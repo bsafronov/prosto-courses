@@ -46,6 +46,7 @@ const invalidFixtures = [
   ["missing-answer", "answer"],
   ["ambiguous-answer", "exactly one option"],
   ["missing-explanation", "explanation"],
+  ["presentation-import", "must not import presentation"],
 ];
 
 for (const [fixture, expectedMessage] of invalidFixtures) {

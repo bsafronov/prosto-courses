@@ -27,10 +27,15 @@ summary: One concise sentence that helps a learner decide whether to open it.
 outcomes:
   - Explain the central concept
   - Apply it in a realistic example
+language: en
 ---
 
 Optional introductory Course Overview prose goes here.
 ```
+
+`language` is optional and defaults to `en`. Set it to the Course content's
+language so the generated Course Overview and Lessons expose accurate document
+language metadata.
 
 Every file in `lessons/` requires a title and an integer order:
 

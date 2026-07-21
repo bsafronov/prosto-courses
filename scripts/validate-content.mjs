@@ -74,6 +74,17 @@ function validateKnowledgeChecks(body, file) {
   }
 }
 
+function withoutFencedCode(body) {
+  return body.replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1\s*$/gm, "");
+}
+
+function validateAuthoringBoundary(body, file) {
+  const authoringSource = withoutFencedCode(body);
+  if (/^\s*(?:import|export)\b/m.test(authoringSource)) {
+    report(file, "Course content must not import presentation modules");
+  }
+}
+
 async function readMdx(file) {
   try {
     return matter(await readFile(file, "utf8"));
@@ -99,6 +110,7 @@ async function validateCourse(courseEntry) {
   ) {
     report(overviewFile, "Course frontmatter requires a non-empty outcomes list");
   }
+  validateAuthoringBoundary(overview.content, overviewFile);
   validateKnowledgeChecks(overview.content, overviewFile);
 
   const lessonsDir = path.join(courseDir, "lessons");
@@ -134,6 +146,7 @@ async function validateCourse(courseEntry) {
     } else {
       orderToFile.set(lesson.data.order, lessonEntry.name);
     }
+    validateAuthoringBoundary(lesson.content, lessonFile);
     validateKnowledgeChecks(lesson.content, lessonFile);
   }
 

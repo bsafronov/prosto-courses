@@ -15,6 +15,7 @@ test("learner reads the first Lesson from the Course Catalog", async ({
 
   await card.getByRole("link", { name: "Основы Markdown", exact: true }).click();
   await expect(page).toHaveURL(/\/courses\/markdown\/$/);
+  await expect(page.locator("html")).toHaveAttribute("lang", "ru");
   await expect(
     page.getByRole("heading", { level: 1, name: "Основы Markdown" }),
   ).toBeVisible();

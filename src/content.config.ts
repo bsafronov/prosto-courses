@@ -14,6 +14,7 @@ const courses = defineCollection({
     title: z.string().min(1),
     summary: z.string().min(1),
     outcomes: z.array(z.string().min(1)).min(1),
+    language: z.string().min(2).optional(),
   }),
 });
 

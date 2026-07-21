@@ -2,11 +2,15 @@
 import { sitePath } from "../lib/courses";
 import "../styles/global.css";
 
-interface Props { title: string; description?: string }
-const { title, description = "Short, practical courses." } = Astro.props;
+interface Props { title: string; description?: string; language?: string }
+const {
+  title,
+  description = "Short, practical courses.",
+  language = "en",
+} = Astro.props;
 ---
 <!doctype html>
-<html lang="en">
+<html lang={language}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />

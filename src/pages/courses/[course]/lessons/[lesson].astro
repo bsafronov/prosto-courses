@@ -35,7 +35,10 @@ const previous = lessons[lessonIndex - 1];
 const next = lessons[lessonIndex + 1];
 const lessonLinks = getLessonLinks(course.id, lessons);
 ---
-<BaseLayout title={`${lesson.data.title} | ${course.data.title}`}>
+<BaseLayout
+  title={`${lesson.data.title} | ${course.data.title}`}
+  language={course.data.language}
+>
   <div class="container lesson-shell" data-progress-root data-course-slug={course.id} data-current-lesson={slug} data-lessons={JSON.stringify(lessonLinks)}>
     <details class="course-navigation" open>
       <summary>{course.data.title}: Course lessons</summary>

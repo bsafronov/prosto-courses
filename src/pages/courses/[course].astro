@@ -18,7 +18,11 @@ const { course, lessons } = Astro.props;
 const { Content } = await render(course);
 const lessonLinks = getLessonLinks(course.id, lessons);
 ---
-<BaseLayout title={`${course.data.title} | Prosto.Courses`} description={course.data.summary}>
+<BaseLayout
+  title={`${course.data.title} | Prosto.Courses`}
+  description={course.data.summary}
+  language={course.data.language}
+>
   <div class="container overview" data-progress-root data-course-slug={course.id} data-lessons={JSON.stringify(lessonLinks)}>
     <header>
       <p class="eyebrow">Course Overview</p>
