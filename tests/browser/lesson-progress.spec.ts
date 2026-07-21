@@ -21,6 +21,14 @@ async function expectThreeProgressStates(page: Page, listName: string) {
   await expect(notStarted).toContainText("○");
 }
 
+async function completeEveryLesson(page: Page) {
+  await page.getByRole("link", { name: "Start course" }).click();
+  for (let index = 0; index < 3; index += 1) {
+    await page.getByRole("button", { name: "Mark Lesson complete" }).click();
+    if (index < 2) await page.getByRole("link", { name: /Next Lesson/ }).click();
+  }
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto(courseOverview);
   await page.evaluate(() => localStorage.clear());
@@ -165,13 +173,25 @@ test("Lesson Progress survives title, order, and content edits at stable slugs",
 });
 
 test("Course action becomes Review course after every Lesson is complete", async ({ page }) => {
-  await page.getByRole("link", { name: "Start course" }).click();
-  for (let index = 0; index < 3; index += 1) {
-    await page.getByRole("button", { name: "Mark Lesson complete" }).click();
-    if (index < 2) await page.getByRole("link", { name: /Next Lesson/ }).click();
-  }
+  await completeEveryLesson(page);
   await page.getByRole("link", { name: "Course Overview", exact: true }).click();
   await expect(page.getByRole("link", { name: "Review course" })).toHaveAttribute(
+    "href",
+    /\/lessons\/vvedenie\/$/,
+  );
+});
+
+test("marking a Lesson incomplete changes Review course back to Continue course", async ({
+  page,
+}) => {
+  await completeEveryLesson(page);
+
+  await page.getByRole("link", { name: "Course Overview", exact: true }).click();
+  await page.getByRole("link", { name: "Review course" }).click();
+  await page.getByRole("button", { name: "Mark Lesson incomplete" }).click();
+  await page.getByRole("link", { name: "Course Overview", exact: true }).click();
+
+  await expect(page.getByRole("link", { name: "Continue course" })).toHaveAttribute(
     "href",
     /\/lessons\/vvedenie\/$/,
   );
