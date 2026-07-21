@@ -108,8 +108,8 @@ function initialiseProgress(root: HTMLElement) {
   root.dataset.progressReady = "true";
   const courseSlug = root.dataset.courseSlug;
   if (!courseSlug) return;
-  const progress = readProgress();
-  const course = ensureCourse(progress, courseSlug);
+  let progress = readProgress();
+  let course = ensureCourse(progress, courseSlug);
   const currentSlug = root.dataset.currentLesson;
 
   if (currentSlug && course.lessons[currentSlug]?.state !== "completed") {
@@ -121,6 +121,13 @@ function initialiseProgress(root: HTMLElement) {
     writeProgress(progress);
   }
   refresh(root, course);
+
+  window.addEventListener("storage", (event) => {
+    if (event.key !== storageKey) return;
+    progress = readProgress();
+    course = ensureCourse(progress, courseSlug);
+    refresh(root, course);
+  });
 
   root.querySelector<HTMLButtonElement>("[data-completion-toggle]")?.addEventListener("click", () => {
     if (!currentSlug) return;
