@@ -1,0 +1,88 @@
+---
+import { getCollection, render, type CollectionEntry } from "astro:content";
+import CourseLessonList from "../../../../components/CourseLessonList.astro";
+import KnowledgeCheck from "../../../../components/KnowledgeCheck.astro";
+import ProgressStatus from "../../../../components/ProgressStatus.astro";
+import BaseLayout from "../../../../layouts/BaseLayout.astro";
+import { coursePath, getLessonLinks, getLessons, lessonCourseSlug, lessonPath, lessonSlug, type LessonEntry } from "../../../../lib/courses";
+
+export async function getStaticPaths() {
+  const courses = await getCollection("courses");
+  const lessons = await getCollection("lessons");
+  const paths = [];
+  for (const lesson of lessons) {
+    const courseSlug = lessonCourseSlug(lesson);
+    const course = courses.find((candidate) => candidate.id === courseSlug);
+    if (!course) continue;
+    paths.push({
+      params: { course: courseSlug, lesson: lessonSlug(lesson) },
+      props: { course, lesson, lessons: await getLessons(courseSlug) },
+    });
+  }
+  return paths;
+}
+
+interface Props {
+  course: CollectionEntry<"courses">;
+  lesson: CollectionEntry<"lessons">;
+  lessons: LessonEntry[];
+}
+const { course, lesson, lessons } = Astro.props;
+const { Content } = await render(lesson);
+const slug = lessonSlug(lesson);
+const lessonIndex = lessons.findIndex((candidate) => candidate.id === lesson.id);
+const previous = lessons[lessonIndex - 1];
+const next = lessons[lessonIndex + 1];
+const lessonLinks = getLessonLinks(course.id, lessons);
+---
+<BaseLayout title={`${lesson.data.title} | ${course.data.title}`}>
+  <div class="container lesson-shell" data-progress-root data-course-slug={course.id} data-current-lesson={slug} data-lessons={JSON.stringify(lessonLinks)}>
+    <details class="course-navigation" open>
+      <summary>{course.data.title}: Course lessons</summary>
+      <nav aria-label="Course navigation">
+        <a class="overview-link" href={coursePath(course.id)}>Course Overview</a>
+        <CourseLessonList courseSlug={course.id} lessons={lessons} label="Course navigation lessons" />
+      </nav>
+    </details>
+    <article class="lesson-content">
+      <header>
+        <p class="eyebrow">Lesson {lesson.data.order} of {lessons.length}</p>
+        <h1>{lesson.data.title}</h1>
+        <ProgressStatus lessonSlug={slug} />
+      </header>
+      <div class="prose"><Content components={{ KnowledgeCheck }} /></div>
+      <section class="completion" aria-labelledby="completion-heading">
+        <h2 id="completion-heading">Lesson Completion</h2>
+        <p>Completion is your choice and is independent of Knowledge Check answers.</p>
+        <button type="button" data-completion-toggle aria-pressed="false">Mark Lesson complete</button>
+      </section>
+      <nav class="sequence" aria-label="Lesson sequence">
+        {previous ? <a href={lessonPath(course.id, lessonSlug(previous))}>← Previous Lesson: {previous.data.title}</a> : <span></span>}
+        {next ? <a href={lessonPath(course.id, lessonSlug(next))}>Next Lesson: {next.data.title} →</a> : <a href={coursePath(course.id)}>Back to Course Overview →</a>}
+      </nav>
+    </article>
+  </div>
+  <script src="../../../../scripts/progress.ts"></script>
+</BaseLayout>
+
+<style>
+  .lesson-shell { display: grid; grid-template-columns: minmax(16rem, 21rem) minmax(0, 48rem); gap: 3rem; align-items: start; padding-top: 2rem; }
+  .course-navigation { position: sticky; top: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); padding: .8rem; }
+  summary { cursor: pointer; font-weight: 800; }
+  nav { margin-top: .8rem; }
+  .overview-link { display: inline-block; margin: .4rem 0 .7rem; font-weight: 700; }
+  .lesson-content { min-width: 0; }
+  header { padding: 1.4rem 0 1.8rem; border-bottom: 1px solid var(--color-border); }
+  h1 { margin: .15rem 0 .6rem; font-size: clamp(2.2rem, 6vw, 3.6rem); line-height: 1.08; letter-spacing: -.045em; }
+  .prose { padding-top: 1rem; }
+  .completion { margin-top: 3rem; border: 1px solid var(--color-border); border-radius: var(--radius); padding: 1.2rem; background: var(--color-surface); }
+  .completion h2 { margin: 0; font-size: 1.25rem; }
+  .completion p { color: var(--color-muted); }
+  .sequence { display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--color-border); margin-top: 2.5rem; padding-top: 1.5rem; }
+  .sequence a { font-weight: 750; }
+  .sequence a:last-child { text-align: right; margin-left: auto; }
+  @media (max-width: 52rem) {
+    .lesson-shell { grid-template-columns: 1fr; gap: 1rem; }
+    .course-navigation { position: static; }
+  }
+</style>

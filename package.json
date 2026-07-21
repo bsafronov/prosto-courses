@@ -1,0 +1,28 @@
+{
+  "name": "prosto-courses",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.9.0",
+  "scripts": {
+    "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev",
+    "validate": "node scripts/validate-content.mjs && ASTRO_TELEMETRY_DISABLED=1 astro check",
+    "build": "pnpm validate && ASTRO_TELEMETRY_DISABLED=1 astro build",
+    "preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview",
+    "test": "pnpm test:contract && pnpm test:browser",
+    "test:contract": "node --test tests/authoring-contract.test.mjs",
+    "test:browser": "playwright test",
+    "typecheck": "ASTRO_TELEMETRY_DISABLED=1 astro check"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "7.0.3",
+    "astro": "7.1.3",
+    "gray-matter": "4.0.3"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.9",
+    "@playwright/test": "1.61.1",
+    "@types/node": "26.1.1",
+    "typescript": "6.0.3"
+  }
+}

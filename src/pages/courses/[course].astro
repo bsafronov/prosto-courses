@@ -1,0 +1,53 @@
+---
+import { getCollection, render, type CollectionEntry } from "astro:content";
+import CourseLessonList from "../../components/CourseLessonList.astro";
+import KnowledgeCheck from "../../components/KnowledgeCheck.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getLessonLinks, getLessons, type LessonEntry } from "../../lib/courses";
+
+export async function getStaticPaths() {
+  const courses = await getCollection("courses");
+  return Promise.all(courses.map(async (course) => ({
+    params: { course: course.id },
+    props: { course, lessons: await getLessons(course.id) },
+  })));
+}
+
+interface Props { course: CollectionEntry<"courses">; lessons: LessonEntry[] }
+const { course, lessons } = Astro.props;
+const { Content } = await render(course);
+const lessonLinks = getLessonLinks(course.id, lessons);
+---
+<BaseLayout title={`${course.data.title} | Prosto.Courses`} description={course.data.summary}>
+  <div class="container overview" data-progress-root data-course-slug={course.id} data-lessons={JSON.stringify(lessonLinks)}>
+    <header>
+      <p class="eyebrow">Course Overview</p>
+      <h1>{course.data.title}</h1>
+      <p class="summary">{course.data.summary}</p>
+      <a class="button" data-course-action href={lessonLinks[0].href}>Start course</a>
+    </header>
+    <div class="columns">
+      <article class="prose reading-width">
+        <Content components={{ KnowledgeCheck }} />
+        <h2>Learning outcomes</h2>
+        <ul>{course.data.outcomes.map((outcome) => <li>{outcome}</li>)}</ul>
+      </article>
+      <aside>
+        <h2>Lessons</h2>
+        <CourseLessonList courseSlug={course.id} lessons={lessons} />
+      </aside>
+    </div>
+  </div>
+  <script src="../../scripts/progress.ts"></script>
+</BaseLayout>
+
+<style>
+  .overview { padding-top: 3.5rem; }
+  header { max-width: 47rem; }
+  h1 { margin: .2rem 0 .6rem; font-size: clamp(2.4rem, 7vw, 4.4rem); line-height: 1.05; letter-spacing: -.05em; }
+  .summary { color: var(--color-muted); font-size: 1.15rem; }
+  .columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(20rem, .75fr); gap: 3rem; margin-top: 3rem; align-items: start; }
+  aside { position: sticky; top: 1rem; }
+  aside h2 { font-size: 1.15rem; }
+  @media (max-width: 48rem) { .columns { grid-template-columns: 1fr; gap: 1.5rem; } aside { position: static; } }
+</style>

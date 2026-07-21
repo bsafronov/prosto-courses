@@ -1,0 +1,31 @@
+---
+import type { LessonEntry } from "../lib/courses";
+import { lessonPath, lessonSlug } from "../lib/courses";
+import ProgressStatus from "./ProgressStatus.astro";
+
+interface Props { courseSlug: string; lessons: LessonEntry[]; label?: string }
+const { courseSlug, lessons, label = "Course lessons" } = Astro.props;
+---
+<ol aria-label={label} class="lesson-list">
+  {lessons.map((lesson) => (
+    <li>
+      <a href={lessonPath(courseSlug, lessonSlug(lesson))}>
+        <span class="lesson-number" aria-hidden="true">{lesson.data.order}</span>
+        <span class="lesson-title">{lesson.data.title}</span>
+        <ProgressStatus lessonSlug={lessonSlug(lesson)} />
+      </a>
+    </li>
+  ))}
+</ol>
+
+<style>
+  .lesson-list { list-style: none; padding: 0; display: grid; gap: .65rem; }
+  a { display: grid; grid-template-columns: 2rem 1fr auto; gap: .75rem; align-items: center; padding: .8rem; border: 1px solid var(--color-border); border-radius: .65rem; background: var(--color-surface); color: var(--color-ink); text-decoration: none; }
+  a:hover { border-color: var(--color-brand); box-shadow: 0 4px 16px rgb(23 32 51 / 8%); }
+  .lesson-number { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 50%; background: #ececf5; font-weight: 800; }
+  .lesson-title { font-weight: 720; }
+  @media (max-width: 34rem) {
+    a { grid-template-columns: 2rem 1fr; }
+    a :global([data-progress-status]) { grid-column: 2; justify-self: start; }
+  }
+</style>

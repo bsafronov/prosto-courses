@@ -1,0 +1,20 @@
+---
+interface Props { lessonSlug: string }
+const { lessonSlug } = Astro.props;
+---
+<span
+  class="status"
+  data-progress-status
+  data-lesson-slug={lessonSlug}
+  data-state="not-started"
+  aria-label="Lesson status: Not started"
+>
+  <span data-status-icon aria-hidden="true">○</span>
+  <span data-status-label>Not started</span>
+</span>
+
+<style>
+  .status { display: inline-flex; align-items: center; gap: .35rem; border-radius: 999px; padding: .18rem .55rem; color: var(--color-muted); font-size: .82rem; font-weight: 750; white-space: nowrap; }
+  .status[data-state="started"] { color: var(--color-started-ink); background: var(--color-started); }
+  .status[data-state="completed"] { color: var(--color-completed-ink); background: var(--color-completed); }
+</style>

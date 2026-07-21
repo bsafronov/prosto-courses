@@ -1,0 +1,33 @@
+---
+import { sitePath } from "../lib/courses";
+import "../styles/global.css";
+
+interface Props { title: string; description?: string }
+const { title, description = "Short, practical courses." } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content={description} />
+    <title>{title}</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href={sitePath()}>Prosto.Courses</a>
+        <a href={sitePath()}>All courses</a>
+      </div>
+    </header>
+    <main><slot /></main>
+    <footer class="site-footer"><div class="container">Learn at your own pace.</div></footer>
+  </body>
+</html>
+
+<style>
+  .site-header { border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
+  .header-inner { min-height: 4.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .brand { color: var(--color-ink); font-weight: 850; text-decoration: none; letter-spacing: -.025em; }
+  .site-footer { margin-top: 5rem; border-top: 1px solid var(--color-border); padding: 2rem 0; color: var(--color-muted); }
+</style>

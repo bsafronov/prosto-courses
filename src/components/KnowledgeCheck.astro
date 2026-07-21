@@ -1,0 +1,60 @@
+---
+interface Props {
+  prompt: string;
+  options: string[];
+  answer: string;
+  explanation: string;
+}
+const { prompt, options, answer, explanation } = Astro.props;
+const inputName = `knowledge-check-${Math.random().toString(36).slice(2)}`;
+---
+<form class="knowledge-check" data-knowledge-check data-answer={answer}>
+  <fieldset>
+    <legend><span>Knowledge Check</span>{prompt}</legend>
+    <div class="options">
+      {options.map((option) => (
+        <label><input type="radio" name={inputName} value={option} required /> <span>{option}</span></label>
+      ))}
+    </div>
+  </fieldset>
+  <button type="submit">Check answer</button>
+  <div class="feedback" data-feedback aria-live="polite" hidden>
+    <strong data-feedback-result></strong>
+    <span>{explanation}</span>
+  </div>
+</form>
+
+<script>
+  function initialiseKnowledgeCheck(form: HTMLFormElement) {
+    if (form.dataset.ready) return;
+    form.dataset.ready = "true";
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const selected = new FormData(form).get(
+        form.querySelector<HTMLInputElement>("input[type=radio]")?.name ?? "",
+      );
+      const correct = selected === form.dataset.answer;
+      const feedback = form.querySelector<HTMLElement>("[data-feedback]");
+      const result = form.querySelector<HTMLElement>("[data-feedback-result]");
+      if (!feedback || !result) return;
+      result.textContent = correct ? "Correct. " : "Not quite. Try again. ";
+      feedback.dataset.result = correct ? "correct" : "incorrect";
+      feedback.hidden = false;
+    });
+  }
+  document.querySelectorAll<HTMLFormElement>("[data-knowledge-check]").forEach(initialiseKnowledgeCheck);
+</script>
+
+<style>
+  .knowledge-check { margin: 2rem 0; border: 1px solid #b9c2ef; border-radius: var(--radius); padding: 1.2rem; background: #f4f5ff; }
+  fieldset { border: 0; padding: 0; margin: 0 0 1rem; }
+  legend { display: grid; gap: .25rem; width: 100%; font-weight: 750; font-size: 1.08rem; }
+  legend span { color: var(--color-brand); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; }
+  .options { display: grid; gap: .55rem; margin-top: 1rem; }
+  label { display: flex; gap: .65rem; align-items: start; background: white; border: 1px solid var(--color-border); border-radius: .5rem; padding: .65rem .75rem; cursor: pointer; }
+  input { margin-top: .35rem; accent-color: var(--color-brand); }
+  .feedback { margin-top: 1rem; border-radius: .55rem; padding: .75rem; }
+  .feedback[data-result="correct"] { color: var(--color-completed-ink); background: var(--color-completed); }
+  .feedback[data-result="incorrect"] { color: var(--color-started-ink); background: var(--color-started); }
+  .feedback strong, .feedback span { display: block; }
+</style>
