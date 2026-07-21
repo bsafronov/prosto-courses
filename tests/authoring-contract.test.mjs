@@ -50,6 +50,7 @@ const invalidFixtures = [
   ["non-integer-order", "must be an integer"],
   ["non-positive-order", "must be positive"],
   ["duplicate-options", "unique options"],
+  ["whitespace-duplicate-options", "unique options"],
   ["missing-answer", "answer"],
   ["ambiguous-answer", "exactly one option"],
   ["missing-explanation", "explanation"],

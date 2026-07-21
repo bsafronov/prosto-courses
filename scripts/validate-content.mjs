@@ -66,7 +66,7 @@ function validateKnowledgeChecks(body, file) {
       continue;
     }
 
-    if (new Set(options).size !== options.length) {
+    if (new Set(options.map((option) => option.trim())).size !== options.length) {
       report(file, `${label} requires unique options`);
     }
     if (answer && options.filter((option) => option === answer).length !== 1) {

@@ -18,9 +18,14 @@ const inputName = `knowledge-check-${Math.random().toString(36).slice(2)}`;
     </div>
   </fieldset>
   <button type="submit">Check answer</button>
-  <div class="feedback" data-feedback aria-live="polite" hidden>
-    <strong data-feedback-result></strong>
-    <span>{explanation}</span>
+  <div
+    class="feedback"
+    data-feedback
+    data-explanation={explanation}
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+  >
   </div>
 </form>
 
@@ -35,11 +40,14 @@ const inputName = `knowledge-check-${Math.random().toString(36).slice(2)}`;
       );
       const correct = selected === form.dataset.answer;
       const feedback = form.querySelector<HTMLElement>("[data-feedback]");
-      const result = form.querySelector<HTMLElement>("[data-feedback-result]");
-      if (!feedback || !result) return;
+      if (!feedback) return;
+      const result = document.createElement("strong");
+      const explanation = document.createElement("span");
+      result.dataset.feedbackResult = "";
       result.textContent = correct ? "Correct. " : "Not quite. Try again. ";
+      explanation.textContent = feedback.dataset.explanation ?? "";
+      feedback.replaceChildren(result, explanation);
       feedback.dataset.result = correct ? "correct" : "incorrect";
-      feedback.hidden = false;
     });
   }
   document.querySelectorAll<HTMLFormElement>("[data-knowledge-check]").forEach(initialiseKnowledgeCheck);
@@ -54,6 +62,7 @@ const inputName = `knowledge-check-${Math.random().toString(36).slice(2)}`;
   label { display: flex; gap: .65rem; align-items: start; background: white; border: 1px solid var(--color-border); border-radius: .5rem; padding: .65rem .75rem; cursor: pointer; }
   input { margin-top: .35rem; accent-color: var(--color-brand); }
   .feedback { margin-top: 1rem; border-radius: .55rem; padding: .75rem; }
+  .feedback:empty { margin: 0; padding: 0; }
   .feedback[data-result="correct"] { color: var(--color-completed-ink); background: var(--color-completed); }
   .feedback[data-result="incorrect"] { color: var(--color-started-ink); background: var(--color-started); }
   .feedback strong, .feedback span { display: block; }
