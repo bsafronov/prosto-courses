@@ -175,8 +175,12 @@ async function validateCourse(courseEntry) {
     requiredString(lesson.data, "title", lessonFile, "Lesson");
     validateSharedMetadata(lesson.data, lessonFile);
 
-    if (!Number.isInteger(lesson.data.order) || lesson.data.order < 1) {
-      report(lessonFile, "Lesson order must be a positive integer");
+    if (!Object.hasOwn(lesson.data, "order")) {
+      report(lessonFile, "Lesson frontmatter requires an order");
+    } else if (!Number.isInteger(lesson.data.order)) {
+      report(lessonFile, "Lesson order must be an integer");
+    } else if (lesson.data.order < 1) {
+      report(lessonFile, "Lesson order must be positive");
     } else if (orderToFile.has(lesson.data.order)) {
       report(
         lessonFile,

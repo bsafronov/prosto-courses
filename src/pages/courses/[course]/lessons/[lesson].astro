@@ -44,7 +44,12 @@ const lessonLinks = getLessonLinks(course.id, lessons);
       <summary>{course.data.title}: Course lessons</summary>
       <nav aria-label="Course navigation">
         <a class="overview-link" href={coursePath(course.id)}>Course Overview</a>
-        <CourseLessonList courseSlug={course.id} lessons={lessons} label="Course navigation lessons" />
+        <CourseLessonList
+          courseSlug={course.id}
+          lessons={lessons}
+          label="Course navigation lessons"
+          currentLessonSlug={slug}
+        />
       </nav>
     </details>
     <article class="lesson-content">

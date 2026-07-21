@@ -1,4 +1,16 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+const lessonSequence = [
+  "1Знакомство с Markdown",
+  "2Заголовки, выделение и списки",
+  "3Ссылки и код",
+];
+
+async function expectLessonSequence(page: Page, label: string) {
+  await expect(
+    page.getByRole("list", { name: label }).getByRole("link"),
+  ).toContainText(lessonSequence);
+}
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/prosto-courses/");
@@ -24,13 +36,7 @@ test("learner reads the first Lesson from the Course Catalog", async ({
   await expect(
     page.getByRole("listitem").filter({ hasText: "Создавать заголовки" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("list", { name: "Course lessons" }).getByRole("link"),
-  ).toHaveText([
-    "1Знакомство с Markdown○Not started",
-    "2Заголовки, выделение и списки○Not started",
-    "3Ссылки и код○Not started",
-  ]);
+  await expectLessonSequence(page, "Course lessons");
 
   await page.getByRole("link", { name: "Start course" }).click();
   await expect(page).toHaveURL(/\/courses\/markdown\/lessons\/vvedenie\/$/);
@@ -48,4 +54,53 @@ test("learner reads the first Lesson from the Course Catalog", async ({
   await expect(page).toHaveURL(/\/courses\/markdown\/lessons\/formatting\/$/);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole("navigation", { name: "Course navigation" })).toBeVisible();
+});
+
+test("learner follows the complete Lesson sequence", async ({
+  page,
+}) => {
+  await page.goto("/prosto-courses/courses/markdown/lessons/vvedenie/");
+
+  await expectLessonSequence(page, "Course navigation lessons");
+  await expect(page.getByText("Lesson 1 of 3", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Знакомство с Markdown/ }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("link", { name: /Previous Lesson/ })).toHaveCount(0);
+
+  await page.getByRole("link", { name: /Next Lesson: Заголовки/ }).click();
+
+  await expectLessonSequence(page, "Course navigation lessons");
+  await expect(page.getByText("Lesson 2 of 3", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Заголовки, выделение и списки/ }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("link", { name: /Previous Lesson: Знакомство/ }),
+  ).toHaveAttribute("href", /\/lessons\/vvedenie\/$/);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const courseNavigation = page.getByRole("navigation", {
+    name: "Course navigation",
+  });
+  const navigationToggle = page.getByText(
+    "Основы Markdown: Course lessons",
+    { exact: true },
+  );
+  await navigationToggle.click();
+  await expect(courseNavigation).not.toBeVisible();
+  await navigationToggle.click();
+  await expect(courseNavigation).toBeVisible();
+
+  await page.getByRole("link", { name: /Next Lesson: Ссылки и код/ }).click();
+
+  await expectLessonSequence(page, "Course navigation lessons");
+  await expect(page.getByText("Lesson 3 of 3", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Ссылки и код/ }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("link", { name: /Next Lesson/ })).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: "Back to Course Overview →" }),
+  ).toHaveAttribute("href", /\/courses\/markdown\/$/);
 });

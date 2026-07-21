@@ -3,13 +3,26 @@ import type { LessonEntry } from "../lib/courses";
 import { lessonPath, lessonSlug } from "../lib/courses";
 import ProgressStatus from "./ProgressStatus.astro";
 
-interface Props { courseSlug: string; lessons: LessonEntry[]; label?: string }
-const { courseSlug, lessons, label = "Course lessons" } = Astro.props;
+interface Props {
+  courseSlug: string;
+  lessons: LessonEntry[];
+  label?: string;
+  currentLessonSlug?: string;
+}
+const {
+  courseSlug,
+  lessons,
+  label = "Course lessons",
+  currentLessonSlug,
+} = Astro.props;
 ---
 <ol aria-label={label} class="lesson-list">
   {lessons.map((lesson) => (
     <li>
-      <a href={lessonPath(courseSlug, lessonSlug(lesson))}>
+      <a
+        href={lessonPath(courseSlug, lessonSlug(lesson))}
+        aria-current={lessonSlug(lesson) === currentLessonSlug ? "page" : undefined}
+      >
         <span class="lesson-number" aria-hidden="true">{lesson.data.order}</span>
         <span class="lesson-title">{lesson.data.title}</span>
         <ProgressStatus lessonSlug={lessonSlug(lesson)} />
