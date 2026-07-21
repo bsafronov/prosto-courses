@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import matter from "gray-matter";
+import { isSupportedLanguage } from "./content-contract.mjs";
 
 const contentRoot = path.resolve(process.argv[2] ?? "src/content/courses");
 const errors = [];
@@ -75,13 +76,43 @@ function validateKnowledgeChecks(body, file) {
 }
 
 function withoutFencedCode(body) {
-  return body.replace(/^(```|~~~)[^\n]*\n[\s\S]*?^\1\s*$/gm, "");
+  const authoringLines = [];
+  let fence;
+
+  for (const line of body.split("\n")) {
+    if (!fence) {
+      const opening = line.match(/^ {0,3}(`{3,}|~{3,})/);
+      if (opening) {
+        fence = { marker: opening[1][0], length: opening[1].length };
+      } else {
+        authoringLines.push(line);
+      }
+      continue;
+    }
+
+    const closing = line.match(/^ {0,3}(`{3,}|~{3,})\s*$/);
+    if (
+      closing &&
+      closing[1][0] === fence.marker &&
+      closing[1].length >= fence.length
+    ) {
+      fence = undefined;
+    }
+  }
+
+  return authoringLines.join("\n");
 }
 
 function validateAuthoringBoundary(body, file) {
   const authoringSource = withoutFencedCode(body);
   if (/^\s*(?:import|export)\b/m.test(authoringSource)) {
     report(file, "Course content must not import presentation modules");
+  }
+}
+
+function validateSharedMetadata(data, file) {
+  if (Object.hasOwn(data, "layout")) {
+    report(file, "Course content must not select a layout");
   }
 }
 
@@ -101,6 +132,13 @@ async function validateCourse(courseEntry) {
 
   requiredString(overview.data, "title", overviewFile, "Course");
   requiredString(overview.data, "summary", overviewFile, "Course");
+  validateSharedMetadata(overview.data, overviewFile);
+  if (
+    overview.data.language !== undefined &&
+    !isSupportedLanguage(overview.data.language)
+  ) {
+    report(overviewFile, "Course language must be a Unicode locale identifier");
+  }
   if (
     !Array.isArray(overview.data.outcomes) ||
     overview.data.outcomes.length === 0 ||
@@ -135,6 +173,7 @@ async function validateCourse(courseEntry) {
     const lessonFile = path.join(lessonsDir, lessonEntry.name);
     const lesson = await readMdx(lessonFile);
     requiredString(lesson.data, "title", lessonFile, "Lesson");
+    validateSharedMetadata(lesson.data, lessonFile);
 
     if (!Number.isInteger(lesson.data.order) || lesson.data.order < 1) {
       report(lessonFile, "Lesson order must be a positive integer");

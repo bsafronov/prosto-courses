@@ -33,7 +33,8 @@ language: en
 Optional introductory Course Overview prose goes here.
 ```
 
-`language` is optional and defaults to `en`. Set it to the Course content's
+`language` is an optional Unicode locale identifier, such as `en`, `ru`,
+`pt-BR`, or `zh-Hant`, and defaults to `en`. Set it to the Course content's
 language so the generated Course Overview and Lessons expose accurate document
 language metadata.
 
