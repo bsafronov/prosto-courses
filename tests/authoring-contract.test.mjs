@@ -35,10 +35,17 @@ test("accepts the canonical Russian Course through the public contract", async (
   assert.match(result.output, /Validated 1 Course and 3 Lessons/);
 });
 
-test("accepts import examples inside Markdown fences", async () => {
-  const result = await validateFixture("fenced-import-example");
-  assert.equal(result.exitCode, 0, result.output);
-});
+const fencedExamples = [
+  ["fenced-import-example", "import"],
+  ["fenced-knowledge-check-example", "Knowledge Check"],
+];
+
+for (const [fixture, example] of fencedExamples) {
+  test(`accepts ${example} examples inside Markdown fences`, async () => {
+    const result = await validateFixture(fixture);
+    assert.equal(result.exitCode, 0, result.output);
+  });
+}
 
 const invalidFixtures = [
   ["missing-course-metadata", "summary"],

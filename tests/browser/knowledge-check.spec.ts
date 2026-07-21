@@ -33,6 +33,7 @@ test("Knowledge Check announces feedback, explains answers, and allows keyboard 
   await page.keyboard.press("Space");
   await check.getByRole("button", { name: "Check answer" }).press("Enter");
   await expect(feedback).toContainText("Correct.");
+  await expect(feedback).toContainText("Символы Markdown просты");
 
   await expect(
     page.locator("header").getByLabel("Lesson status: Started"),

@@ -24,6 +24,7 @@ function stringAttribute(source, name) {
 }
 
 function validateKnowledgeChecks(body, file) {
+  body = withoutFencedCode(body);
   const openingTags = [...body.matchAll(/<KnowledgeCheck\b([\s\S]*?)\/>/g)];
   const mentions = [...body.matchAll(/<KnowledgeCheck\b/g)];
 
