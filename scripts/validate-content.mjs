@@ -5,6 +5,7 @@ import matter from "gray-matter";
 import {
   assessmentSchema,
   capstoneSchema,
+  capabilityPackDependenciesSchema,
   courseSchema,
   lessonSchema,
   moduleSchema,
@@ -17,6 +18,9 @@ import {
 const contentRoot = path.resolve(
   process.argv[2] ?? process.env.COURSE_CONTENT_ROOT ?? "src/content/courses",
 );
+const capabilityPackManifestFile = path.resolve(
+  process.env.CAPABILITY_PACK_MANIFEST ?? "platform/capability-packs.json",
+);
 const errors = [];
 const counts = {
   courses: 0,
@@ -26,6 +30,46 @@ const counts = {
   capstones: 0,
 };
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+async function readCapabilityPackManifest() {
+  let manifest;
+  try {
+    manifest = JSON.parse(await readFile(capabilityPackManifestFile, "utf8"));
+  } catch (error) {
+    console.error(
+      `Capability Pack manifest could not be read at ${capabilityPackManifestFile}: ${error.message}`,
+    );
+    process.exit(1);
+  }
+
+  if (
+    !Number.isInteger(manifest.manifestVersion) ||
+    manifest.manifestVersion < 1 ||
+    typeof manifest.baseCatalog?.version !== "string" ||
+    !Array.isArray(manifest.baseCatalog?.components) ||
+    !Array.isArray(manifest.packs)
+  ) {
+    console.error(
+      `Capability Pack manifest is malformed at ${capabilityPackManifestFile}`,
+    );
+    process.exit(1);
+  }
+
+  return manifest;
+}
+
+const capabilityPackManifest = await readCapabilityPackManifest();
+const baseComponents = new Set(capabilityPackManifest.baseCatalog.components);
+const componentPacks = new Map();
+for (const pack of capabilityPackManifest.packs) {
+  for (const declaration of pack.components ?? []) {
+    const component =
+      typeof declaration === "string" ? { name: declaration } : declaration;
+    const owners = componentPacks.get(component.name) ?? [];
+    owners.push({ pack, component });
+    componentPacks.set(component.name, owners);
+  }
+}
 
 function report(file, message) {
   errors.push(`${path.relative(process.cwd(), file)}: ${message}`);
@@ -97,6 +141,51 @@ function withoutFencedCode(body) {
   return authoringLines.join("\n");
 }
 
+function openingComponentTags(source) {
+  const tags = [];
+
+  for (let index = 0; index < source.length; index += 1) {
+    if (source[index] !== "<" || !/[A-Z]/.test(source[index + 1] ?? "")) {
+      continue;
+    }
+
+    const nameStart = index + 1;
+    let cursor = nameStart + 1;
+    while (/[A-Za-z0-9]/.test(source[cursor] ?? "")) cursor += 1;
+    const name = source.slice(nameStart, cursor);
+    const attributesStart = cursor;
+    let braceDepth = 0;
+    let quote;
+    let escaped = false;
+
+    for (; cursor < source.length; cursor += 1) {
+      const character = source[cursor];
+      if (quote) {
+        if (escaped) escaped = false;
+        else if (character === "\\") escaped = true;
+        else if (character === quote) quote = undefined;
+        continue;
+      }
+      if (character === '"' || character === "'" || character === "`") {
+        quote = character;
+      } else if (character === "{") {
+        braceDepth += 1;
+      } else if (character === "}") {
+        braceDepth = Math.max(0, braceDepth - 1);
+      } else if (character === ">" && braceDepth === 0) {
+        tags.push({
+          name,
+          source: source.slice(attributesStart, cursor),
+        });
+        index = cursor;
+        break;
+      }
+    }
+  }
+
+  return tags;
+}
+
 function validateKnowledgeChecks(body, file) {
   body = withoutFencedCode(body);
   const openingTags = [...body.matchAll(/<KnowledgeCheck\b([\s\S]*?)\/>/g)];
@@ -159,6 +248,115 @@ function validateKnowledgeChecks(body, file) {
   }
 }
 
+function validateCapabilityPackDependencies(dependencies, file) {
+  const declaredPacks = new Map();
+  if (!Array.isArray(dependencies)) return declaredPacks;
+
+  for (const dependency of dependencies) {
+    if (
+      typeof dependency?.name !== "string" ||
+      typeof dependency?.version !== "string"
+    ) {
+      continue;
+    }
+    if (declaredPacks.has(dependency.name)) {
+      report(
+        file,
+        `Capability Pack ${dependency.name} must be declared exactly once`,
+      );
+      continue;
+    }
+
+    const availableByName = capabilityPackManifest.packs.filter(
+      (pack) => pack.name === dependency.name,
+    );
+    if (availableByName.length === 0) {
+      report(
+        file,
+        `Capability Pack ${dependency.name} is not available in platform manifest version ${capabilityPackManifest.manifestVersion}`,
+      );
+      continue;
+    }
+
+    const available = availableByName.find(
+      (pack) => pack.version === dependency.version,
+    );
+    if (!available) {
+      const versions = availableByName.map((pack) => pack.version).join(", ");
+      report(
+        file,
+        `Capability Pack ${dependency.name} version ${dependency.version} is unsupported; available versions: ${versions}`,
+      );
+      continue;
+    }
+    declaredPacks.set(dependency.name, available);
+  }
+
+  return declaredPacks;
+}
+
+function validateSemanticComponents(body, file, declaredPacks = new Map()) {
+  const authoringSource = withoutFencedCode(body);
+  const components = openingComponentTags(authoringSource);
+
+  for (const { name: componentName, source } of components) {
+    const isBaseComponent = baseComponents.has(componentName);
+    const owners = componentPacks.get(componentName) ?? [];
+    const declaredOwner = owners.find(
+      ({ pack }) => declaredPacks.get(pack.name)?.version === pack.version,
+    );
+
+    if (!isBaseComponent && !declaredOwner && owners.length === 0) {
+      report(
+        file,
+        `${componentName} is not a base Semantic Course Component or an available Capability Pack component`,
+      );
+      continue;
+    }
+
+    if (!isBaseComponent && !declaredOwner) {
+      const { pack } = owners[0];
+      report(
+        file,
+        `${componentName} requires Capability Pack ${pack.name} version ${pack.version} to be declared in Course metadata`,
+      );
+      continue;
+    }
+
+    if (/\{\s*\.\.\./.test(source)) {
+      report(
+        file,
+        `${componentName} must use explicit static props; spread props can hide undeclared runtimes or services`,
+      );
+      continue;
+    }
+
+    for (const resource of ["runtime", "service"]) {
+      if (!new RegExp(`\\b${resource}\\s*=`).test(source)) continue;
+      const value = stringAttribute(source, resource);
+      if (!value) {
+        report(
+          file,
+          `${componentName} ${resource} must be a static non-empty string declared by a Course Capability Pack`,
+        );
+        continue;
+      }
+
+      const allowedValues = declaredOwner?.component[`${resource}s`] ?? [];
+      if (!allowedValues.includes(value)) {
+        const dependency = declaredOwner?.pack;
+        const owner = dependency
+          ? `Capability Pack ${dependency.name} version ${dependency.version}`
+          : "any declared Course Capability Pack";
+        report(
+          file,
+          `${componentName} ${resource} ${value} is not declared by ${owner}`,
+        );
+      }
+    }
+  }
+}
+
 function validateAuthoringBoundary(body, file) {
   const authoringSource = withoutFencedCode(body);
   if (/^\s*(?:import|export)\b/m.test(authoringSource)) {
@@ -172,11 +370,12 @@ function validateSharedMetadata(data, file) {
   }
 }
 
-function validateLearnerSource(source, file, owner) {
+function validateLearnerSource(source, file, owner, declaredPacks) {
   if (!source) return;
   requiredString(source.data, "title", file, owner);
   validateSharedMetadata(source.data, file);
   validateAuthoringBoundary(source.content, file);
+  validateSemanticComponents(source.content, file, declaredPacks);
   validateKnowledgeChecks(source.content, file);
 }
 
@@ -311,6 +510,60 @@ async function validateArtifact(file, label) {
   }
 }
 
+async function validateCourseBriefCapabilityPacks(file, dependencies) {
+  const brief = await readMdx(file);
+  if (!brief) return;
+  const courseDependencies = Array.isArray(dependencies) ? dependencies : [];
+  const declared = brief.data.capabilityPacks ?? [];
+  const result = capabilityPackDependenciesSchema.safeParse(declared);
+  if (!result.success) {
+    for (const issue of result.error.issues) {
+      const location = issue.path.length > 0 ? `.${issue.path.join(".")}` : "";
+      report(file, `Course Brief capabilityPacks${location}: ${issue.message}`);
+    }
+  }
+  const confirmed = Array.isArray(declared) ? declared : [];
+  validateCapabilityPackDependencies(confirmed, file);
+
+  for (const dependency of courseDependencies) {
+    if (
+      typeof dependency?.name !== "string" ||
+      typeof dependency?.version !== "string"
+    ) {
+      continue;
+    }
+    const isConfirmed = confirmed.some(
+      (pack) =>
+        pack?.name === dependency.name && pack?.version === dependency.version,
+    );
+    if (!isConfirmed) {
+      report(
+        file,
+        `Course Brief must confirm Capability Pack ${dependency.name} version ${dependency.version}`,
+      );
+    }
+  }
+
+  for (const dependency of confirmed) {
+    if (
+      typeof dependency?.name !== "string" ||
+      typeof dependency?.version !== "string"
+    ) {
+      continue;
+    }
+    const isCourseDependency = courseDependencies.some(
+      (pack) =>
+        pack?.name === dependency.name && pack?.version === dependency.version,
+    );
+    if (!isCourseDependency) {
+      report(
+        file,
+        `Course Brief Capability Pack ${dependency.name} version ${dependency.version} must also be declared in Course metadata`,
+      );
+    }
+  }
+}
+
 async function directoryEntries(directory) {
   try {
     return await readdir(directory, { withFileTypes: true });
@@ -324,13 +577,14 @@ async function validateModule(
   courseLessonSlugs,
   moduleEntry,
   alignment,
+  declaredPacks,
 ) {
   const moduleDir = path.join(courseDir, "modules", moduleEntry.name);
   validateSlug(moduleEntry.name, moduleDir, "Module");
 
   const moduleFile = path.join(moduleDir, "index.mdx");
   const moduleSource = await readRequiredMdx(moduleFile, "Module");
-  validateLearnerSource(moduleSource, moduleFile, "Module");
+  validateLearnerSource(moduleSource, moduleFile, "Module", declaredPacks);
   if (moduleSource)
     validateMetadata(moduleSchema, moduleSource.data, moduleFile, "Module");
   if (moduleSource) {
@@ -343,7 +597,12 @@ async function validateModule(
 
   const checkpointFile = path.join(moduleDir, "checkpoint.mdx");
   const checkpoint = await readRequiredMdx(checkpointFile, "Module Checkpoint");
-  validateLearnerSource(checkpoint, checkpointFile, "Module Checkpoint");
+  validateLearnerSource(
+    checkpoint,
+    checkpointFile,
+    "Module Checkpoint",
+    declaredPacks,
+  );
   if (checkpoint) {
     validateMetadata(
       assessmentSchema,
@@ -385,7 +644,7 @@ async function validateModule(
     }
 
     const lesson = await readMdx(lessonFile);
-    validateLearnerSource(lesson, lessonFile, "Lesson");
+    validateLearnerSource(lesson, lessonFile, "Lesson", declaredPacks);
     if (lesson) {
       validateMetadata(lessonSchema, lesson.data, lessonFile, "Lesson");
       alignment.registerOutcomeReferences({
@@ -415,7 +674,11 @@ async function validateCourse(courseEntry) {
 
   const overviewFile = path.join(courseDir, "index.mdx");
   const overview = await readRequiredMdx(overviewFile, "Course");
-  validateLearnerSource(overview, overviewFile, "Course");
+  const declaredPacks = validateCapabilityPackDependencies(
+    overview?.data.capabilityPacks,
+    overviewFile,
+  );
+  validateLearnerSource(overview, overviewFile, "Course", declaredPacks);
   const alignment = createOutcomeAlignment({
     courseOutcomes: overview?.data.outcomes,
     courseFile: overviewFile,
@@ -430,7 +693,12 @@ async function validateCourse(courseEntry) {
     capstoneFile,
     "Capstone Demonstration",
   );
-  validateLearnerSource(capstone, capstoneFile, "Capstone Demonstration");
+  validateLearnerSource(
+    capstone,
+    capstoneFile,
+    "Capstone Demonstration",
+    declaredPacks,
+  );
   if (capstone) {
     validateMetadata(
       capstoneSchema,
@@ -444,8 +712,9 @@ async function validateCourse(courseEntry) {
       label: "Capstone Demonstration",
       outcomeIds: capstone.data.outcomes,
     });
-    for (const [index, criterion] of (
-      Array.isArray(capstone.data.criteria) ? capstone.data.criteria : []
+    for (const [index, criterion] of (Array.isArray(capstone.data.criteria)
+      ? capstone.data.criteria
+      : []
     ).entries()) {
       alignment.registerOutcomeReferences({
         evidenceKind: outcomeEvidence.capstoneCriterion,
@@ -457,9 +726,11 @@ async function validateCourse(courseEntry) {
     counts.capstones += 1;
   }
 
-  await validateArtifact(
-    path.join(courseDir, "_authoring", "brief.md"),
-    "Course Brief at _authoring/brief.md",
+  const briefFile = path.join(courseDir, "_authoring", "brief.md");
+  await validateArtifact(briefFile, "Course Brief at _authoring/brief.md");
+  await validateCourseBriefCapabilityPacks(
+    briefFile,
+    overview?.data.capabilityPacks,
   );
   await validateArtifact(
     path.join(courseDir, "_authoring", "blueprint.md"),
@@ -488,6 +759,7 @@ async function validateCourse(courseEntry) {
       courseLessonSlugs,
       moduleEntry,
       alignment,
+      declaredPacks,
     );
     if (moduleSource) {
       validateOrder(

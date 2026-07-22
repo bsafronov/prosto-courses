@@ -2,6 +2,22 @@ import { z } from "astro/zod";
 
 const nonEmptyString = z.string().trim().min(1);
 const outcomeId = nonEmptyString.regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
+const capabilityPackName = nonEmptyString.regex(
+  /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+  "Capability Pack name must use lowercase words separated by hyphens",
+);
+const exactVersion = nonEmptyString.regex(
+  /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/,
+  "Capability Pack version must be an exact semantic version",
+);
+export const capabilityPackDependenciesSchema = z.array(
+  z
+    .object({
+      name: capabilityPackName,
+      version: exactVersion,
+    })
+    .strict(),
+);
 const date = z.coerce.date();
 const lessonTime = z
   .object({
@@ -45,7 +61,7 @@ export const courseSchema = z
       )
       .min(1),
     createdAt: date,
-    capabilityPacks: z.array(nonEmptyString),
+    capabilityPacks: capabilityPackDependenciesSchema,
     freshness,
   })
   .strict();

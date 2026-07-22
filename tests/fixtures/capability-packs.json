@@ -1,0 +1,29 @@
+{
+  "manifestVersion": 1,
+  "baseCatalog": {
+    "version": "1.0.0",
+    "components": [
+      "Callout",
+      "KnowledgeCheck",
+      "PracticeTask",
+      "TaskSolution",
+      "TaskRubric",
+      "Reflection",
+      "Diagram",
+      "Chart"
+    ]
+  },
+  "packs": [
+    {
+      "name": "fixture-lab",
+      "version": "1.2.0",
+      "components": [
+        {
+          "name": "FixtureLab",
+          "runtimes": ["fixture-runtime"],
+          "services": ["fixture-service"]
+        }
+      ]
+    }
+  ]
+}

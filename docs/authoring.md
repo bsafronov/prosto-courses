@@ -63,6 +63,16 @@ Create `_authoring/brief.md`. It is versioned but never learner-facing. It must 
 
 Do not design the Course structure until the Course Owner explicitly approves the Course Brief.
 
+When Capability Packs are required, confirm the same exact dependencies in Course Brief frontmatter:
+
+```yaml
+---
+capabilityPacks:
+  - name: approved-pack-name
+    version: 1.2.0
+---
+```
+
 ### 3. Agree the Course Blueprint
 
 Create `_authoring/blueprint.md`. It is versioned but never learner-facing. It must contain:
@@ -189,7 +199,7 @@ Rules:
 - `prerequisites` are observable capabilities, not vague labels such as “basic knowledge.”
 - Each outcome has a unique stable lowercase-hyphen ID and an observable statement.
 - `createdAt` is the original Course creation date and never changes.
-- `capabilityPacks` contains explicit versioned pack identifiers when required.
+- `capabilityPacks` contains exact `{ name, version }` dependencies when required. Names and versions must match the platform manifest; version ranges and combined strings such as `pack@1.2.0` are invalid.
 - `freshness.mode` is `stable` or `time-sensitive`.
 - `verifiedAt` records factual verification, not the last file edit.
 - `reviewAfter` is required for time-sensitive content.
@@ -411,7 +421,8 @@ Example:
     {
       id: "liability-total",
       text: "Увеличилась сумма обязательств",
-      feedback: "Оплата собственными деньгами не создаёт обязательство перед кредитором.",
+      feedback:
+        "Оплата собственными деньгами не создаёт обязательство перед кредитором.",
     },
   ]}
   answer="asset-composition"
@@ -468,7 +479,8 @@ Rules:
     criteria={[
       {
         criterion: "Причина расхождения установлена",
-        evidence: "Объяснение связывает конкретную операцию с двумя затронутыми счетами",
+        evidence:
+          "Объяснение связывает конкретную операцию с двумя затронутыми счетами",
       },
     ]}
   />
@@ -537,7 +549,11 @@ The Authoring Agent selects meaning, never a color. The platform supplies consis
 <Reflection
   prompt="Какое предположение в твоём первоначальном решении оказалось неверным?"
   outcomes={["reconcile-balance"]}
-  guidance={["Назови предположение", "Опиши наблюдаемый симптом", "Сформулируй новое правило"]}
+  guidance={[
+    "Назови предположение",
+    "Опиши наблюдаемый симптом",
+    "Сформулируй новое правило",
+  ]}
 />
 ```
 
@@ -552,7 +568,17 @@ Versioned Capability Packs extend the base catalog for bounded needs such as:
 - interactive simulation;
 - audio or video with transcripts.
 
+When the platform manifest makes a pack available, declare its name and exact version separately:
+
+```yaml
+capabilityPacks:
+  - name: approved-pack-name
+    version: 1.2.0
+```
+
 The Course Brief must name the exact pack and supported version. Do not assume a language runtime, external service, or media feature that the platform has not declared.
+
+The platform-owned manifest is [`platform/capability-packs.json`](../platform/capability-packs.json). Its `manifestVersion` versions the dependency contract, `baseCatalog` records the components available without a pack, and `packs` maps each available exact pack version to its components and any supported runtime or service identifiers. The default manifest intentionally contains no specialized packs. Platform maintainers can validate against a candidate manifest by setting `CAPABILITY_PACK_MANIFEST`; Course source cannot select or replace the manifest.
 
 ## Learning Visuals
 

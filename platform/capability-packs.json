@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "baseCatalog": {
+    "version": "1.0.0",
+    "components": [
+      "Callout",
+      "KnowledgeCheck",
+      "PracticeTask",
+      "TaskSolution",
+      "TaskRubric",
+      "Reflection",
+      "Diagram",
+      "Chart"
+    ]
+  },
+  "packs": []
+}

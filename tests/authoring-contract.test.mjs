@@ -14,12 +14,20 @@ const canonicalCoursePath = fileURLToPath(
   new URL("../src/content/courses", import.meta.url),
 );
 
-async function validateContent(contentPath) {
+async function validateContent(contentPath, { capabilityPackManifest } = {}) {
   try {
     const result = await execFileAsync(
       process.execPath,
       ["scripts/validate-content.mjs", contentPath],
-      { cwd: fileURLToPath(new URL("..", import.meta.url)) },
+      {
+        cwd: fileURLToPath(new URL("..", import.meta.url)),
+        env: {
+          ...process.env,
+          ...(capabilityPackManifest
+            ? { CAPABILITY_PACK_MANIFEST: capabilityPackManifest }
+            : {}),
+        },
+      },
     );
     return { exitCode: 0, output: result.stdout + result.stderr };
   } catch (error) {
@@ -32,7 +40,7 @@ async function validateContent(contentPath) {
 
 const validateFixture = (name) => validateContent(fixturePath(name));
 
-async function withChangedValidCourse(changes, run) {
+async function withChangedValidCourse(changes, run, options) {
   const root = await mkdtemp(path.join(tmpdir(), "prosto-authoring-contract-"));
   const course = path.join(root, "accessible-images");
   await cp(fixturePath("valid-course/accessible-images"), course, {
@@ -44,7 +52,7 @@ async function withChangedValidCourse(changes, run) {
       const file = path.join(course, relativePath);
       await writeFile(file, change(await readFile(file, "utf8")));
     }
-    await run(await validateContent(root));
+    await run(await validateContent(root, options));
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -68,6 +76,190 @@ test("accepts a fresh Course through the public authoring contract", async () =>
   );
 });
 
+test("accepts an available Capability Pack dependency and its components", async () => {
+  await withChangedValidCourse(
+    {
+      "index.mdx": (source) =>
+        source.replace(
+          "capabilityPacks: []",
+          "capabilityPacks:\n  - name: fixture-lab\n    version: 1.2.0",
+        ),
+      "_authoring/brief.md": (source) =>
+        `---\ncapabilityPacks:\n  - name: fixture-lab\n    version: 1.2.0\n---\n${source}`,
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<FixtureLab runtime="fixture-runtime" service="fixture-service" />\n`,
+    },
+    (result) => assert.equal(result.exitCode, 0, result.output),
+    { capabilityPackManifest: fixturePath("capability-packs.json") },
+  );
+});
+
+test("rejects a Capability Pack not confirmed by the Course Brief", async () => {
+  await withChangedValidCourse(
+    {
+      "index.mdx": (source) =>
+        source.replace(
+          "capabilityPacks: []",
+          "capabilityPacks:\n  - name: fixture-lab\n    version: 1.2.0",
+        ),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Course Brief must confirm Capability Pack fixture-lab version 1\.2\.0/i,
+      );
+    },
+    { capabilityPackManifest: fixturePath("capability-packs.json") },
+  );
+});
+
+test("rejects an invented Capability Pack declared only by the Course Brief", async () => {
+  await withChangedValidCourse(
+    {
+      "_authoring/brief.md": (source) =>
+        `---\ncapabilityPacks:\n  - name: invented-pack\n    version: 1.0.0\n---\n${source}`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Capability Pack invented-pack is not available in platform manifest version 1/i,
+      );
+      assert.match(
+        result.output,
+        /Course Brief Capability Pack invented-pack version 1\.0\.0 must also be declared in Course metadata/i,
+      );
+    },
+    { capabilityPackManifest: fixturePath("capability-packs.json") },
+  );
+});
+
+test("rejects unknown Capability Pack names", async () => {
+  await withChangedValidCourse(
+    {
+      "index.mdx": (source) =>
+        source.replace(
+          "capabilityPacks: []",
+          "capabilityPacks:\n  - name: invented-pack\n    version: 1.0.0",
+        ),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Capability Pack invented-pack is not available in platform manifest version 1/i,
+      );
+    },
+    { capabilityPackManifest: fixturePath("capability-packs.json") },
+  );
+});
+
+test("rejects unsupported Capability Pack versions", async () => {
+  await withChangedValidCourse(
+    {
+      "index.mdx": (source) =>
+        source.replace(
+          "capabilityPacks: []",
+          "capabilityPacks:\n  - name: fixture-lab\n    version: 2.0.0",
+        ),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Capability Pack fixture-lab version 2\.0\.0 is unsupported; available versions: 1\.2\.0/i,
+      );
+    },
+    { capabilityPackManifest: fixturePath("capability-packs.json") },
+  );
+});
+
+test("rejects components from an undeclared Capability Pack", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<FixtureLab prompt="Missing Course dependency" />\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /FixtureLab requires Capability Pack fixture-lab version 1\.2\.0 to be declared in Course metadata/i,
+      );
+    },
+    { capabilityPackManifest: fixturePath("capability-packs.json") },
+  );
+});
+
+test("rejects invented components", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<InventedComponent />\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /InventedComponent is not a base Semantic Course Component or an available Capability Pack component/i,
+      );
+    },
+  );
+});
+
+test("rejects runtimes and services not declared by an available dependency", async () => {
+  await withChangedValidCourse(
+    {
+      "index.mdx": (source) =>
+        source.replace(
+          "capabilityPacks: []",
+          "capabilityPacks:\n  - name: fixture-lab\n    version: 1.2.0",
+        ),
+      "_authoring/brief.md": (source) =>
+        `---\ncapabilityPacks:\n  - name: fixture-lab\n    version: 1.2.0\n---\n${source}`,
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<FixtureLab prompt="x > y" runtime="python" service="invented.example" />\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /FixtureLab runtime python is not declared by Capability Pack fixture-lab version 1\.2\.0/i,
+      );
+      assert.match(
+        result.output,
+        /FixtureLab service invented\.example is not declared by Capability Pack fixture-lab version 1\.2\.0/i,
+      );
+    },
+    { capabilityPackManifest: fixturePath("capability-packs.json") },
+  );
+});
+
+test("rejects spread props that can hide undeclared runtimes or services", async () => {
+  await withChangedValidCourse(
+    {
+      "index.mdx": (source) =>
+        source.replace(
+          "capabilityPacks: []",
+          "capabilityPacks:\n  - name: fixture-lab\n    version: 1.2.0",
+        ),
+      "_authoring/brief.md": (source) =>
+        `---\ncapabilityPacks:\n  - name: fixture-lab\n    version: 1.2.0\n---\n${source}`,
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<FixtureLab {...{ runtime: "python", service: "invented.example" }} />\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /FixtureLab must use explicit static props; spread props can hide undeclared runtimes or services/i,
+      );
+    },
+    { capabilityPackManifest: fixturePath("capability-packs.json") },
+  );
+});
+
 test("rejects a Course Learning Outcome that no Lesson teaches", async () => {
   const result = await validateFixture("untaught-outcome");
   assert.notEqual(result.exitCode, 0);
@@ -87,7 +279,9 @@ test("rejects a taught outcome omitted by its Module Checkpoint", async () => {
 });
 
 test("rejects a Course Learning Outcome omitted by Capstone criteria", async () => {
-  const result = await validateFixture("outcome-missing-from-capstone-criteria");
+  const result = await validateFixture(
+    "outcome-missing-from-capstone-criteria",
+  );
   assert.notEqual(result.exitCode, 0);
   assert.match(
     result.output,
@@ -163,7 +357,10 @@ test("reports a missing Module Checkpoint at its authored path", async () => {
 test("rejects the legacy flat Course and Lesson structure", async () => {
   const result = await validateFixture("legacy-course");
   assert.notEqual(result.exitCode, 0);
-  assert.match(result.output, /legacy flat Course\/Lesson structure is not supported/i);
+  assert.match(
+    result.output,
+    /legacy flat Course\/Lesson structure is not supported/i,
+  );
 });
 
 test("rejects Course metadata that the strict collection cannot load", async () => {
@@ -261,9 +458,18 @@ for (const [fixture, example] of fencedExamples) {
 
 const invalidFixtures = [
   ["duplicate-module-order", "duplicate Module order 1"],
-  ["module-order-gap", "Module order must be unique and contiguous starting at 1"],
-  ["duplicate-lesson-slug", "Lesson slug shared-lesson collides across the Course"],
-  ["missing-authoring-artifact", "quality report at _authoring/quality-report.md"],
+  [
+    "module-order-gap",
+    "Module order must be unique and contiguous starting at 1",
+  ],
+  [
+    "duplicate-lesson-slug",
+    "Lesson slug shared-lesson collides across the Course",
+  ],
+  [
+    "missing-authoring-artifact",
+    "quality report at _authoring/quality-report.md",
+  ],
   ["missing-course-metadata", "summary"],
   ["missing-lesson-metadata", "title"],
   ["orphan-lesson", "must belong to a Course Module"],
