@@ -53,6 +53,18 @@ test("rejects the legacy flat Course and Lesson structure", async () => {
   assert.match(result.output, /legacy flat Course\/Lesson structure is not supported/i);
 });
 
+test("rejects Course metadata that the strict collection cannot load", async () => {
+  const result = await validateFixture("missing-course-metadata");
+  assert.notEqual(result.exitCode, 0);
+  assert.match(result.output, /learnerProfile/i);
+});
+
+test("rejects Lesson metadata that the strict collection cannot load", async () => {
+  const result = await validateFixture("missing-lesson-metadata");
+  assert.notEqual(result.exitCode, 0);
+  assert.match(result.output, /revision/i);
+});
+
 const fencedExamples = [
   ["fenced-import-example", "import"],
   ["fenced-knowledge-check-example", "Knowledge Check"],

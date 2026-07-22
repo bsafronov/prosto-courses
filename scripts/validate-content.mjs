@@ -26,6 +26,172 @@ function requiredString(data, field, file, owner) {
   }
 }
 
+function validateAllowedFields(data, allowedFields, file, owner) {
+  for (const field of Object.keys(data)) {
+    if (!allowedFields.includes(field)) {
+      report(file, `${owner} frontmatter does not allow a ${field} field`);
+    }
+  }
+}
+
+function validateStringArray(data, field, file, owner, { min = 0 } = {}) {
+  const value = data[field];
+  if (
+    !Array.isArray(value) ||
+    value.length < min ||
+    value.some((item) => typeof item !== "string" || item.trim() === "")
+  ) {
+    const size = min > 0 ? "a non-empty" : "an";
+    report(file, `${owner} frontmatter requires ${size} ${field} list of strings`);
+    return false;
+  }
+  return true;
+}
+
+function validateOutcomeIds(data, file, owner) {
+  if (!validateStringArray(data, "outcomes", file, owner, { min: 1 })) return;
+  for (const outcome of data.outcomes) {
+    if (!slugPattern.test(outcome)) {
+      report(file, `${owner} outcome IDs must use lowercase hyphenated words`);
+    }
+  }
+}
+
+function isDate(value) {
+  if (!(value instanceof Date) && typeof value !== "string" && typeof value !== "number") {
+    return false;
+  }
+  return !Number.isNaN(new Date(value).valueOf());
+}
+
+function validateDate(data, field, file, owner) {
+  if (!isDate(data[field])) {
+    report(file, `${owner} frontmatter requires a valid ${field} date`);
+  }
+}
+
+function validateFreshness(value, file, owner) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    report(file, `${owner} frontmatter requires freshness metadata`);
+    return;
+  }
+  const allowedFields = value.mode === "time-sensitive"
+    ? ["mode", "verifiedAt", "reviewAfter", "jurisdiction"]
+    : ["mode", "verifiedAt", "jurisdiction"];
+  validateAllowedFields(value, allowedFields, file, `${owner} freshness`);
+  if (value.mode !== "stable" && value.mode !== "time-sensitive") {
+    report(file, `${owner} freshness mode must be stable or time-sensitive`);
+  }
+  validateDate(value, "verifiedAt", file, `${owner} freshness`);
+  if (value.mode === "time-sensitive") {
+    validateDate(value, "reviewAfter", file, `${owner} freshness`);
+  }
+  if (
+    Object.hasOwn(value, "jurisdiction") &&
+    (typeof value.jurisdiction !== "string" || value.jurisdiction.trim() === "")
+  ) {
+    report(file, `${owner} freshness jurisdiction must be a non-empty string`);
+  }
+}
+
+function validateLessonTime(value, file) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    report(file, "Lesson frontmatter requires time estimates");
+    return;
+  }
+  validateAllowedFields(value, ["study", "practice", "advanced"], file, "Lesson time");
+  for (const field of ["study", "practice"]) {
+    if (!Number.isInteger(value[field]) || value[field] < 0) {
+      report(file, `Lesson time ${field} must be a non-negative integer`);
+    }
+  }
+  if (
+    Object.hasOwn(value, "advanced") &&
+    (!Number.isInteger(value.advanced) || value.advanced < 0)
+  ) {
+    report(file, "Lesson time advanced must be a non-negative integer");
+  }
+}
+
+function validateCourseMetadata(data, file) {
+  validateAllowedFields(
+    data,
+    [
+      "title",
+      "summary",
+      "learnerProfile",
+      "prerequisites",
+      "outcomes",
+      "createdAt",
+      "capabilityPacks",
+      "freshness",
+    ],
+    file,
+    "Course",
+  );
+  requiredString(data, "summary", file, "Course");
+  requiredString(data, "learnerProfile", file, "Course");
+  validateStringArray(data, "prerequisites", file, "Course");
+  validateStringArray(data, "capabilityPacks", file, "Course");
+  validateDate(data, "createdAt", file, "Course");
+  validateFreshness(data.freshness, file, "Course");
+
+  if (!Array.isArray(data.outcomes) || data.outcomes.length === 0) {
+    report(file, "Course frontmatter requires a non-empty outcomes list");
+  } else {
+    for (const outcome of data.outcomes) {
+      if (!outcome || typeof outcome !== "object" || Array.isArray(outcome)) {
+        report(file, "Course outcomes require id and statement fields");
+        continue;
+      }
+      validateAllowedFields(outcome, ["id", "statement"], file, "Course outcome");
+      requiredString(outcome, "id", file, "Course outcome");
+      requiredString(outcome, "statement", file, "Course outcome");
+      if (typeof outcome.id === "string" && !slugPattern.test(outcome.id)) {
+        report(file, "Course outcome id must use lowercase hyphenated words");
+      }
+    }
+  }
+}
+
+function validateModuleMetadata(data, file) {
+  validateAllowedFields(
+    data,
+    ["title", "summary", "order", "capability", "outcomes"],
+    file,
+    "Module",
+  );
+  requiredString(data, "summary", file, "Module");
+  requiredString(data, "capability", file, "Module");
+  validateOutcomeIds(data, file, "Module");
+}
+
+function validateLessonMetadata(data, file) {
+  validateAllowedFields(
+    data,
+    ["title", "order", "revision", "capability", "outcomes", "time", "freshness"],
+    file,
+    "Lesson",
+  );
+  if (!Number.isInteger(data.revision) || data.revision < 1) {
+    report(file, "Lesson revision must be a positive integer");
+  }
+  requiredString(data, "capability", file, "Lesson");
+  validateOutcomeIds(data, file, "Lesson");
+  validateLessonTime(data.time, file);
+  if (Object.hasOwn(data, "freshness")) {
+    validateFreshness(data.freshness, file, "Lesson");
+  }
+}
+
+function validateAssessmentMetadata(data, file, owner) {
+  validateAllowedFields(data, ["title", "outcomes", "time"], file, owner);
+  validateOutcomeIds(data, file, owner);
+  if (!Number.isInteger(data.time) || data.time < 1) {
+    report(file, `${owner} time must be a positive integer`);
+  }
+}
+
 function validateSlug(slug, file, owner) {
   if (!slugPattern.test(slug)) {
     report(file, `${owner} slug must use lowercase URL-safe words separated by hyphens`);
@@ -271,12 +437,15 @@ async function validateModule(courseDir, courseLessonSlugs, moduleEntry) {
   const moduleFile = path.join(moduleDir, "index.mdx");
   const moduleSource = await readRequiredMdx(moduleFile, "Module");
   validateLearnerSource(moduleSource, moduleFile, "Module");
-  if (moduleSource) requiredString(moduleSource.data, "summary", moduleFile, "Module");
+  if (moduleSource) validateModuleMetadata(moduleSource.data, moduleFile);
 
   const checkpointFile = path.join(moduleDir, "checkpoint.mdx");
   const checkpoint = await readRequiredMdx(checkpointFile, "Module Checkpoint");
   validateLearnerSource(checkpoint, checkpointFile, "Module Checkpoint");
-  if (checkpoint) counts.checkpoints += 1;
+  if (checkpoint) {
+    validateAssessmentMetadata(checkpoint.data, checkpointFile, "Module Checkpoint");
+    counts.checkpoints += 1;
+  }
 
   const lessonsDir = path.join(moduleDir, "lessons");
   const lessonEntries = (await directoryEntries(lessonsDir)).filter(
@@ -303,7 +472,10 @@ async function validateModule(courseDir, courseLessonSlugs, moduleEntry) {
 
     const lesson = await readMdx(lessonFile);
     validateLearnerSource(lesson, lessonFile, "Lesson");
-    if (lesson) validateOrder(lesson.data, lessonFile, "Lesson", lessonOrders);
+    if (lesson) {
+      validateLessonMetadata(lesson.data, lessonFile);
+      validateOrder(lesson.data, lessonFile, "Lesson", lessonOrders);
+    }
   }
   validateContiguousOrders(lessonOrders, lessonEntries.length, lessonsDir, "Lesson");
 
@@ -318,20 +490,15 @@ async function validateCourse(courseEntry) {
   const overviewFile = path.join(courseDir, "index.mdx");
   const overview = await readRequiredMdx(overviewFile, "Course");
   validateLearnerSource(overview, overviewFile, "Course");
-  if (overview) {
-    requiredString(overview.data, "summary", overviewFile, "Course");
-    if (Object.hasOwn(overview.data, "language")) {
-      report(overviewFile, "Course frontmatter does not allow a language field");
-    }
-    if (!Array.isArray(overview.data.outcomes) || overview.data.outcomes.length === 0) {
-      report(overviewFile, "Course frontmatter requires a non-empty outcomes list");
-    }
-  }
+  if (overview) validateCourseMetadata(overview.data, overviewFile);
 
   const capstoneFile = path.join(courseDir, "capstone.mdx");
   const capstone = await readRequiredMdx(capstoneFile, "Capstone Demonstration");
   validateLearnerSource(capstone, capstoneFile, "Capstone Demonstration");
-  if (capstone) counts.capstones += 1;
+  if (capstone) {
+    validateAssessmentMetadata(capstone.data, capstoneFile, "Capstone Demonstration");
+    counts.capstones += 1;
+  }
 
   await validateArtifact(
     path.join(courseDir, "_authoring", "brief.md"),

@@ -42,7 +42,7 @@ type Props = {
   tree: CourseTree;
 };
 
-const { course, checkpoint, tree } = Astro.props;
+const { course, checkpoint, tree }: Props = Astro.props;
 const slug = checkpointModuleSlug(checkpoint);
 const moduleIndex = tree.modules.findIndex(
   (candidate) => moduleSlug(candidate.module) === slug,

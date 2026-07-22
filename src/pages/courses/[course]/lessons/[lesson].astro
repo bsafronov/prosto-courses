@@ -39,7 +39,7 @@ type Props = {
   lesson: CollectionEntry<"lessons">;
   tree: CourseTree;
 };
-const { course, lesson, tree } = Astro.props;
+const { course, lesson, tree }: Props = Astro.props;
 const { Content } = await render(lesson);
 const slug = lessonSlug(lesson);
 const currentModule = tree.modules.find(

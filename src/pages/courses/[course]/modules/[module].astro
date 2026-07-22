@@ -41,7 +41,7 @@ type Props = {
   tree: CourseTree;
 };
 
-const { course, module, tree } = Astro.props;
+const { course, module, tree }: Props = Astro.props;
 const current = tree.modules.find(
   (candidate) => candidate.module.id === module.id,
 ) as CourseModule;

@@ -21,8 +21,15 @@ const idPart = (id: string, index: number) => id.split("/")[index];
 export const moduleCourseSlug = (module: ModuleEntry) => idPart(module.id, 0);
 export const moduleSlug = (module: ModuleEntry) => idPart(module.id, 1);
 export const lessonCourseSlug = (lesson: LessonEntry) => idPart(lesson.id, 0);
-export const lessonModuleSlug = (lesson: LessonEntry) => idPart(lesson.id, 1);
-export const lessonSlug = (lesson: LessonEntry) => idPart(lesson.id, 2);
+export const lessonSlug = (lesson: LessonEntry) => idPart(lesson.id, 1);
+export function lessonModuleSlug(lesson: LessonEntry) {
+  const normalizedPath = lesson.filePath?.replaceAll("\\", "/") ?? "";
+  const match = normalizedPath.match(
+    /(?:^|\/)modules\/([^/]+)\/lessons\/[^/]+\.mdx$/,
+  );
+  if (!match) throw new Error(`Lesson ${lesson.id} has no Module-owned source path`);
+  return match[1];
+}
 export const checkpointCourseSlug = (checkpoint: CheckpointEntry) =>
   idPart(checkpoint.id, 0);
 export const checkpointModuleSlug = (checkpoint: CheckpointEntry) =>

@@ -69,8 +69,8 @@ const lessons = defineCollection({
     base,
     pattern: "*/modules/*/lessons/*.mdx",
     generateId: ({ entry }) => {
-      const [courseSlug, , moduleSlug, , filename] = entry.split("/");
-      return `${courseSlug}/${moduleSlug}/${filename.replace(/\.mdx$/, "")}`;
+      const [courseSlug, , , , filename] = entry.split("/");
+      return `${courseSlug}/${filename.replace(/\.mdx$/, "")}`;
     },
   }),
   schema: z.object({
