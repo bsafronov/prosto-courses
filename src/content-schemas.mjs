@@ -79,3 +79,16 @@ export const assessmentSchema = z
     time: z.number().int().positive(),
   })
   .strict();
+
+export const capstoneSchema = assessmentSchema.extend({
+  criteria: z
+    .array(
+      z
+        .object({
+          statement: nonEmptyString,
+          outcomes: z.array(outcomeId).min(1),
+        })
+        .strict(),
+    )
+    .min(1),
+});

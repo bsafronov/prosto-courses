@@ -60,6 +60,18 @@ test("learner traverses the complete Course tree from Catalog to Capstone", asyn
       name: "Понятная инструкция в Markdown",
     }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Критерии готовности" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("list", { name: "Критерии итоговой работы" })
+      .getByRole("listitem"),
+  ).toContainText([
+    "Назначение Markdown объяснено",
+    "Инструкция разделена заголовками",
+    "Ссылки и фрагменты кода записаны однозначно",
+  ]);
 });
 
 test("learner reads the first Lesson from the Course Catalog", async (

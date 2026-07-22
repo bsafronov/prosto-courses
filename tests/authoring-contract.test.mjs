@@ -47,6 +47,98 @@ test("accepts a fresh Course through the public authoring contract", async () =>
   );
 });
 
+test("rejects a Course Learning Outcome that no Lesson teaches", async () => {
+  const result = await validateFixture("untaught-outcome");
+  assert.notEqual(result.exitCode, 0);
+  assert.match(
+    result.output,
+    /course\/index\.mdx: Learning Outcome untaught-outcome is not taught by any Lesson/i,
+  );
+});
+
+test("rejects a taught outcome omitted by its Module Checkpoint", async () => {
+  const result = await validateFixture("outcome-missing-from-checkpoint");
+  assert.notEqual(result.exitCode, 0);
+  assert.match(
+    result.output,
+    /modules\/module\/checkpoint\.mdx: Module Checkpoint does not cover taught Learning Outcome unchecked-outcome/i,
+  );
+});
+
+test("rejects a Course Learning Outcome omitted by Capstone criteria", async () => {
+  const result = await validateFixture("outcome-missing-from-capstone-criteria");
+  assert.notEqual(result.exitCode, 0);
+  assert.match(
+    result.output,
+    /capstone\.mdx: Learning Outcome undemonstrated-outcome is not demonstrated by any Capstone criterion/i,
+  );
+});
+
+test("rejects a Course Learning Outcome omitted by Capstone metadata", async () => {
+  const result = await validateFixture("outcome-missing-from-capstone");
+  assert.notEqual(result.exitCode, 0);
+  assert.match(
+    result.output,
+    /capstone\.mdx: Capstone Demonstration does not support Learning Outcome omitted-capstone-outcome/i,
+  );
+});
+
+test("rejects duplicate outcome declarations and references at their authored sources", async () => {
+  const result = await validateFixture("duplicate-course-outcome");
+  assert.notEqual(result.exitCode, 0);
+  for (const expectedMessage of [
+    /course\/index\.mdx: duplicate Course Learning Outcome ID shared-outcome/i,
+    /modules\/module\/index\.mdx: Module has duplicate Learning Outcome ID shared-outcome/i,
+    /checkpoint\.mdx: Module Checkpoint has duplicate Learning Outcome ID shared-outcome/i,
+    /lesson\.mdx: Lesson has duplicate Learning Outcome ID shared-outcome/i,
+    /capstone\.mdx: Capstone Demonstration has duplicate Learning Outcome ID shared-outcome/i,
+    /capstone\.mdx: Capstone criterion 1 has duplicate Learning Outcome ID shared-outcome/i,
+  ]) {
+    assert.match(result.output, expectedMessage);
+  }
+});
+
+test("rejects unknown outcome references at every authored source", async () => {
+  const result = await validateFixture("unknown-lesson-outcome");
+  assert.notEqual(result.exitCode, 0);
+  for (const expectedMessage of [
+    /modules\/module\/index\.mdx: Module references unknown Course Learning Outcome ID missing-module-outcome/i,
+    /checkpoint\.mdx: Module Checkpoint references unknown Course Learning Outcome ID missing-checkpoint-outcome/i,
+    /lesson\.mdx: Lesson references unknown Course Learning Outcome ID missing-lesson-outcome/i,
+    /capstone\.mdx: Capstone Demonstration references unknown Course Learning Outcome ID missing-capstone-outcome/i,
+    /capstone\.mdx: Capstone criterion 1 references unknown Course Learning Outcome ID missing-criterion-outcome/i,
+  ]) {
+    assert.match(result.output, expectedMessage);
+  }
+});
+
+test("rejects learner-facing Course parts without outcome references", async () => {
+  const result = await validateFixture("unaligned-lesson");
+  assert.notEqual(result.exitCode, 0);
+  for (const expectedMessage of [
+    /modules\/module\/index\.mdx: Module must support at least one Course Learning Outcome/i,
+    /checkpoint\.mdx: Module Checkpoint must support at least one Course Learning Outcome/i,
+    /lesson\.mdx: Lesson must support at least one Course Learning Outcome/i,
+    /capstone\.mdx: Capstone Demonstration must support at least one Course Learning Outcome/i,
+    /capstone\.mdx: Capstone criterion 1 must support at least one Course Learning Outcome/i,
+  ]) {
+    assert.match(result.output, expectedMessage);
+  }
+});
+
+test("reports a missing Module Checkpoint at its authored path", async () => {
+  const result = await validateFixture("missing-checkpoint-source");
+  assert.notEqual(result.exitCode, 0);
+  assert.match(
+    result.output,
+    /modules\/module\/checkpoint\.mdx: Module Checkpoint source is required/i,
+  );
+  assert.match(
+    result.output,
+    /modules\/module\/checkpoint\.mdx: Module Checkpoint must support at least one Course Learning Outcome/i,
+  );
+});
+
 test("rejects the legacy flat Course and Lesson structure", async () => {
   const result = await validateFixture("legacy-course");
   assert.notEqual(result.exitCode, 0);

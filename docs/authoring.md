@@ -244,7 +244,26 @@ Rules:
 
 ### Module Checkpoint and Capstone metadata
 
-`checkpoint.mdx` and `capstone.mdx` require `title`, `outcomes`, and `time`. Their outcome IDs must belong to the Course. A Module Checkpoint covers its Module capability. The Capstone covers every Course Learning Outcome.
+`checkpoint.mdx` requires `title`, `outcomes`, and `time`. Its outcome IDs must belong to the Course, and it must cover every Learning Outcome taught by Lessons in its Module.
+
+`capstone.mdx` requires `title`, `outcomes`, `criteria`, and `time`:
+
+```mdx
+---
+title: Сверка оборотно-сальдовой ведомости
+outcomes:
+  - reconcile-balance
+criteria:
+  - statement: Причина расхождения установлена и связана с конкретной операцией
+    outcomes:
+      - reconcile-balance
+time: 45
+---
+```
+
+Each Capstone criterion has an observable learner-facing `statement` and at least one Course Learning Outcome ID. The Capstone and its criteria collectively cover every Course Learning Outcome.
+
+The public validator rejects unknown or duplicate references, learner-facing Course parts with no Learning Outcome, outcomes not taught by a Lesson, outcomes omitted by the appropriate Module Checkpoint, and outcomes not demonstrated by a Capstone criterion. These rules form the shared Outcome Alignment model that later Knowledge Check, Practice Task, and Reflection validation extends.
 
 The platform calculates Course duration, counts, aggregated Content Freshness, navigation, and Course Completion.
 

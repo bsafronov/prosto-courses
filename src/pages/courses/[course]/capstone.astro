@@ -64,6 +64,12 @@ const { Content } = await render(capstone);
         <p>{course.data.title}</p>
       </header>
       <div class="prose"><Content components={{ KnowledgeCheck }} /></div>
+      <section class="capstone-criteria">
+        <h2>Критерии готовности</h2>
+        <ul aria-label="Критерии итоговой работы">
+          {capstone.data.criteria.map((criterion) => <li>{criterion.statement}</li>)}
+        </ul>
+      </section>
       <nav class="sequence" aria-label="Последовательность курса">
         <a href={checkpointPath(course.id, moduleSlug(finalModule.module))}>
           ← Проверка Модуля: {finalModule.checkpoint.data.title}
@@ -83,6 +89,9 @@ const { Content } = await render(capstone);
   header { padding: 1.4rem 0 1.8rem; border-bottom: 1px solid var(--color-border); }
   h1 { margin: .15rem 0 .6rem; font-size: clamp(2.2rem, 6vw, 3.6rem); line-height: 1.08; letter-spacing: -.045em; }
   .prose { padding-top: 1rem; }
+  .capstone-criteria { margin-top: 2rem; padding: 1.2rem 1.4rem; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
+  .capstone-criteria h2 { margin-top: 0; }
+  .capstone-criteria li + li { margin-top: .55rem; }
   .sequence { display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--color-border); margin-top: 2.5rem; padding-top: 1.5rem; }
   .sequence a { font-weight: 750; }
   .sequence a:last-child { margin-left: auto; text-align: right; }

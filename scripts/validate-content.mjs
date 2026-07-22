@@ -4,10 +4,15 @@ import process from "node:process";
 import matter from "gray-matter";
 import {
   assessmentSchema,
+  capstoneSchema,
   courseSchema,
   lessonSchema,
   moduleSchema,
 } from "../src/content-schemas.mjs";
+import {
+  createOutcomeAlignment,
+  outcomeEvidence,
+} from "../src/outcome-alignment.mjs";
 
 const contentRoot = path.resolve(
   process.argv[2] ?? process.env.COURSE_CONTENT_ROOT ?? "src/content/courses",
@@ -314,7 +319,12 @@ async function directoryEntries(directory) {
   }
 }
 
-async function validateModule(courseDir, courseLessonSlugs, moduleEntry) {
+async function validateModule(
+  courseDir,
+  courseLessonSlugs,
+  moduleEntry,
+  alignment,
+) {
   const moduleDir = path.join(courseDir, "modules", moduleEntry.name);
   validateSlug(moduleEntry.name, moduleDir, "Module");
 
@@ -323,6 +333,13 @@ async function validateModule(courseDir, courseLessonSlugs, moduleEntry) {
   validateLearnerSource(moduleSource, moduleFile, "Module");
   if (moduleSource)
     validateMetadata(moduleSchema, moduleSource.data, moduleFile, "Module");
+  if (moduleSource) {
+    alignment.registerOutcomeReferences({
+      file: moduleFile,
+      label: "Module",
+      outcomeIds: moduleSource.data.outcomes,
+    });
+  }
 
   const checkpointFile = path.join(moduleDir, "checkpoint.mdx");
   const checkpoint = await readRequiredMdx(checkpointFile, "Module Checkpoint");
@@ -336,6 +353,13 @@ async function validateModule(courseDir, courseLessonSlugs, moduleEntry) {
     );
     counts.checkpoints += 1;
   }
+  alignment.registerOutcomeReferences({
+    alignmentScope: moduleEntry.name,
+    evidenceKind: outcomeEvidence.moduleCheckpoint,
+    file: checkpointFile,
+    label: "Module Checkpoint",
+    outcomeIds: checkpoint?.data.outcomes,
+  });
 
   const lessonsDir = path.join(moduleDir, "lessons");
   const lessonEntries = (await directoryEntries(lessonsDir)).filter(
@@ -364,6 +388,13 @@ async function validateModule(courseDir, courseLessonSlugs, moduleEntry) {
     validateLearnerSource(lesson, lessonFile, "Lesson");
     if (lesson) {
       validateMetadata(lessonSchema, lesson.data, lessonFile, "Lesson");
+      alignment.registerOutcomeReferences({
+        alignmentScope: moduleEntry.name,
+        evidenceKind: outcomeEvidence.lessonInstruction,
+        file: lessonFile,
+        label: "Lesson",
+        outcomeIds: lesson.data.outcomes,
+      });
       validateOrder(lesson.data, lessonFile, "Lesson", lessonOrders);
     }
   }
@@ -385,8 +416,14 @@ async function validateCourse(courseEntry) {
   const overviewFile = path.join(courseDir, "index.mdx");
   const overview = await readRequiredMdx(overviewFile, "Course");
   validateLearnerSource(overview, overviewFile, "Course");
-  if (overview)
+  const alignment = createOutcomeAlignment({
+    courseOutcomes: overview?.data.outcomes,
+    courseFile: overviewFile,
+    report,
+  });
+  if (overview) {
     validateMetadata(courseSchema, overview.data, overviewFile, "Course");
+  }
 
   const capstoneFile = path.join(courseDir, "capstone.mdx");
   const capstone = await readRequiredMdx(
@@ -396,11 +433,27 @@ async function validateCourse(courseEntry) {
   validateLearnerSource(capstone, capstoneFile, "Capstone Demonstration");
   if (capstone) {
     validateMetadata(
-      assessmentSchema,
+      capstoneSchema,
       capstone.data,
       capstoneFile,
       "Capstone Demonstration",
     );
+    alignment.registerOutcomeReferences({
+      evidenceKind: outcomeEvidence.capstone,
+      file: capstoneFile,
+      label: "Capstone Demonstration",
+      outcomeIds: capstone.data.outcomes,
+    });
+    for (const [index, criterion] of (
+      Array.isArray(capstone.data.criteria) ? capstone.data.criteria : []
+    ).entries()) {
+      alignment.registerOutcomeReferences({
+        evidenceKind: outcomeEvidence.capstoneCriterion,
+        file: capstoneFile,
+        label: `Capstone criterion ${index + 1}`,
+        outcomeIds: criterion?.outcomes,
+      });
+    }
     counts.capstones += 1;
   }
 
@@ -434,6 +487,7 @@ async function validateCourse(courseEntry) {
       courseDir,
       courseLessonSlugs,
       moduleEntry,
+      alignment,
     );
     if (moduleSource) {
       validateOrder(
@@ -450,6 +504,30 @@ async function validateCourse(courseEntry) {
     modulesDir,
     "Module",
   );
+  alignment.requireEveryOutcome({
+    evidenceKind: outcomeEvidence.lessonInstruction,
+    file: overviewFile,
+    describeMissing: (outcomeId) =>
+      `Learning Outcome ${outcomeId} is not taught by any Lesson`,
+  });
+  alignment.requireMatchingEvidence({
+    evidenceKind: outcomeEvidence.moduleCheckpoint,
+    sourceEvidenceKind: outcomeEvidence.lessonInstruction,
+    describeMissing: (outcomeId) =>
+      `Module Checkpoint does not cover taught Learning Outcome ${outcomeId}`,
+  });
+  alignment.requireEveryOutcome({
+    evidenceKind: outcomeEvidence.capstone,
+    file: capstoneFile,
+    describeMissing: (outcomeId) =>
+      `Capstone Demonstration does not support Learning Outcome ${outcomeId}`,
+  });
+  alignment.requireEveryOutcome({
+    evidenceKind: outcomeEvidence.capstoneCriterion,
+    file: capstoneFile,
+    describeMissing: (outcomeId) =>
+      `Learning Outcome ${outcomeId} is not demonstrated by any Capstone criterion`,
+  });
 }
 
 let contentEntries;

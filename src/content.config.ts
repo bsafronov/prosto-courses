@@ -2,6 +2,7 @@ import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import {
   assessmentSchema,
+  capstoneSchema,
   courseSchema,
   lessonSchema,
   moduleSchema,
@@ -60,7 +61,7 @@ const capstones = defineCollection({
     pattern: "*/capstone.mdx",
     generateId: ({ entry }) => entry.split("/")[0],
   }),
-  schema: assessmentSchema,
+  schema: capstoneSchema,
 });
 
 export const collections = {
