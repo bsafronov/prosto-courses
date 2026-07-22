@@ -81,6 +81,30 @@ test("Course Overview refreshes Lesson Progress after browser back navigation", 
   );
 });
 
+test("restored Lesson refreshes progress from browser-local storage", async ({
+  page,
+}) => {
+  await page.getByRole("link", { name: "Start course" }).click();
+  await expect(
+    page.locator("header").getByLabel("Lesson status: Started"),
+  ).toBeVisible();
+  await page.evaluate(() => {
+    const key = "prosto-courses:progress:v1";
+    const progress = JSON.parse(localStorage.getItem(key)!);
+    progress.courses.markdown.lessons.formatting = {
+      state: "started",
+      visitedAt: Date.now() + 1,
+    };
+    localStorage.setItem(key, JSON.stringify(progress));
+    window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }));
+  });
+
+  const lessons = page.getByRole("list", { name: "Course navigation lessons" });
+  await expect(
+    lessons.getByRole("link", { name: /Заголовки, выделение и списки/ }),
+  ).toContainText("Started");
+});
+
 test("Lesson navigation refreshes progress after browser back navigation", async ({
   page,
 }) => {

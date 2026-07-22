@@ -106,7 +106,7 @@ function refresh(root: HTMLElement, course: StoredCourse) {
 function initialiseProgress(root: HTMLElement) {
   if (root.dataset.progressReady) return;
   root.dataset.progressReady = "true";
-  const courseSlug = root.dataset.courseSlug;
+  const courseSlug = root.dataset.courseSlug ?? "";
   if (!courseSlug) return;
   let progress = readProgress();
   let course = ensureCourse(progress, courseSlug);
@@ -122,11 +122,19 @@ function initialiseProgress(root: HTMLElement) {
   }
   refresh(root, course);
 
-  window.addEventListener("storage", (event) => {
-    if (event.key !== storageKey) return;
+  function refreshFromStorage() {
     progress = readProgress();
     course = ensureCourse(progress, courseSlug);
     refresh(root, course);
+  }
+
+  window.addEventListener("storage", (event) => {
+    if (event.key !== storageKey) return;
+    refreshFromStorage();
+  });
+
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) refreshFromStorage();
   });
 
   root.querySelector<HTMLButtonElement>("[data-completion-toggle]")?.addEventListener("click", () => {
