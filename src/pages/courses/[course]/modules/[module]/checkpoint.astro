@@ -1,7 +1,7 @@
 ---
 import { getCollection, render, type CollectionEntry } from "astro:content";
 import CourseOutline from "../../../../../components/CourseOutline.astro";
-import KnowledgeCheck from "../../../../../components/KnowledgeCheck.astro";
+import { semanticComponents } from "../../../../../components/semantic-components";
 import BaseLayout from "../../../../../layouts/BaseLayout.astro";
 import {
   capstonePath,
@@ -76,7 +76,7 @@ const { Content } = await render(checkpoint);
         <h1>{checkpoint.data.title}</h1>
         <p><a href={modulePath(course.id, slug)}>{currentModule.module.data.title}</a></p>
       </header>
-      <div class="prose"><Content components={{ KnowledgeCheck }} /></div>
+      <div class="prose"><Content components={semanticComponents} /></div>
       <nav class="sequence" aria-label="Последовательность курса">
         <a href={lessonPath(course.id, lessonSlug(previousLesson))}>
           ← Последний урок: {previousLesson.data.title}

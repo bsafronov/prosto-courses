@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import matter from "gray-matter";
+import { JSDOM } from "jsdom";
 import {
   assessmentSchema,
   capstoneSchema,
@@ -14,6 +15,11 @@ import {
   createOutcomeAlignment,
   outcomeEvidence,
 } from "../src/outcome-alignment.mjs";
+
+const mermaidDom = new JSDOM("<!doctype html><html><body></body></html>");
+globalThis.window = mermaidDom.window;
+globalThis.document = mermaidDom.window.document;
+const { default: mermaid } = await import("mermaid");
 
 const contentRoot = path.resolve(
   process.argv[2] ?? process.env.COURSE_CONTENT_ROOT ?? "src/content/courses",
@@ -30,6 +36,20 @@ const counts = {
   capstones: 0,
 };
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const calloutKinds = new Set([
+  "key",
+  "info",
+  "warning",
+  "error",
+  "advanced",
+  "context",
+]);
+const diagramAccessibilityProps = [
+  "title",
+  "description",
+  "howToRead",
+  "takeaway",
+];
 
 async function readCapabilityPackManifest() {
   let manifest;
@@ -106,25 +126,124 @@ function validateSlug(slug, file, owner) {
   }
 }
 
-function stringAttribute(source, name) {
-  const match = source.match(
-    new RegExp(`\\b${name}\\s*=\\s*(["'])(.*?)\\1`, "s"),
-  );
-  return match?.[2];
+function afterBracedExpression(source, start) {
+  let depth = 0;
+  let quote;
+  let escaped = false;
+  let cursor = start;
+
+  for (; cursor < source.length; cursor += 1) {
+    const character = source[cursor];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === quote) quote = undefined;
+    } else if (
+      character === '"' ||
+      character === "'" ||
+      character === "`"
+    ) {
+      quote = character;
+    } else if (character === "{") {
+      depth += 1;
+    } else if (character === "}" && --depth === 0) {
+      return cursor + 1;
+    }
+  }
+
+  return cursor;
 }
 
-function withoutFencedCode(body) {
+function componentAttributes(source) {
+  const attributes = [];
+  let cursor = 0;
+
+  while (cursor < source.length) {
+    while (/\s|\//.test(source[cursor] ?? "")) cursor += 1;
+    if (cursor >= source.length) break;
+
+    if (source[cursor] === "{") {
+      cursor = afterBracedExpression(source, cursor);
+      continue;
+    }
+
+    const nameMatch = source
+      .slice(cursor)
+      .match(/^[A-Za-z][A-Za-z0-9_-]*/);
+    if (!nameMatch) {
+      cursor += 1;
+      continue;
+    }
+
+    const name = nameMatch[0];
+    cursor += name.length;
+    while (/\s/.test(source[cursor] ?? "")) cursor += 1;
+
+    let value;
+    if (source[cursor] === "=") {
+      cursor += 1;
+      while (/\s/.test(source[cursor] ?? "")) cursor += 1;
+      const quote = source[cursor];
+      if (quote === '"' || quote === "'") {
+        cursor += 1;
+        const valueStart = cursor;
+        let escaped = false;
+        for (; cursor < source.length; cursor += 1) {
+          const character = source[cursor];
+          if (escaped) escaped = false;
+          else if (character === "\\") escaped = true;
+          else if (character === quote) break;
+        }
+        value = source.slice(valueStart, cursor);
+        cursor += 1;
+      } else if (source[cursor] === "{") {
+        cursor = afterBracedExpression(source, cursor);
+      } else {
+        while (cursor < source.length && !/\s|\//.test(source[cursor])) {
+          cursor += 1;
+        }
+      }
+    }
+
+    attributes.push({ name, value });
+  }
+
+  return attributes;
+}
+
+function stringAttribute(source, name) {
+  return componentAttributes(source).find(
+    (attribute) => attribute.name === name,
+  )?.value;
+}
+
+function attributeNames(source) {
+  return componentAttributes(source).map((attribute) => attribute.name);
+}
+
+function inspectFencedCode(body) {
   const authoringLines = [];
+  const languages = [];
+  const ranges = [];
   let fence;
+  let offset = 0;
 
   for (const line of body.split("\n")) {
     if (!fence) {
-      const opening = line.match(/^ {0,3}(`{3,}|~{3,})/);
+      const opening = line.match(
+        /^ {0,3}(`{3,}|~{3,})\s*([A-Za-z0-9_-]+)?/,
+      );
       if (opening) {
-        fence = { marker: opening[1][0], length: opening[1].length };
+        fence = {
+          marker: opening[1][0],
+          length: opening[1].length,
+          start: offset,
+        };
+        if (opening[2]) languages.push(opening[2].toLowerCase());
       } else {
         authoringLines.push(line);
       }
+      offset += line.length + 1;
       continue;
     }
 
@@ -134,11 +253,22 @@ function withoutFencedCode(body) {
       closing[1][0] === fence.marker &&
       closing[1].length >= fence.length
     ) {
+      ranges.push({ start: fence.start, end: offset + line.length });
       fence = undefined;
     }
+    offset += line.length + 1;
   }
+  if (fence) ranges.push({ start: fence.start, end: body.length });
 
-  return authoringLines.join("\n");
+  return { authoringSource: authoringLines.join("\n"), languages, ranges };
+}
+
+function withoutFencedCode(body) {
+  return inspectFencedCode(body).authoringSource;
+}
+
+function topLevelFencedCodeLanguages(body) {
+  return inspectFencedCode(body).languages;
 }
 
 function openingComponentTags(source) {
@@ -176,6 +306,11 @@ function openingComponentTags(source) {
         tags.push({
           name,
           source: source.slice(attributesStart, cursor),
+          start: index,
+          end: cursor + 1,
+          selfClosing: /\/\s*$/.test(
+            source.slice(attributesStart, cursor),
+          ),
         });
         index = cursor;
         break;
@@ -244,6 +379,113 @@ function validateKnowledgeChecks(body, file) {
     }
     if (answer && options.filter((option) => option === answer).length !== 1) {
       report(file, `${label} answer must match exactly one option`);
+    }
+  }
+}
+
+function validateCallouts(body, file) {
+  const authoringSource = withoutFencedCode(body);
+  const openings = [...authoringSource.matchAll(/<Callout\b/g)];
+  const callouts = [
+    ...authoringSource.matchAll(
+      /<Callout\b[^>]*>([\s\S]*?)<\/Callout\s*>/g,
+    ),
+  ];
+
+  if (callouts.length !== openings.length) {
+    report(file, "Callout requires meaningful content");
+  }
+  for (const callout of callouts) {
+    const proseSource = withoutFencedCode(callout[1]).replace(
+      /`+[^`]*`+/g,
+      "",
+    );
+    if (/[{}]/.test(proseSource)) {
+      report(
+        file,
+        "Callout requires meaningful content; MDX expressions are not allowed",
+      );
+      continue;
+    }
+    const meaningfulSource = callout[1]
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
+      .replace(/<[^>]*>/g, "")
+      .replace(/[*_~`]/g, "")
+      .trim();
+    if (!meaningfulSource) {
+      report(file, "Callout requires meaningful content");
+    }
+  }
+}
+
+async function validateDiagrams(body, file) {
+  const fencedCode = inspectFencedCode(body);
+  const isInsideFencedExample = (index) =>
+    fencedCode.ranges.some(
+      (range) => index >= range.start && index <= range.end,
+    );
+  const diagramOpenings = openingComponentTags(body).filter(
+    (tag) => tag.name === "Diagram" && !isInsideFencedExample(tag.start),
+  );
+  const diagrams = [];
+  for (const opening of diagramOpenings) {
+    if (opening.selfClosing) continue;
+    const closingPattern = /<\/Diagram\s*>/g;
+    closingPattern.lastIndex = opening.end;
+    let closing;
+    do {
+      closing = closingPattern.exec(body);
+    } while (closing && isInsideFencedExample(closing.index));
+    if (!closing) continue;
+    diagrams.push({
+      content: body.slice(opening.end, closing.index),
+      start: opening.start,
+      end: closing.index + closing[0].length,
+    });
+  }
+  if (diagramOpenings.length !== diagrams.length) {
+    report(
+      file,
+      "Diagram must wrap exactly one non-empty fenced Mermaid source",
+    );
+  }
+  let outsideCursor = 0;
+  let sourceOutsideDiagrams = "";
+  for (const diagram of diagrams) {
+    sourceOutsideDiagrams += body.slice(outsideCursor, diagram.start);
+    outsideCursor = diagram.end;
+  }
+  sourceOutsideDiagrams += body.slice(outsideCursor);
+  if (topLevelFencedCodeLanguages(sourceOutsideDiagrams).includes("mermaid")) {
+    report(file, "Mermaid source must be wrapped by Diagram");
+  }
+
+  for (const diagram of diagrams) {
+    const fencedSource = diagram.content.match(
+      /^\s*(?<fence>`{3,}|~{3,})mermaid[ \t]*\r?\n(?<source>[\s\S]+?)\r?\n[ \t]*\k<fence>\s*$/,
+    );
+    if (!fencedSource?.groups?.source.trim()) {
+      report(
+        file,
+        "Diagram must wrap exactly one non-empty fenced Mermaid source",
+      );
+      continue;
+    }
+    const sourceLines = fencedSource.groups.source.split(/\r?\n/);
+    const commonIndent = Math.min(
+      ...sourceLines
+        .filter((line) => line.trim())
+        .map((line) => line.match(/^ */)[0].length),
+    );
+    const mermaidSource = sourceLines
+      .map((line) => line.slice(commonIndent))
+      .join("\n");
+    if (
+      !(await mermaid.parse(mermaidSource, {
+        suppressErrors: true,
+      }))
+    ) {
+      report(file, "Diagram contains invalid Mermaid source");
     }
   }
 }
@@ -331,6 +573,43 @@ function validateSemanticComponents(body, file, declaredPacks = new Map()) {
       continue;
     }
 
+    if (
+      componentName === "Callout" &&
+      !calloutKinds.has(stringAttribute(source, "kind"))
+    ) {
+      report(
+        file,
+        "Callout kind must be one of key, info, warning, error, advanced, context",
+      );
+    }
+    if (componentName === "Callout") {
+      const authoredProps = attributeNames(source).filter(
+        (name) => name !== "kind",
+      );
+      if (authoredProps.length > 0) {
+        report(
+          file,
+          `Callout does not allow authored props: ${authoredProps.join(", ")}`,
+        );
+      }
+    }
+    if (componentName === "Diagram") {
+      for (const prop of diagramAccessibilityProps) {
+        if (!stringAttribute(source, prop)?.trim()) {
+          report(file, `Diagram requires a non-empty ${prop}`);
+        }
+      }
+      const authoredProps = attributeNames(source).filter(
+        (name) => !diagramAccessibilityProps.includes(name),
+      );
+      if (authoredProps.length > 0) {
+        report(
+          file,
+          `Diagram does not allow authored props: ${authoredProps.join(", ")}`,
+        );
+      }
+    }
+
     for (const resource of ["runtime", "service"]) {
       if (!new RegExp(`\\b${resource}\\s*=`).test(source)) continue;
       const value = stringAttribute(source, resource);
@@ -370,13 +649,15 @@ function validateSharedMetadata(data, file) {
   }
 }
 
-function validateLearnerSource(source, file, owner, declaredPacks) {
+async function validateLearnerSource(source, file, owner, declaredPacks) {
   if (!source) return;
   requiredString(source.data, "title", file, owner);
   validateSharedMetadata(source.data, file);
   validateAuthoringBoundary(source.content, file);
   validateSemanticComponents(source.content, file, declaredPacks);
   validateKnowledgeChecks(source.content, file);
+  validateCallouts(source.content, file);
+  await validateDiagrams(source.content, file);
 }
 
 async function readMdx(file) {
@@ -442,7 +723,7 @@ async function validateCourseOwnership(courseDir) {
         "legacy flat Course/Lesson structure is not supported; Lessons must belong to modules/<module-slug>/lessons/",
       );
       const lesson = await readMdx(file);
-      validateLearnerSource(lesson, file, "Lesson");
+      await validateLearnerSource(lesson, file, "Lesson");
       if (lesson) validateOrder(lesson.data, file, "Lesson", new Map());
     } else if (file.endsWith(".mdx")) {
       report(file, "Course MDX must follow the target Course tree");
@@ -584,7 +865,7 @@ async function validateModule(
 
   const moduleFile = path.join(moduleDir, "index.mdx");
   const moduleSource = await readRequiredMdx(moduleFile, "Module");
-  validateLearnerSource(moduleSource, moduleFile, "Module", declaredPacks);
+  await validateLearnerSource(moduleSource, moduleFile, "Module", declaredPacks);
   if (moduleSource)
     validateMetadata(moduleSchema, moduleSource.data, moduleFile, "Module");
   if (moduleSource) {
@@ -597,7 +878,7 @@ async function validateModule(
 
   const checkpointFile = path.join(moduleDir, "checkpoint.mdx");
   const checkpoint = await readRequiredMdx(checkpointFile, "Module Checkpoint");
-  validateLearnerSource(
+  await validateLearnerSource(
     checkpoint,
     checkpointFile,
     "Module Checkpoint",
@@ -644,7 +925,7 @@ async function validateModule(
     }
 
     const lesson = await readMdx(lessonFile);
-    validateLearnerSource(lesson, lessonFile, "Lesson", declaredPacks);
+    await validateLearnerSource(lesson, lessonFile, "Lesson", declaredPacks);
     if (lesson) {
       validateMetadata(lessonSchema, lesson.data, lessonFile, "Lesson");
       alignment.registerOutcomeReferences({
@@ -678,7 +959,7 @@ async function validateCourse(courseEntry) {
     overview?.data.capabilityPacks,
     overviewFile,
   );
-  validateLearnerSource(overview, overviewFile, "Course", declaredPacks);
+  await validateLearnerSource(overview, overviewFile, "Course", declaredPacks);
   const alignment = createOutcomeAlignment({
     courseOutcomes: overview?.data.outcomes,
     courseFile: overviewFile,
@@ -693,7 +974,7 @@ async function validateCourse(courseEntry) {
     capstoneFile,
     "Capstone Demonstration",
   );
-  validateLearnerSource(
+  await validateLearnerSource(
     capstone,
     capstoneFile,
     "Capstone Demonstration",

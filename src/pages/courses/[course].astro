@@ -1,7 +1,7 @@
 ---
 import { getCollection, render, type CollectionEntry } from "astro:content";
 import CourseOutline from "../../components/CourseOutline.astro";
-import KnowledgeCheck from "../../components/KnowledgeCheck.astro";
+import { semanticComponents } from "../../components/semantic-components";
 import WorkloadSummary from "../../components/WorkloadSummary.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import {
@@ -50,7 +50,7 @@ const lessonLinks = getLessonLinks(course.id, lessons);
     </header>
     <div class="columns">
       <article class="prose reading-width">
-        <Content components={{ KnowledgeCheck }} />
+        <Content components={semanticComponents} />
         <h2>Для кого этот курс</h2>
         <p>{course.data.learnerProfile}</p>
         <h2>Что нужно уметь</h2>

@@ -1,7 +1,7 @@
 ---
 import { getCollection, render, type CollectionEntry } from "astro:content";
 import CourseOutline from "../../../components/CourseOutline.astro";
-import KnowledgeCheck from "../../../components/KnowledgeCheck.astro";
+import { semanticComponents } from "../../../components/semantic-components";
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import {
   checkpointPath,
@@ -63,7 +63,7 @@ const { Content } = await render(capstone);
         <h1>{capstone.data.title}</h1>
         <p>{course.data.title}</p>
       </header>
-      <div class="prose"><Content components={{ KnowledgeCheck }} /></div>
+      <div class="prose"><Content components={semanticComponents} /></div>
       <section class="capstone-criteria">
         <h2>Критерии готовности</h2>
         <ul aria-label="Критерии итоговой работы">

@@ -1,8 +1,8 @@
 ---
 import { getCollection, render, type CollectionEntry } from "astro:content";
 import CourseOutline from "../../../../components/CourseOutline.astro";
-import KnowledgeCheck from "../../../../components/KnowledgeCheck.astro";
 import ProgressStatus from "../../../../components/ProgressStatus.astro";
+import { semanticComponents } from "../../../../components/semantic-components";
 import WorkloadSummary from "../../../../components/WorkloadSummary.astro";
 import BaseLayout from "../../../../layouts/BaseLayout.astro";
 import {
@@ -89,7 +89,7 @@ const lessonTimeItems = [
         />
         <ProgressStatus lessonSlug={slug} />
       </header>
-      <div class="prose"><Content components={{ KnowledgeCheck }} /></div>
+      <div class="prose"><Content components={semanticComponents} /></div>
       <section class="completion" aria-labelledby="completion-heading">
         <h2 id="completion-heading">Завершение урока</h2>
         <p>Ты сам решаешь, когда завершить урок. Ответы в блоке «Проверь себя» на это не влияют.</p>

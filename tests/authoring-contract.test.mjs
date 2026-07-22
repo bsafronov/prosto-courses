@@ -260,6 +260,181 @@ test("rejects spread props that can hide undeclared runtimes or services", async
   );
 });
 
+test("rejects a Callout meaning outside the closed semantic catalog", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Callout kind="success">This meaning is not part of the authoring contract.</Callout>\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Callout kind must be one of key, info, warning, error, advanced, context/i,
+      );
+    },
+  );
+});
+
+test("rejects authored presentation controls on Callouts", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Callout kind="info" color layout>Platform-owned presentation cannot be authored.</Callout>\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Callout does not allow authored props: color, layout/i,
+      );
+    },
+  );
+});
+
+test("rejects a Callout without meaningful content", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Callout kind="info"></Callout>\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(result.output, /Callout requires meaningful content/i);
+    },
+  );
+});
+
+test("rejects a Callout expression that renders no meaningful content", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Callout kind="info">{" "}</Callout>\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(result.output, /Callout requires meaningful content/i);
+    },
+  );
+});
+
+test("rejects a Diagram without every accessibility input", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Diagram title="Alt text workflow">\n\n\`\`\`mermaid\nflowchart LR\n  Context --> Description\n\`\`\`\n\n</Diagram>\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      for (const prop of ["description", "howToRead", "takeaway"]) {
+        assert.match(
+          result.output,
+          new RegExp(`Diagram requires a non-empty ${prop}`, "i"),
+        );
+      }
+    },
+  );
+});
+
+test("rejects raw Mermaid fences outside Diagram", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n\n\`\`\`mermaid\nflowchart LR\n  Context --> Description\n\`\`\`\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Mermaid source must be wrapped by Diagram/i,
+      );
+    },
+  );
+});
+
+test("accepts Mermaid examples inside a Markdown fence", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n\n\`\`\`\`mdx\n\`\`\`mermaid\nflowchart LR\n  Context --> Description\n\`\`\`\n\`\`\`\`\n`,
+    },
+    (result) => assert.equal(result.exitCode, 0, result.output),
+  );
+});
+
+test("requires Diagram to wrap exactly one fenced Mermaid source", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Diagram title="Alt text workflow" description="Context determines the useful description." howToRead="Read from left to right." takeaway="Describe purpose, not pixels.">\nContext --> Description\n</Diagram>\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Diagram must wrap exactly one non-empty fenced Mermaid source/i,
+      );
+    },
+  );
+});
+
+test("rejects a self-closing Diagram without Mermaid source", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Diagram title="Alt text workflow" description="Context determines the useful description." howToRead="Read from left to right." takeaway="Describe purpose, not pixels." />\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Diagram must wrap exactly one non-empty fenced Mermaid source/i,
+      );
+    },
+  );
+});
+
+test("rejects authored presentation controls on Diagrams", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Diagram title="Alt text workflow" description="Context determines the useful description." howToRead="Read from left to right." takeaway="Describe purpose, not pixels." color layout>\n\n\`\`\`mermaid\nflowchart LR\n  Context --> Description\n\`\`\`\n\n</Diagram>\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Diagram does not allow authored props: color, layout/i,
+      );
+    },
+  );
+});
+
+test("rejects invalid Mermaid syntax inside Diagram", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Diagram title="Alt text workflow" description="Context determines the useful description." howToRead="Read from left to right." takeaway="Describe purpose, not pixels.">\n\n\`\`\`mermaid\nnot-a-diagram -->\n\`\`\`\n\n</Diagram>\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(result.output, /Diagram contains invalid Mermaid source/i);
+    },
+  );
+});
+
+test("accepts every Callout meaning and an accessible Diagram", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n${["key", "info", "warning", "error", "advanced", "context"]
+          .map((kind) => `<Callout kind="${kind}">${kind}</Callout>`)
+          .join("\n")}\n<Diagram title="Alt text workflow" description="When x=1 and x > 0, context leads to a useful description." howToRead="Read from left to right." takeaway="Purpose determines the description.">\n  \`\`\`mermaid\n  flowchart LR\n    Context --> Description\n  \`\`\`\n</Diagram>\n`,
+    },
+    (result) => assert.equal(result.exitCode, 0, result.output),
+  );
+});
+
 test("rejects a Course Learning Outcome that no Lesson teaches", async () => {
   const result = await validateFixture("untaught-outcome");
   assert.notEqual(result.exitCode, 0);

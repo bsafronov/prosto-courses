@@ -1,0 +1,65 @@
+---
+type CalloutKind =
+  | "key"
+  | "info"
+  | "warning"
+  | "error"
+  | "advanced"
+  | "context";
+
+interface Props {
+  kind: CalloutKind;
+}
+
+const presentations = {
+  key: { label: "Ключевая мысль", icon: "◆" },
+  info: { label: "Информация", icon: "ⓘ" },
+  warning: { label: "Предупреждение", icon: "▲" },
+  error: { label: "Ошибка", icon: "×" },
+  advanced: { label: "Дополнительно — необязательно", icon: "↗" },
+  context: { label: "Контекст", icon: "◎" },
+} satisfies Record<CalloutKind, { label: string; icon: string }>;
+
+const { kind } = Astro.props;
+const presentation = presentations[kind];
+---
+
+<aside class="callout" data-kind={kind} aria-label={presentation.label}>
+  <p class="callout-label">
+    <span class="callout-icon" aria-hidden="true">{presentation.icon}</span>
+    <span>{presentation.label}</span>
+  </p>
+  <div class="callout-content"><slot /></div>
+</aside>
+
+<style>
+  .callout {
+    --callout-accent: #3347a8;
+    --callout-surface: #f4f5ff;
+    min-width: 0;
+    margin: 1.75rem 0;
+    border: 1px solid color-mix(in srgb, var(--callout-accent) 42%, white);
+    border-inline-start: .35rem solid var(--callout-accent);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+    background: var(--callout-surface);
+    overflow-wrap: anywhere;
+  }
+  .callout[data-kind="key"] { --callout-accent: #3347a8; --callout-surface: #f4f5ff; }
+  .callout[data-kind="info"] { --callout-accent: #086788; --callout-surface: #edf8fb; }
+  .callout[data-kind="warning"] { --callout-accent: #8a5a00; --callout-surface: #fff8e6; }
+  .callout[data-kind="error"] { --callout-accent: #a12828; --callout-surface: #fff1f1; }
+  .callout[data-kind="advanced"] { --callout-accent: #6a478f; --callout-surface: #f8f2fc; border-style: dashed; }
+  .callout[data-kind="context"] { --callout-accent: #53616f; --callout-surface: #f2f5f7; }
+  .callout-label {
+    display: flex;
+    gap: .55rem;
+    align-items: center;
+    margin: 0 0 .45rem;
+    color: var(--callout-accent);
+    font-weight: 800;
+  }
+  .callout-icon { display: inline-grid; width: 1.3rem; place-items: center; font-size: 1.05rem; }
+  .callout-content :global(> :first-child) { margin-top: 0; }
+  .callout-content :global(> :last-child) { margin-bottom: 0; }
+</style>

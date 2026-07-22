@@ -1,0 +1,115 @@
+---
+interface Props {
+  title: string;
+  description: string;
+  howToRead: string;
+  takeaway: string;
+}
+
+const { title, description, howToRead, takeaway } = Astro.props;
+---
+
+<figure class="diagram" aria-label={title}>
+  <figcaption>{title}</figcaption>
+  <div
+    class="diagram-visual"
+    role="img"
+    aria-label={description}
+    aria-busy="true"
+    data-mermaid-container
+  >
+    <slot />
+  </div>
+  <div class="diagram-interpretation">
+    <p><strong>Описание:</strong> {description}</p>
+    <p><strong>Как читать:</strong> {howToRead}</p>
+    <p><strong>Главный вывод:</strong> {takeaway}</p>
+  </div>
+</figure>
+
+<script>
+  import mermaid from "mermaid";
+
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: "strict",
+    theme: "neutral",
+    flowchart: { htmlLabels: false, useMaxWidth: true },
+  });
+
+  async function renderDiagram(container: HTMLElement, index: number) {
+    if (container.dataset.mermaidRendered) return;
+    const source = container.querySelector(
+      "pre[data-language='mermaid'] code, code.language-mermaid",
+    )?.textContent;
+    if (!source?.trim()) return;
+
+    try {
+      const { svg, bindFunctions } = await mermaid.render(
+        `course-diagram-${index}`,
+        source,
+      );
+      container.innerHTML = svg;
+      const rendered = container.querySelector("svg");
+      rendered?.setAttribute("aria-hidden", "true");
+      rendered?.removeAttribute("role");
+      bindFunctions?.(container);
+      container.dataset.mermaidRendered = "true";
+      container.setAttribute("aria-busy", "false");
+    } catch {
+      container.dataset.mermaidRendered = "error";
+      container.setAttribute("aria-busy", "false");
+    }
+  }
+
+  document
+    .querySelectorAll<HTMLElement>("[data-mermaid-container]")
+    .forEach((container, index) => void renderDiagram(container, index));
+</script>
+
+<style>
+  .diagram {
+    min-width: 0;
+    margin: 2rem 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  figcaption {
+    border-bottom: 1px solid var(--color-border);
+    padding: .9rem 1rem;
+    font-weight: 800;
+  }
+  .diagram-visual {
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 1rem;
+    background: #fbfcff;
+  }
+  .diagram-visual :global(pre) { display: none; }
+  .diagram-visual :global(svg) {
+    display: block;
+    width: 100% !important;
+    max-width: 100%;
+    height: auto;
+    margin-inline: auto;
+  }
+  .diagram-interpretation {
+    display: grid;
+    gap: .65rem;
+    border-top: 1px solid var(--color-border);
+    padding: 1rem;
+  }
+  .diagram-interpretation p { margin: 0; }
+  @media (prefers-reduced-motion: reduce) {
+    .diagram-visual,
+    .diagram-visual :global(*) {
+      scroll-behavior: auto !important;
+      animation-duration: 0s !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0s !important;
+    }
+  }
+</style>

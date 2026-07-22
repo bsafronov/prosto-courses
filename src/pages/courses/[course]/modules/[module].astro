@@ -2,7 +2,7 @@
 import { getCollection, render, type CollectionEntry } from "astro:content";
 import CourseLessonList from "../../../../components/CourseLessonList.astro";
 import CourseOutline from "../../../../components/CourseOutline.astro";
-import KnowledgeCheck from "../../../../components/KnowledgeCheck.astro";
+import { semanticComponents } from "../../../../components/semantic-components";
 import WorkloadSummary from "../../../../components/WorkloadSummary.astro";
 import BaseLayout from "../../../../layouts/BaseLayout.astro";
 import {
@@ -94,7 +94,7 @@ const { Content } = await render(module);
         >Начать Модуль</a>
       </header>
       <div class="prose">
-        <Content components={{ KnowledgeCheck }} />
+        <Content components={semanticComponents} />
         <h2>Что ты сможешь после Модуля</h2>
         <p>{module.data.capability}</p>
         <h2>Какие результаты поддерживает Модуль</h2>
