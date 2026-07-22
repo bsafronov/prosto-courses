@@ -13,6 +13,7 @@ import {
   lessonModuleSlug,
   lessonPath,
   lessonSlug,
+  moduleSlug,
   type CourseModule,
   type CourseTree,
 } from "../../../../lib/courses";
@@ -43,7 +44,7 @@ const { course, lesson, tree }: Props = Astro.props;
 const { Content } = await render(lesson);
 const slug = lessonSlug(lesson);
 const currentModule = tree.modules.find(
-  (candidate) => candidate.module.id.split("/")[1] === lessonModuleSlug(lesson),
+  (candidate) => moduleSlug(candidate.module) === lessonModuleSlug(lesson),
 ) as CourseModule;
 const lessonIndex = currentModule.lessons.findIndex(
   (candidate) => candidate.id === lesson.id,

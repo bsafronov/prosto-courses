@@ -2,6 +2,12 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import matter from "gray-matter";
+import {
+  assessmentSchema,
+  courseSchema,
+  lessonSchema,
+  moduleSchema,
+} from "../src/content-schemas.mjs";
 
 const contentRoot = path.resolve(
   process.argv[2] ?? process.env.COURSE_CONTENT_ROOT ?? "src/content/courses",
@@ -26,180 +32,35 @@ function requiredString(data, field, file, owner) {
   }
 }
 
-function validateAllowedFields(data, allowedFields, file, owner) {
-  for (const field of Object.keys(data)) {
-    if (!allowedFields.includes(field)) {
-      report(file, `${owner} frontmatter does not allow a ${field} field`);
-    }
-  }
-}
+function validateMetadata(schema, data, file, owner) {
+  const result = schema.safeParse(data);
+  if (result.success) return;
 
-function validateStringArray(data, field, file, owner, { min = 0 } = {}) {
-  const value = data[field];
-  if (
-    !Array.isArray(value) ||
-    value.length < min ||
-    value.some((item) => typeof item !== "string" || item.trim() === "")
-  ) {
-    const size = min > 0 ? "a non-empty" : "an";
-    report(file, `${owner} frontmatter requires ${size} ${field} list of strings`);
-    return false;
-  }
-  return true;
-}
-
-function validateOutcomeIds(data, file, owner) {
-  if (!validateStringArray(data, "outcomes", file, owner, { min: 1 })) return;
-  for (const outcome of data.outcomes) {
-    if (!slugPattern.test(outcome)) {
-      report(file, `${owner} outcome IDs must use lowercase hyphenated words`);
-    }
-  }
-}
-
-function isDate(value) {
-  if (!(value instanceof Date) && typeof value !== "string" && typeof value !== "number") {
-    return false;
-  }
-  return !Number.isNaN(new Date(value).valueOf());
-}
-
-function validateDate(data, field, file, owner) {
-  if (!isDate(data[field])) {
-    report(file, `${owner} frontmatter requires a valid ${field} date`);
-  }
-}
-
-function validateFreshness(value, file, owner) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    report(file, `${owner} frontmatter requires freshness metadata`);
-    return;
-  }
-  const allowedFields = value.mode === "time-sensitive"
-    ? ["mode", "verifiedAt", "reviewAfter", "jurisdiction"]
-    : ["mode", "verifiedAt", "jurisdiction"];
-  validateAllowedFields(value, allowedFields, file, `${owner} freshness`);
-  if (value.mode !== "stable" && value.mode !== "time-sensitive") {
-    report(file, `${owner} freshness mode must be stable or time-sensitive`);
-  }
-  validateDate(value, "verifiedAt", file, `${owner} freshness`);
-  if (value.mode === "time-sensitive") {
-    validateDate(value, "reviewAfter", file, `${owner} freshness`);
-  }
-  if (
-    Object.hasOwn(value, "jurisdiction") &&
-    (typeof value.jurisdiction !== "string" || value.jurisdiction.trim() === "")
-  ) {
-    report(file, `${owner} freshness jurisdiction must be a non-empty string`);
-  }
-}
-
-function validateLessonTime(value, file) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    report(file, "Lesson frontmatter requires time estimates");
-    return;
-  }
-  validateAllowedFields(value, ["study", "practice", "advanced"], file, "Lesson time");
-  for (const field of ["study", "practice"]) {
-    if (!Number.isInteger(value[field]) || value[field] < 0) {
-      report(file, `Lesson time ${field} must be a non-negative integer`);
-    }
-  }
-  if (
-    Object.hasOwn(value, "advanced") &&
-    (!Number.isInteger(value.advanced) || value.advanced < 0)
-  ) {
-    report(file, "Lesson time advanced must be a non-negative integer");
-  }
-}
-
-function validateCourseMetadata(data, file) {
-  validateAllowedFields(
-    data,
-    [
-      "title",
-      "summary",
-      "learnerProfile",
-      "prerequisites",
-      "outcomes",
-      "createdAt",
-      "capabilityPacks",
-      "freshness",
-    ],
-    file,
-    "Course",
-  );
-  requiredString(data, "summary", file, "Course");
-  requiredString(data, "learnerProfile", file, "Course");
-  validateStringArray(data, "prerequisites", file, "Course");
-  validateStringArray(data, "capabilityPacks", file, "Course");
-  validateDate(data, "createdAt", file, "Course");
-  validateFreshness(data.freshness, file, "Course");
-
-  if (!Array.isArray(data.outcomes) || data.outcomes.length === 0) {
-    report(file, "Course frontmatter requires a non-empty outcomes list");
-  } else {
-    for (const outcome of data.outcomes) {
-      if (!outcome || typeof outcome !== "object" || Array.isArray(outcome)) {
-        report(file, "Course outcomes require id and statement fields");
-        continue;
+  for (const issue of result.error.issues) {
+    if (issue.code === "unrecognized_keys") {
+      for (const field of issue.keys) {
+        report(file, `${owner} frontmatter does not allow a ${field} field`);
       }
-      validateAllowedFields(outcome, ["id", "statement"], file, "Course outcome");
-      requiredString(outcome, "id", file, "Course outcome");
-      requiredString(outcome, "statement", file, "Course outcome");
-      if (typeof outcome.id === "string" && !slugPattern.test(outcome.id)) {
-        report(file, "Course outcome id must use lowercase hyphenated words");
-      }
+      continue;
     }
-  }
-}
-
-function validateModuleMetadata(data, file) {
-  validateAllowedFields(
-    data,
-    ["title", "summary", "order", "capability", "outcomes"],
-    file,
-    "Module",
-  );
-  requiredString(data, "summary", file, "Module");
-  requiredString(data, "capability", file, "Module");
-  validateOutcomeIds(data, file, "Module");
-}
-
-function validateLessonMetadata(data, file) {
-  validateAllowedFields(
-    data,
-    ["title", "order", "revision", "capability", "outcomes", "time", "freshness"],
-    file,
-    "Lesson",
-  );
-  if (!Number.isInteger(data.revision) || data.revision < 1) {
-    report(file, "Lesson revision must be a positive integer");
-  }
-  requiredString(data, "capability", file, "Lesson");
-  validateOutcomeIds(data, file, "Lesson");
-  validateLessonTime(data.time, file);
-  if (Object.hasOwn(data, "freshness")) {
-    validateFreshness(data.freshness, file, "Lesson");
-  }
-}
-
-function validateAssessmentMetadata(data, file, owner) {
-  validateAllowedFields(data, ["title", "outcomes", "time"], file, owner);
-  validateOutcomeIds(data, file, owner);
-  if (!Number.isInteger(data.time) || data.time < 1) {
-    report(file, `${owner} time must be a positive integer`);
+    const location = issue.path.length > 0 ? ` ${issue.path.join(".")}` : "";
+    report(file, `${owner} frontmatter${location}: ${issue.message}`);
   }
 }
 
 function validateSlug(slug, file, owner) {
   if (!slugPattern.test(slug)) {
-    report(file, `${owner} slug must use lowercase URL-safe words separated by hyphens`);
+    report(
+      file,
+      `${owner} slug must use lowercase URL-safe words separated by hyphens`,
+    );
   }
 }
 
 function stringAttribute(source, name) {
-  const match = source.match(new RegExp(`\\b${name}\\s*=\\s*(["'])(.*?)\\1`, "s"));
+  const match = source.match(
+    new RegExp(`\\b${name}\\s*=\\s*(["'])(.*?)\\1`, "s"),
+  );
   return match?.[2];
 }
 
@@ -237,7 +98,10 @@ function validateKnowledgeChecks(body, file) {
   const mentions = [...body.matchAll(/<KnowledgeCheck\b/g)];
 
   if (openingTags.length !== mentions.length) {
-    report(file, "Knowledge Check must be a self-closing component with static props");
+    report(
+      file,
+      "Knowledge Check must be a self-closing component with static props",
+    );
   }
 
   for (const [index, match] of openingTags.entries()) {
@@ -246,7 +110,9 @@ function validateKnowledgeChecks(body, file) {
     const prompt = stringAttribute(source, "prompt");
     const answer = stringAttribute(source, "answer");
     const explanation = stringAttribute(source, "explanation");
-    const optionsMatch = source.match(/\boptions\s*=\s*\{\s*(\[[\s\S]*?\])\s*\}/);
+    const optionsMatch = source.match(
+      /\boptions\s*=\s*\{\s*(\[[\s\S]*?\])\s*\}/,
+    );
 
     if (!prompt?.trim()) report(file, `${label} requires a non-empty prompt`);
     if (!answer?.trim()) report(file, `${label} requires a non-empty answer`);
@@ -269,13 +135,17 @@ function validateKnowledgeChecks(body, file) {
     if (
       !Array.isArray(options) ||
       options.length < 2 ||
-      options.some((option) => typeof option !== "string" || option.trim() === "")
+      options.some(
+        (option) => typeof option !== "string" || option.trim() === "",
+      )
     ) {
       report(file, `${label} requires at least two non-empty string options`);
       continue;
     }
 
-    if (new Set(options.map((option) => option.trim())).size !== options.length) {
+    if (
+      new Set(options.map((option) => option.trim())).size !== options.length
+    ) {
       report(file, `${label} requires unique options`);
     }
     if (answer && options.filter((option) => option === answer).length !== 1) {
@@ -356,7 +226,10 @@ function isOwnedCourseFile(relativePath) {
 
 async function validateCourseOwnership(courseDir) {
   for (const file of await findFiles(courseDir)) {
-    const relativePath = path.relative(courseDir, file).split(path.sep).join("/");
+    const relativePath = path
+      .relative(courseDir, file)
+      .split(path.sep)
+      .join("/");
     if (isOwnedCourseFile(relativePath)) continue;
 
     if (/^lessons\/[^/]+\.mdx$/.test(relativePath)) {
@@ -374,7 +247,10 @@ async function validateCourseOwnership(courseDir) {
       validateAuthoringBoundary(source?.content ?? "", file);
       validateKnowledgeChecks(source?.content ?? "", file);
     } else if (file.endsWith(".md")) {
-      report(file, "Course authoring Markdown must be an owned _authoring artifact");
+      report(
+        file,
+        "Course authoring Markdown must be an owned _authoring artifact",
+      );
     }
   }
 }
@@ -402,13 +278,21 @@ function validateOrder(data, file, owner, orderToFile) {
   orderToFile.set(data.order, path.basename(file));
 }
 
-function validateContiguousOrders(orderToFile, expectedCount, directory, owner) {
+function validateContiguousOrders(
+  orderToFile,
+  expectedCount,
+  directory,
+  owner,
+) {
   const orders = [...orderToFile.keys()].sort((left, right) => left - right);
   if (
     orders.length === expectedCount &&
     orders.some((order, index) => order !== index + 1)
   ) {
-    report(directory, `${owner} order must be unique and contiguous starting at 1`);
+    report(
+      directory,
+      `${owner} order must be unique and contiguous starting at 1`,
+    );
   }
 }
 
@@ -437,13 +321,19 @@ async function validateModule(courseDir, courseLessonSlugs, moduleEntry) {
   const moduleFile = path.join(moduleDir, "index.mdx");
   const moduleSource = await readRequiredMdx(moduleFile, "Module");
   validateLearnerSource(moduleSource, moduleFile, "Module");
-  if (moduleSource) validateModuleMetadata(moduleSource.data, moduleFile);
+  if (moduleSource)
+    validateMetadata(moduleSchema, moduleSource.data, moduleFile, "Module");
 
   const checkpointFile = path.join(moduleDir, "checkpoint.mdx");
   const checkpoint = await readRequiredMdx(checkpointFile, "Module Checkpoint");
   validateLearnerSource(checkpoint, checkpointFile, "Module Checkpoint");
   if (checkpoint) {
-    validateAssessmentMetadata(checkpoint.data, checkpointFile, "Module Checkpoint");
+    validateMetadata(
+      assessmentSchema,
+      checkpoint.data,
+      checkpointFile,
+      "Module Checkpoint",
+    );
     counts.checkpoints += 1;
   }
 
@@ -473,11 +363,16 @@ async function validateModule(courseDir, courseLessonSlugs, moduleEntry) {
     const lesson = await readMdx(lessonFile);
     validateLearnerSource(lesson, lessonFile, "Lesson");
     if (lesson) {
-      validateLessonMetadata(lesson.data, lessonFile);
+      validateMetadata(lessonSchema, lesson.data, lessonFile, "Lesson");
       validateOrder(lesson.data, lessonFile, "Lesson", lessonOrders);
     }
   }
-  validateContiguousOrders(lessonOrders, lessonEntries.length, lessonsDir, "Lesson");
+  validateContiguousOrders(
+    lessonOrders,
+    lessonEntries.length,
+    lessonsDir,
+    "Lesson",
+  );
 
   return moduleSource;
 }
@@ -490,13 +385,22 @@ async function validateCourse(courseEntry) {
   const overviewFile = path.join(courseDir, "index.mdx");
   const overview = await readRequiredMdx(overviewFile, "Course");
   validateLearnerSource(overview, overviewFile, "Course");
-  if (overview) validateCourseMetadata(overview.data, overviewFile);
+  if (overview)
+    validateMetadata(courseSchema, overview.data, overviewFile, "Course");
 
   const capstoneFile = path.join(courseDir, "capstone.mdx");
-  const capstone = await readRequiredMdx(capstoneFile, "Capstone Demonstration");
+  const capstone = await readRequiredMdx(
+    capstoneFile,
+    "Capstone Demonstration",
+  );
   validateLearnerSource(capstone, capstoneFile, "Capstone Demonstration");
   if (capstone) {
-    validateAssessmentMetadata(capstone.data, capstoneFile, "Capstone Demonstration");
+    validateMetadata(
+      assessmentSchema,
+      capstone.data,
+      capstoneFile,
+      "Capstone Demonstration",
+    );
     counts.capstones += 1;
   }
 
@@ -526,7 +430,11 @@ async function validateCourse(courseEntry) {
   const moduleOrders = new Map();
   const courseLessonSlugs = new Map();
   for (const moduleEntry of moduleEntries) {
-    const moduleSource = await validateModule(courseDir, courseLessonSlugs, moduleEntry);
+    const moduleSource = await validateModule(
+      courseDir,
+      courseLessonSlugs,
+      moduleEntry,
+    );
     if (moduleSource) {
       validateOrder(
         moduleSource.data,
@@ -536,7 +444,12 @@ async function validateCourse(courseEntry) {
       );
     }
   }
-  validateContiguousOrders(moduleOrders, moduleEntries.length, modulesDir, "Module");
+  validateContiguousOrders(
+    moduleOrders,
+    moduleEntries.length,
+    modulesDir,
+    "Module",
+  );
 }
 
 let contentEntries;
@@ -561,7 +474,9 @@ counts.courses = courseEntries.length;
 for (const courseEntry of courseEntries) await validateCourse(courseEntry);
 
 if (errors.length > 0) {
-  console.error(`Content validation failed:\n${errors.map((error) => `- ${error}`).join("\n")}`);
+  console.error(
+    `Content validation failed:\n${errors.map((error) => `- ${error}`).join("\n")}`,
+  );
   process.exit(1);
 }
 
