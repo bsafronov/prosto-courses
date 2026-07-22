@@ -16,6 +16,72 @@ export type CourseTree = {
   capstone: CapstoneEntry;
 };
 
+export const lessonMinutes = (lesson: LessonEntry) =>
+  lesson.data.time.study +
+  lesson.data.time.practice +
+  (lesson.data.time.advanced ?? 0);
+
+export const moduleMinutes = (courseModule: CourseModule) =>
+  courseModule.lessons.reduce(
+    (total, lesson) => total + lessonMinutes(lesson),
+    courseModule.checkpoint.data.time,
+  );
+
+export const courseMinutes = (tree: CourseTree) =>
+  tree.modules.reduce(
+    (total, courseModule) => total + moduleMinutes(courseModule),
+    tree.capstone.data.time,
+  );
+
+export function formatMinutes(minutes: number) {
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return [
+    hours > 0 ? `${hours} ч` : "",
+    remainder > 0 ? `${remainder} мин` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function formatRussianCount(
+  count: number,
+  forms: [one: string, few: string, many: string],
+) {
+  const lastTwoDigits = count % 100;
+  const lastDigit = count % 10;
+  const form =
+    lastTwoDigits >= 11 && lastTwoDigits <= 14
+      ? forms[2]
+      : lastDigit === 1
+        ? forms[0]
+        : lastDigit >= 2 && lastDigit <= 4
+          ? forms[1]
+          : forms[2];
+  return `${count} ${form}`;
+}
+
+export const formatModuleCount = (count: number) =>
+  formatRussianCount(count, ["Модуль", "Модуля", "Модулей"]);
+
+export const formatLessonCount = (count: number) =>
+  formatRussianCount(count, ["Урок", "Урока", "Уроков"]);
+
+export function getModuleOutcomes(course: CourseEntry, module: ModuleEntry) {
+  const outcomesById = new Map(
+    course.data.outcomes.map((outcome) => [outcome.id, outcome]),
+  );
+  return module.data.outcomes.map((outcomeId) => {
+    const outcome = outcomesById.get(outcomeId);
+    if (!outcome) {
+      throw new Error(
+        `Module ${module.id} references unknown Learning Outcome ${outcomeId}`,
+      );
+    }
+    return outcome;
+  });
+}
+
 const idPart = (id: string, index: number) => id.split("/")[index];
 
 export const moduleCourseSlug = (module: ModuleEntry) => idPart(module.id, 0);

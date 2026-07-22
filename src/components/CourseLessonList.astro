@@ -17,13 +17,13 @@ const {
 } = Astro.props;
 ---
 <ol aria-label={label} class="lesson-list">
-  {lessons.map((lesson) => (
+  {lessons.map((lesson, lessonIndex) => (
     <li>
       <a
         href={lessonPath(courseSlug, lessonSlug(lesson))}
         aria-current={lessonSlug(lesson) === currentLessonSlug ? "page" : undefined}
       >
-        <span class="lesson-number" aria-hidden="true">{lesson.data.order}</span>
+        <span class="lesson-number" aria-hidden="true">{lessonIndex + 1}</span>
         <span class="lesson-title">{lesson.data.title}</span>
         <ProgressStatus lessonSlug={lessonSlug(lesson)} />
       </a>

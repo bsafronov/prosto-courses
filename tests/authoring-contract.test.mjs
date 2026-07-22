@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import test from "node:test";
@@ -28,6 +31,24 @@ async function validateContent(contentPath) {
 }
 
 const validateFixture = (name) => validateContent(fixturePath(name));
+
+async function withChangedValidCourse(changes, run) {
+  const root = await mkdtemp(path.join(tmpdir(), "prosto-authoring-contract-"));
+  const course = path.join(root, "accessible-images");
+  await cp(fixturePath("valid-course/accessible-images"), course, {
+    recursive: true,
+  });
+
+  try {
+    for (const [relativePath, change] of Object.entries(changes)) {
+      const file = path.join(course, relativePath);
+      await writeFile(file, change(await readFile(file, "utf8")));
+    }
+    await run(await validateContent(root));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
 
 test("accepts the canonical Russian Course through the public contract", async () => {
   const result = await validateContent(canonicalCoursePath);
@@ -155,6 +176,75 @@ test("rejects Lesson metadata that the strict collection cannot load", async () 
   const result = await validateFixture("missing-lesson-metadata");
   assert.notEqual(result.exitCode, 0);
   assert.match(result.output, /revision/i);
+});
+
+test("rejects authored counts, positions, links, and duration totals", async () => {
+  await withChangedValidCourse(
+    {
+      "index.mdx": (source) =>
+        source.replace(
+          "capabilityPacks: []",
+          "capabilityPacks: []\nmoduleCount: 1\nlessonCount: 2\ntotalTime: 70",
+        ),
+      "modules/alt-text/index.mdx": (source) =>
+        source.replace(
+          "order: 1",
+          "order: 1\nlessonCount: 2\ntotalTime: 50\nhref: /modules/alt-text",
+        ),
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        source.replace(
+          "revision: 1",
+          "revision: 1\nposition: 1\nhref: /lessons/describe-purpose",
+        ),
+    },
+    async (result) => {
+      assert.notEqual(result.exitCode, 0);
+      for (const field of [
+        "moduleCount",
+        "lessonCount",
+        "totalTime",
+        "position",
+        "href",
+      ]) {
+        assert.match(
+          result.output,
+          new RegExp(`does not allow a ${field} field`, "i"),
+        );
+      }
+    },
+  );
+});
+
+test("rejects malformed promise, capability, outcome, and workload metadata", async () => {
+  await withChangedValidCourse(
+    {
+      "index.mdx": (source) =>
+        source
+          .replace(
+            "learnerProfile: Writers who publish image-supported learning material and know basic HTML semantics.",
+            "learnerProfile: '   '",
+          )
+          .replace("id: identify-image-purpose", "id: Invalid Outcome ID"),
+      "modules/alt-text/index.mdx": (source) =>
+        source.replace(
+          "capability: Write useful alternative text for an image in context",
+          "capability: ''",
+        ),
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        source.replace("study: 5", "study: -1"),
+    },
+    async (result) => {
+      assert.notEqual(result.exitCode, 0);
+      for (const expectedMessage of [
+        /Course frontmatter learnerProfile/i,
+        /Course frontmatter outcomes\.0\.id/i,
+        /Module frontmatter capability/i,
+        /Lesson frontmatter time\.study/i,
+      ]) {
+        assert.match(result.output, expectedMessage);
+      }
+    },
+  );
 });
 
 const fencedExamples = [

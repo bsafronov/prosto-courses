@@ -2,10 +2,15 @@
 import { getCollection, render, type CollectionEntry } from "astro:content";
 import CourseOutline from "../../components/CourseOutline.astro";
 import KnowledgeCheck from "../../components/KnowledgeCheck.astro";
+import WorkloadSummary from "../../components/WorkloadSummary.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import {
   getCourseTree,
   getLessonLinks,
+  courseMinutes,
+  formatLessonCount,
+  formatMinutes,
+  formatModuleCount,
   type CourseTree,
 } from "../../lib/courses";
 import { courseActionCopy } from "../../lib/ui-copy";
@@ -33,16 +38,29 @@ const lessonLinks = getLessonLinks(course.id, lessons);
       <p class="eyebrow">О курсе</p>
       <h1>{course.data.title}</h1>
       <p class="summary">{course.data.summary}</p>
+      <WorkloadSummary
+        label="Объём курса"
+        items={[
+          { label: "Модули", value: formatModuleCount(tree.modules.length) },
+          { label: "Уроки", value: formatLessonCount(lessons.length) },
+          { label: "Общее время", value: formatMinutes(courseMinutes(tree)) },
+        ]}
+      />
       <a class="button" data-course-action href={lessonLinks[0].href}>{courseActionCopy.start}</a>
     </header>
     <div class="columns">
       <article class="prose reading-width">
         <Content components={{ KnowledgeCheck }} />
+        <h2>Для кого этот курс</h2>
+        <p>{course.data.learnerProfile}</p>
+        <h2>Что нужно уметь</h2>
+        <ul>{course.data.prerequisites.map((prerequisite) => <li>{prerequisite}</li>)}</ul>
         <h2>Чему ты научишься</h2>
         <ul>{course.data.outcomes.map((outcome) => <li>{outcome.statement}</li>)}</ul>
       </article>
       <aside>
         <h2>Маршрут курса</h2>
+        <p class="guidance"><strong>Рекомендуемая последовательность</strong> — это подсказка: можно открыть любую часть Курса.</p>
         <nav aria-label="Маршрут курса">
           <CourseOutline courseSlug={course.id} tree={tree} />
         </nav>
@@ -60,5 +78,6 @@ const lessonLinks = getLessonLinks(course.id, lessons);
   .columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(20rem, .75fr); gap: 3rem; margin-top: 3rem; align-items: start; }
   aside { position: sticky; top: 1rem; }
   aside h2 { font-size: 1.15rem; }
+  .guidance { color: var(--color-muted); font-size: .92rem; }
   @media (max-width: 48rem) { .columns { grid-template-columns: 1fr; gap: 1.5rem; } aside { position: static; } }
 </style>

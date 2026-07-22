@@ -3,15 +3,20 @@ import { getCollection, render, type CollectionEntry } from "astro:content";
 import CourseLessonList from "../../../../components/CourseLessonList.astro";
 import CourseOutline from "../../../../components/CourseOutline.astro";
 import KnowledgeCheck from "../../../../components/KnowledgeCheck.astro";
+import WorkloadSummary from "../../../../components/WorkloadSummary.astro";
 import BaseLayout from "../../../../layouts/BaseLayout.astro";
 import {
   checkpointPath,
   coursePath,
+  formatLessonCount,
   getCourseTree,
   getLessonLinks,
+  getModuleOutcomes,
+  formatMinutes,
   lessonPath,
   lessonSlug,
   moduleCourseSlug,
+  moduleMinutes,
   moduleSlug,
   type CourseModule,
   type CourseTree,
@@ -45,6 +50,10 @@ const { course, module, tree }: Props = Astro.props;
 const current = tree.modules.find(
   (candidate) => candidate.module.id === module.id,
 ) as CourseModule;
+const modulePosition = tree.modules.findIndex(
+  (candidate) => candidate.module.id === module.id,
+) + 1;
+const supportedOutcomes = getModuleOutcomes(course, module);
 const slug = moduleSlug(module);
 const allLessons = tree.modules.flatMap((entry) => entry.lessons);
 const lessonLinks = getLessonLinks(course.id, allLessons);
@@ -59,6 +68,7 @@ const { Content } = await render(module);
   >
     <nav class="course-navigation" aria-label="Навигация по курсу">
       <a class="overview-link" href={coursePath(course.id)}>О курсе</a>
+      <p class="guidance"><strong>Рекомендуемая последовательность</strong> не ограничивает переходы — можно открыть любой Урок или проверку.</p>
       <CourseOutline
         courseSlug={course.id}
         tree={tree}
@@ -68,15 +78,32 @@ const { Content } = await render(module);
     </nav>
     <article class="module-content">
       <header>
-        <p class="eyebrow">Модуль {module.data.order} из {tree.modules.length}</p>
+        <p class="eyebrow">Модуль {modulePosition} из {tree.modules.length}</p>
         <h1>{module.data.title}</h1>
         <p class="summary">{module.data.summary}</p>
+        <WorkloadSummary
+          label="Объём Модуля"
+          items={[
+            { label: "Уроки", value: formatLessonCount(current.lessons.length) },
+            { label: "Вместе с проверкой", value: formatMinutes(moduleMinutes(current)) },
+          ]}
+        />
         <a
           class="button"
           href={lessonPath(course.id, lessonSlug(current.lessons[0]))}
         >Начать Модуль</a>
       </header>
-      <div class="prose"><Content components={{ KnowledgeCheck }} /></div>
+      <div class="prose">
+        <Content components={{ KnowledgeCheck }} />
+        <h2>Что ты сможешь после Модуля</h2>
+        <p>{module.data.capability}</p>
+        <h2>Какие результаты поддерживает Модуль</h2>
+        <ul>
+          {supportedOutcomes.map((outcome) => (
+            <li>{outcome.statement}</li>
+          ))}
+        </ul>
+      </div>
       <section aria-labelledby="module-lessons-heading">
         <h2 id="module-lessons-heading">Уроки Модуля</h2>
         <CourseLessonList
@@ -97,6 +124,7 @@ const { Content } = await render(module);
   .module-shell { display: grid; grid-template-columns: minmax(16rem, 21rem) minmax(0, 48rem); gap: 3rem; align-items: start; padding-top: 2rem; }
   .course-navigation { position: sticky; top: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); padding: .8rem; }
   .overview-link { display: inline-block; margin: .2rem 0 .9rem; font-weight: 700; }
+  .guidance { color: var(--color-muted); font-size: .88rem; line-height: 1.5; }
   .module-content { min-width: 0; }
   header { padding: 1.4rem 0 1.8rem; border-bottom: 1px solid var(--color-border); }
   h1 { margin: .15rem 0 .6rem; font-size: clamp(2.2rem, 6vw, 3.6rem); line-height: 1.08; letter-spacing: -.045em; }

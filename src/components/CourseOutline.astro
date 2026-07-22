@@ -27,7 +27,7 @@ const {
 ---
 <div class="outline">
   <ol class="module-list">
-    {tree.modules.map(({ module, lessons, checkpoint }) => {
+    {tree.modules.map(({ module, lessons, checkpoint }, moduleIndex) => {
       const slug = moduleSlug(module);
       const label = tree.modules.length === 1
         ? lessonListLabel
@@ -41,7 +41,7 @@ const {
               ? "page"
               : undefined}
           >
-            <span aria-hidden="true">{module.data.order}</span>
+            <span aria-hidden="true">{moduleIndex + 1}</span>
             {module.data.title}
           </a>
           <CourseLessonList
