@@ -71,7 +71,7 @@ const invalidFixtures = [
   ["missing-explanation", "explanation"],
   ["presentation-import", "must not import presentation"],
   ["layout-selection", "must not select a layout"],
-  ["invalid-language", "Unicode locale identifier"],
+  ["invalid-language", "does not allow a language field"],
 ];
 
 for (const [fixture, expectedMessage] of invalidFixtures) {

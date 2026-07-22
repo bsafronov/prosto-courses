@@ -11,6 +11,7 @@ test("Knowledge Check announces feedback, explains answers, and allows keyboard 
 }) => {
   const check = page.locator("[data-knowledge-check]");
   const feedback = check.locator("[data-feedback]");
+  await expect(check.getByText("Проверь себя", { exact: true })).toBeVisible();
   await expect(page.getByRole("status")).toHaveCount(1);
   await expect(feedback).toHaveAttribute("role", "status");
   await expect(feedback).toHaveAttribute("aria-live", "polite");
@@ -21,9 +22,9 @@ test("Knowledge Check announces feedback, explains answers, and allows keyboard 
   });
   await incorrect.focus();
   await page.keyboard.press("Space");
-  await check.getByRole("button", { name: "Check answer" }).focus();
+  await check.getByRole("button", { name: "Проверить ответ" }).focus();
   await page.keyboard.press("Enter");
-  await expect(feedback).toContainText("Not quite. Try again.");
+  await expect(feedback).toContainText("Почти! Попробуй ещё раз.");
   await expect(feedback).toContainText("Символы Markdown просты");
 
   const correct = check.getByRole("radio", {
@@ -31,12 +32,12 @@ test("Knowledge Check announces feedback, explains answers, and allows keyboard 
   });
   await correct.focus();
   await page.keyboard.press("Space");
-  await check.getByRole("button", { name: "Check answer" }).press("Enter");
-  await expect(feedback).toContainText("Correct.");
+  await check.getByRole("button", { name: "Проверить ответ" }).press("Enter");
+  await expect(feedback).toContainText("Верно!");
   await expect(feedback).toContainText("Символы Markdown просты");
 
   await expect(
-    page.locator("header").getByLabel("Lesson status: Started"),
+    page.locator("header").getByLabel("Статус урока: В процессе"),
   ).toBeVisible();
   await expect(page.locator("[data-completion-toggle]")).toHaveAttribute(
     "aria-pressed",
@@ -51,8 +52,8 @@ test("Knowledge Check answers are cleared by a reload", async ({ page }) => {
       name: "Он остаётся читаемым без специального редактора",
     })
     .check();
-  await check.getByRole("button", { name: "Check answer" }).click();
-  await expect(check.locator("[data-feedback]")).toContainText("Correct.");
+  await check.getByRole("button", { name: "Проверить ответ" }).click();
+  await expect(check.locator("[data-feedback]")).toContainText("Верно!");
 
   await page.reload();
 

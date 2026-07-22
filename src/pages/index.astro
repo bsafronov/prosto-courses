@@ -4,20 +4,20 @@ import { coursePath, getCourses } from "../lib/courses";
 
 const courses = await getCourses();
 ---
-<BaseLayout title="Course Catalog | Prosto.Courses">
+<BaseLayout title="Каталог курсов | Prosto.Courses">
   <section class="hero container">
-    <p class="eyebrow">Course Catalog</p>
-    <h1>Learn something useful, one Lesson at a time.</h1>
-    <p>Short, focused Courses with clear progress and practical Knowledge Checks.</p>
+    <p class="eyebrow">Каталог курсов</p>
+    <h1>Учись новому — урок за уроком.</h1>
+    <p>Короткие курсы, понятный прогресс и задания, чтобы проверить себя.</p>
   </section>
   <section class="container catalog" aria-labelledby="catalog-heading">
-    <h2 id="catalog-heading">All courses</h2>
+    <h2 id="catalog-heading">Все курсы</h2>
     <div class="grid">
       {courses.map((course) => (
         <article aria-labelledby={`course-${course.id}`}>
           <h3 id={`course-${course.id}`}><a href={coursePath(course.id)}>{course.data.title}</a></h3>
           <p>{course.data.summary}</p>
-          <a class="learn-more" href={coursePath(course.id)} aria-label={`View ${course.data.title}`}>View Course <span aria-hidden="true">→</span></a>
+          <a class="learn-more" href={coursePath(course.id)} aria-label={`Открыть курс «${course.data.title}»`}>Открыть курс <span aria-hidden="true">→</span></a>
         </article>
       ))}
     </div>

@@ -22,31 +22,28 @@ The directory name is the stable Course slug. Each Lesson filename, without `.md
 
 ```mdx
 ---
-title: Clear Course title
-summary: One concise sentence that helps a learner decide whether to open it.
+title: Понятное название курса
+summary: Одно короткое предложение, которое помогает решить, стоит ли открыть курс.
 outcomes:
-  - Explain the central concept
-  - Apply it in a realistic example
-language: en
+  - Объяснить основную идею
+  - Применить её в реалистичном примере
 ---
 
-Optional introductory Course Overview prose goes here.
+Здесь можно добавить вводный текст о курсе.
 ```
 
-`language` is an optional Unicode locale identifier, such as `en`, `ru`,
-`pt-BR`, or `zh-Hant`, and defaults to `en`. Set it to the Course content's
-language so the generated Course Overview and Lessons expose accurate document
-language metadata.
+The platform and every Course are Russian-language. Do not add a `language`
+field; the platform sets the document language globally.
 
 Every file in `lessons/` requires a title and an integer order:
 
 ```mdx
 ---
-title: A focused Lesson title
+title: Короткое и точное название урока
 order: 1
 ---
 
-Lesson content goes here.
+Здесь находится содержание урока.
 ```
 
 A Course must contain at least one Lesson. Orders must be unique and contiguous from `1`; reordering only requires editing these values.
@@ -57,10 +54,10 @@ A Course must contain at least one Lesson. Orders must be unique and contiguous 
 
 ```mdx
 <KnowledgeCheck
-  prompt="Which option best applies the idea?"
-  options={["First answer", "Second answer", "Third answer"]}
-  answer="Second answer"
-  explanation="Second answer applies the idea because…"
+  prompt="Какой вариант лучше всего применяет эту идею?"
+  options={["Первый ответ", "Второй ответ", "Третий ответ"]}
+  answer="Второй ответ"
+  explanation="Второй ответ применяет идею, потому что…"
 />
 ```
 
@@ -68,7 +65,7 @@ All four props are required and static. `options` must be a JSON array containin
 
 ## Content quality
 
-- Keep each Course internally consistent in one language. Platform interface copy remains English.
+- Write all learner-facing content in Russian and address the learner as `ты` in a friendly, encouraging voice.
 - Give each Lesson one clear focus. Begin with the learner need, introduce ideas before using them, organize headings in order, and keep paragraphs easy to scan.
 - State Learning Outcomes as observable knowledge or ability.
 - Put a Knowledge Check near the explanation it reinforces. Write one unambiguous correct answer and plausible alternatives.
@@ -86,4 +83,4 @@ Run the public authoring validation entry point before committing:
 pnpm validate
 ```
 
-It rejects malformed metadata, Lessons outside an owning Course directory, empty Courses, invalid Lesson order, and invalid Knowledge Checks with file-specific messages. `pnpm build` always runs the same validation before producing the static site.
+It rejects malformed or language-specific metadata, Lessons outside an owning Course directory, empty Courses, invalid Lesson order, and invalid Knowledge Checks with file-specific messages. `pnpm build` always runs the same validation before producing the static site.

@@ -1,7 +1,6 @@
 import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
-import { isSupportedLanguage } from "../scripts/content-contract.mjs";
 
 const base = process.env.COURSE_CONTENT_ROOT ?? "./src/content/courses";
 
@@ -16,7 +15,6 @@ const courses = defineCollection({
       title: z.string().min(1),
       summary: z.string().min(1),
       outcomes: z.array(z.string().min(1)).min(1),
-      language: z.string().refine(isSupportedLanguage).optional(),
     })
     .strict(),
 });

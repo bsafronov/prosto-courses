@@ -1,16 +1,22 @@
 ---
+import {
+  lessonStatusAriaLabel,
+  lessonStatusCopy,
+} from "../lib/ui-copy";
+
 interface Props { lessonSlug: string }
 const { lessonSlug } = Astro.props;
+const initialStatus = lessonStatusCopy["not-started"];
 ---
 <span
   class="status"
   data-progress-status
   data-lesson-slug={lessonSlug}
   data-state="not-started"
-  aria-label="Lesson status: Not started"
+  aria-label={lessonStatusAriaLabel(initialStatus.label)}
 >
-  <span data-status-icon aria-hidden="true">○</span>
-  <span data-status-label>Not started</span>
+  <span data-status-icon aria-hidden="true">{initialStatus.icon}</span>
+  <span data-status-label>{initialStatus.label}</span>
 </span>
 
 <style>

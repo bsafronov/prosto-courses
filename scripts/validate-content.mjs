@@ -2,7 +2,6 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import matter from "gray-matter";
-import { isSupportedLanguage } from "./content-contract.mjs";
 
 const contentRoot = path.resolve(
   process.argv[2] ?? process.env.COURSE_CONTENT_ROOT ?? "src/content/courses",
@@ -172,11 +171,8 @@ async function validateCourse(courseEntry) {
   requiredString(overview.data, "title", overviewFile, "Course");
   requiredString(overview.data, "summary", overviewFile, "Course");
   validateSharedMetadata(overview.data, overviewFile);
-  if (
-    overview.data.language !== undefined &&
-    !isSupportedLanguage(overview.data.language)
-  ) {
-    report(overviewFile, "Course language must be a Unicode locale identifier");
+  if (Object.hasOwn(overview.data, "language")) {
+    report(overviewFile, "Course frontmatter does not allow a language field");
   }
   if (
     !Array.isArray(overview.data.outcomes) ||

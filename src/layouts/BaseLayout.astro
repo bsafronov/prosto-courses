@@ -2,15 +2,14 @@
 import { sitePath } from "../lib/courses";
 import "../styles/global.css";
 
-interface Props { title: string; description?: string; language?: string }
+interface Props { title: string; description?: string }
 const {
   title,
-  description = "Short, practical courses.",
-  language = "en",
+  description = "Короткие практические курсы.",
 } = Astro.props;
 ---
 <!doctype html>
-<html lang={language}>
+<html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
@@ -21,11 +20,11 @@ const {
     <header class="site-header">
       <div class="container header-inner">
         <a class="brand" href={sitePath()}>Prosto.Courses</a>
-        <a href={sitePath()}>All courses</a>
+        <a href={sitePath()}>Все курсы</a>
       </div>
     </header>
     <main><slot /></main>
-    <footer class="site-footer"><div class="container">Learn at your own pace.</div></footer>
+    <footer class="site-footer"><div class="container">Учись в своём темпе.</div></footer>
   </body>
 </html>
 

@@ -1,4 +1,11 @@
-type LessonState = "not-started" | "started" | "completed";
+import {
+  completionActionCopy,
+  courseActionCopy,
+  lessonStatusAriaLabel,
+  lessonStatusCopy,
+  type LessonState,
+} from "../lib/ui-copy";
+
 type StoredLesson = { state: Exclude<LessonState, "not-started">; visitedAt: number };
 type StoredCourse = { lessons: Record<string, StoredLesson>; lastIncomplete?: string };
 type StoredProgress = { courses: Record<string, StoredCourse> };
@@ -31,19 +38,13 @@ function nextVisitedAt(course: StoredCourse) {
   return Math.max(Date.now(), latest + 1);
 }
 
-function statusCopy(state: LessonState) {
-  if (state === "completed") return { icon: "✓", label: "Completed" };
-  if (state === "started") return { icon: "◐", label: "Started" };
-  return { icon: "○", label: "Not started" };
-}
-
 function paintStatus(root: ParentNode, lessonSlug: string, state: LessonState) {
-  const copy = statusCopy(state);
+  const copy = lessonStatusCopy[state];
   root
     .querySelectorAll<HTMLElement>(`[data-progress-status][data-lesson-slug="${CSS.escape(lessonSlug)}"]`)
     .forEach((status) => {
       status.dataset.state = state;
-      status.setAttribute("aria-label", `Lesson status: ${copy.label}`);
+      status.setAttribute("aria-label", lessonStatusAriaLabel(copy.label));
       const icon = status.querySelector<HTMLElement>("[data-status-icon]");
       const label = status.querySelector<HTMLElement>("[data-status-label]");
       if (icon) icon.textContent = copy.icon;
@@ -76,7 +77,9 @@ function refresh(root: HTMLElement, course: StoredCourse) {
     if (toggle) {
       const completed = state === "completed";
       toggle.setAttribute("aria-pressed", String(completed));
-      toggle.textContent = completed ? "Mark Lesson incomplete" : "Mark Lesson complete";
+      toggle.textContent = completed
+        ? completionActionCopy.reopen
+        : completionActionCopy.complete;
     }
   }
 
@@ -85,10 +88,10 @@ function refresh(root: HTMLElement, course: StoredCourse) {
   const started = lessons.filter((lesson) => course.lessons[lesson.slug]);
   const incomplete = lessons.filter((lesson) => course.lessons[lesson.slug]?.state !== "completed");
   if (incomplete.length === 0) {
-    action.textContent = "Review course";
+    action.textContent = courseActionCopy.review;
     action.href = lessons[0].href;
   } else if (started.length === 0) {
-    action.textContent = "Start course";
+    action.textContent = courseActionCopy.start;
     action.href = lessons[0].href;
   } else {
     const recentSlug =
@@ -98,7 +101,7 @@ function refresh(root: HTMLElement, course: StoredCourse) {
         incomplete.map((lesson) => lesson.slug),
       );
     const recent = incomplete.find((lesson) => lesson.slug === recentSlug);
-    action.textContent = "Continue course";
+    action.textContent = courseActionCopy.continue;
     action.href = (recent ?? incomplete[0]).href;
   }
 }

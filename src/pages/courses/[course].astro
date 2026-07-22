@@ -4,6 +4,7 @@ import CourseLessonList from "../../components/CourseLessonList.astro";
 import KnowledgeCheck from "../../components/KnowledgeCheck.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { getLessonLinks, getLessons, type LessonEntry } from "../../lib/courses";
+import { courseActionCopy } from "../../lib/ui-copy";
 
 export async function getStaticPaths() {
   const courses = await getCollection("courses");
@@ -21,23 +22,22 @@ const lessonLinks = getLessonLinks(course.id, lessons);
 <BaseLayout
   title={`${course.data.title} | Prosto.Courses`}
   description={course.data.summary}
-  language={course.data.language}
 >
   <div class="container overview" data-progress-root data-course-slug={course.id} data-lessons={JSON.stringify(lessonLinks)}>
     <header>
-      <p class="eyebrow">Course Overview</p>
+      <p class="eyebrow">О курсе</p>
       <h1>{course.data.title}</h1>
       <p class="summary">{course.data.summary}</p>
-      <a class="button" data-course-action href={lessonLinks[0].href}>Start course</a>
+      <a class="button" data-course-action href={lessonLinks[0].href}>{courseActionCopy.start}</a>
     </header>
     <div class="columns">
       <article class="prose reading-width">
         <Content components={{ KnowledgeCheck }} />
-        <h2>Learning outcomes</h2>
+        <h2>Чему ты научишься</h2>
         <ul>{course.data.outcomes.map((outcome) => <li>{outcome}</li>)}</ul>
       </article>
       <aside>
-        <h2>Lessons</h2>
+        <h2>Уроки</h2>
         <CourseLessonList courseSlug={course.id} lessons={lessons} />
       </aside>
     </div>

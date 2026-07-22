@@ -5,6 +5,7 @@ import KnowledgeCheck from "../../../../components/KnowledgeCheck.astro";
 import ProgressStatus from "../../../../components/ProgressStatus.astro";
 import BaseLayout from "../../../../layouts/BaseLayout.astro";
 import { coursePath, getLessonLinks, getLessons, lessonCourseSlug, lessonPath, lessonSlug, type LessonEntry } from "../../../../lib/courses";
+import { completionActionCopy } from "../../../../lib/ui-copy";
 
 export async function getStaticPaths() {
   const courses = await getCollection("courses");
@@ -37,36 +38,35 @@ const lessonLinks = getLessonLinks(course.id, lessons);
 ---
 <BaseLayout
   title={`${lesson.data.title} | ${course.data.title}`}
-  language={course.data.language}
 >
   <div class="container lesson-shell" data-progress-root data-course-slug={course.id} data-current-lesson={slug} data-lessons={JSON.stringify(lessonLinks)}>
     <details class="course-navigation" open>
-      <summary>{course.data.title}: Course lessons</summary>
-      <nav aria-label="Course navigation">
-        <a class="overview-link" href={coursePath(course.id)}>Course Overview</a>
+      <summary>{course.data.title}: уроки курса</summary>
+      <nav aria-label="Навигация по курсу">
+        <a class="overview-link" href={coursePath(course.id)}>О курсе</a>
         <CourseLessonList
           courseSlug={course.id}
           lessons={lessons}
-          label="Course navigation lessons"
+          label="Уроки в навигации курса"
           currentLessonSlug={slug}
         />
       </nav>
     </details>
     <article class="lesson-content">
       <header>
-        <p class="eyebrow">Lesson {lesson.data.order} of {lessons.length}</p>
+        <p class="eyebrow">Урок {lesson.data.order} из {lessons.length}</p>
         <h1>{lesson.data.title}</h1>
         <ProgressStatus lessonSlug={slug} />
       </header>
       <div class="prose"><Content components={{ KnowledgeCheck }} /></div>
       <section class="completion" aria-labelledby="completion-heading">
-        <h2 id="completion-heading">Lesson Completion</h2>
-        <p>Completion is your choice and is independent of Knowledge Check answers.</p>
-        <button type="button" data-completion-toggle aria-pressed="false">Mark Lesson complete</button>
+        <h2 id="completion-heading">Завершение урока</h2>
+        <p>Ты сам решаешь, когда завершить урок. Ответы в блоке «Проверь себя» на это не влияют.</p>
+        <button type="button" data-completion-toggle aria-pressed="false">{completionActionCopy.complete}</button>
       </section>
-      <nav class="sequence" aria-label="Lesson sequence">
-        {previous ? <a href={lessonPath(course.id, lessonSlug(previous))}>← Previous Lesson: {previous.data.title}</a> : <span></span>}
-        {next ? <a href={lessonPath(course.id, lessonSlug(next))}>Next Lesson: {next.data.title} →</a> : <a href={coursePath(course.id)}>Back to Course Overview →</a>}
+      <nav class="sequence" aria-label="Последовательность уроков">
+        {previous ? <a href={lessonPath(course.id, lessonSlug(previous))}>← Предыдущий урок: {previous.data.title}</a> : <span></span>}
+        {next ? <a href={lessonPath(course.id, lessonSlug(next))}>Следующий урок: {next.data.title} →</a> : <a href={coursePath(course.id)}>Вернуться к курсу →</a>}
       </nav>
     </article>
   </div>
