@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const courseOverview = "/prosto-courses/courses/markdown/";
+const courseOverview = "./courses/markdown/";
 
 async function expectThreeProgressStates(page: Page, listName: string) {
   const lessons = page.getByRole("list", { name: listName });
@@ -109,7 +109,7 @@ test("Course navigation stays consistent across pages in the same browser", asyn
 
   const lessonPage = await context.newPage();
   await lessonPage.goto(
-    "/prosto-courses/courses/markdown/lessons/vvedenie/",
+    "./courses/markdown/lessons/vvedenie/",
   );
 
   await expect(

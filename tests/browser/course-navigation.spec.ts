@@ -17,14 +17,15 @@ async function expectLessonSequence(
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/prosto-courses/");
+  await page.goto("./");
   await page.evaluate(() => localStorage.clear());
   await page.reload();
 });
 
-test("learner reads the first Lesson from the Course Catalog", async ({
-  page,
-}) => {
+test("learner reads the first Lesson from the Course Catalog", async (
+  { page },
+  testInfo,
+) => {
   await expect(page).toHaveTitle(/Course Catalog/);
   const card = page.getByRole("article", { name: "Основы Markdown" });
   await expect(card).toContainText("Научитесь оформлять");
@@ -52,7 +53,7 @@ test("learner reads the first Lesson from the Course Catalog", async ({
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "All courses" })).toHaveAttribute(
     "href",
-    "/prosto-courses/",
+    new URL(testInfo.project.use.baseURL!).pathname,
   );
   await page.getByRole("link", { name: /Next Lesson/ }).click();
   await expect(page).toHaveURL(/\/courses\/markdown\/lessons\/formatting\/$/);
@@ -90,7 +91,7 @@ test("fresh authoring fixture follows the Catalog-to-Lesson path", async ({
 test("learner follows the complete Lesson sequence", async ({
   page,
 }) => {
-  await page.goto("/prosto-courses/courses/markdown/lessons/vvedenie/");
+  await page.goto("./courses/markdown/lessons/vvedenie/");
 
   await expectLessonSequence(page, "Course navigation lessons");
   await expect(page.getByText("Lesson 1 of 3", { exact: true })).toBeVisible();

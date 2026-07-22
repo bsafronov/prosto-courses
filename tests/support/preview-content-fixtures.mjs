@@ -10,6 +10,7 @@ const temporaryRoot = await mkdtemp(
 );
 const contentRoot = path.join(temporaryRoot, "courses");
 const outDir = path.join(temporaryRoot, "dist");
+const cacheDir = path.join(temporaryRoot, "cache");
 
 async function copyCourses(sourceRoot) {
   for (const entry of await readdir(sourceRoot, { withFileTypes: true })) {
@@ -40,6 +41,7 @@ await copyCourses(path.join(projectRoot, "tests/fixtures/valid-course"));
 const environment = {
   ...process.env,
   ASTRO_OUT_DIR: outDir,
+  ASTRO_CACHE_DIR: cacheDir,
   COURSE_CONTENT_ROOT: contentRoot,
 };
 

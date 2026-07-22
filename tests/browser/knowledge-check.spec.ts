@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/prosto-courses/courses/markdown/lessons/vvedenie/");
+  await page.goto("./courses/markdown/lessons/vvedenie/");
   await page.evaluate(() => localStorage.clear());
   await page.reload();
 });
@@ -73,7 +73,7 @@ test("Russian example Course includes Knowledge Checks in multiple Lessons", asy
 }) => {
   await expect(page.locator("[data-knowledge-check]")).toHaveCount(1);
 
-  await page.goto("/prosto-courses/courses/markdown/lessons/formatting/");
+  await page.goto("./courses/markdown/lessons/formatting/");
 
   await expect(page.locator("[data-knowledge-check]")).toHaveCount(1);
   await expect(
