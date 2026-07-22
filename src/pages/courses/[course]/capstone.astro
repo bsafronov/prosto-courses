@@ -1,0 +1,93 @@
+---
+import { getCollection, render, type CollectionEntry } from "astro:content";
+import CourseOutline from "../../../components/CourseOutline.astro";
+import KnowledgeCheck from "../../../components/KnowledgeCheck.astro";
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import {
+  checkpointPath,
+  coursePath,
+  getCourseTree,
+  getLessonLinks,
+  moduleSlug,
+  type CourseTree,
+} from "../../../lib/courses";
+
+export async function getStaticPaths() {
+  const [courses, capstones] = await Promise.all([
+    getCollection("courses"),
+    getCollection("capstones"),
+  ]);
+  const paths = [];
+  for (const capstone of capstones) {
+    const course = courses.find((candidate) => candidate.id === capstone.id);
+    if (!course) continue;
+    paths.push({
+      params: { course: course.id },
+      props: { course, capstone, tree: await getCourseTree(course.id) },
+    });
+  }
+  return paths;
+}
+
+interface Props {
+  course: CollectionEntry<"courses">;
+  capstone: CollectionEntry<"capstones">;
+  tree: CourseTree;
+}
+
+const { course, capstone, tree } = Astro.props;
+const finalModule = tree.modules.at(-1)!;
+const lessons = tree.modules.flatMap((module) => module.lessons);
+const lessonLinks = getLessonLinks(course.id, lessons);
+const { Content } = await render(capstone);
+---
+<BaseLayout title={`${capstone.data.title} | ${course.data.title}`}>
+  <div
+    class="container assessment-shell"
+    data-progress-root
+    data-course-slug={course.id}
+    data-lessons={JSON.stringify(lessonLinks)}
+  >
+    <nav class="course-navigation" aria-label="Навигация по курсу">
+      <a class="overview-link" href={coursePath(course.id)}>О курсе</a>
+      <CourseOutline
+        courseSlug={course.id}
+        tree={tree}
+        lessonListLabel="Уроки в навигации курса"
+        current={{ kind: "capstone", slug: "capstone" }}
+      />
+    </nav>
+    <article class="assessment-content">
+      <header>
+        <p class="eyebrow">Итоговая работа</p>
+        <h1>{capstone.data.title}</h1>
+        <p>{course.data.title}</p>
+      </header>
+      <div class="prose"><Content components={{ KnowledgeCheck }} /></div>
+      <nav class="sequence" aria-label="Последовательность курса">
+        <a href={checkpointPath(course.id, moduleSlug(finalModule.module))}>
+          ← Проверка Модуля: {finalModule.checkpoint.data.title}
+        </a>
+        <a href={coursePath(course.id)}>Вернуться к обзору курса →</a>
+      </nav>
+    </article>
+  </div>
+  <script src="../../../scripts/progress.ts"></script>
+</BaseLayout>
+
+<style>
+  .assessment-shell { display: grid; grid-template-columns: minmax(16rem, 21rem) minmax(0, 48rem); gap: 3rem; align-items: start; padding-top: 2rem; }
+  .course-navigation { position: sticky; top: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); padding: .8rem; }
+  .overview-link { display: inline-block; margin: .2rem 0 .9rem; font-weight: 700; }
+  .assessment-content { min-width: 0; }
+  header { padding: 1.4rem 0 1.8rem; border-bottom: 1px solid var(--color-border); }
+  h1 { margin: .15rem 0 .6rem; font-size: clamp(2.2rem, 6vw, 3.6rem); line-height: 1.08; letter-spacing: -.045em; }
+  .prose { padding-top: 1rem; }
+  .sequence { display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--color-border); margin-top: 2.5rem; padding-top: 1.5rem; }
+  .sequence a { font-weight: 750; }
+  .sequence a:last-child { margin-left: auto; text-align: right; }
+  @media (max-width: 52rem) {
+    .assessment-shell { grid-template-columns: 1fr; gap: 1rem; }
+    .course-navigation { position: static; }
+  }
+</style>

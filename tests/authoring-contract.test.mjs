@@ -32,13 +32,25 @@ const validateFixture = (name) => validateContent(fixturePath(name));
 test("accepts the canonical Russian Course through the public contract", async () => {
   const result = await validateContent(canonicalCoursePath);
   assert.equal(result.exitCode, 0, result.output);
-  assert.match(result.output, /Validated 1 Course and 3 Lessons/);
+  assert.match(
+    result.output,
+    /Validated 1 Course, 1 Module, 3 Lessons, 1 Module Checkpoint, and 1 Capstone Demonstration/,
+  );
 });
 
 test("accepts a fresh Course through the public authoring contract", async () => {
   const result = await validateFixture("valid-course");
   assert.equal(result.exitCode, 0, result.output);
-  assert.match(result.output, /Validated 1 Course and 2 Lessons/);
+  assert.match(
+    result.output,
+    /Validated 1 Course, 1 Module, 2 Lessons, 1 Module Checkpoint, and 1 Capstone Demonstration/,
+  );
+});
+
+test("rejects the legacy flat Course and Lesson structure", async () => {
+  const result = await validateFixture("legacy-course");
+  assert.notEqual(result.exitCode, 0);
+  assert.match(result.output, /legacy flat Course\/Lesson structure is not supported/i);
 });
 
 const fencedExamples = [
@@ -54,10 +66,14 @@ for (const [fixture, example] of fencedExamples) {
 }
 
 const invalidFixtures = [
+  ["duplicate-module-order", "duplicate Module order 1"],
+  ["module-order-gap", "Module order must be unique and contiguous starting at 1"],
+  ["duplicate-lesson-slug", "Lesson slug shared-lesson collides across the Course"],
+  ["missing-authoring-artifact", "quality report at _authoring/quality-report.md"],
   ["missing-course-metadata", "summary"],
   ["missing-lesson-metadata", "title"],
-  ["orphan-lesson", "must belong to a Course directory"],
-  ["misplaced-lesson", "must be index.mdx or belong under lessons"],
+  ["orphan-lesson", "must belong to a Course Module"],
+  ["misplaced-lesson", "must follow the target Course tree"],
   ["empty-course", "at least one Lesson"],
   ["duplicate-order", "duplicate Lesson order 1"],
   ["order-gap", "contiguous starting at 1"],

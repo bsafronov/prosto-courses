@@ -22,6 +22,46 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+test("learner traverses the complete Course tree from Catalog to Capstone", async ({
+  page,
+}) => {
+  await page
+    .getByRole("article", { name: "Основы Markdown" })
+    .getByRole("link", { name: "Основы Markdown", exact: true })
+    .click();
+
+  await page.getByRole("link", { name: "Понятный Markdown-документ" }).click();
+  await expect(page).toHaveURL(/\/courses\/markdown\/modules\/osnovy\/$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Понятный Markdown-документ" }),
+  ).toBeVisible();
+
+  await page.getByRole("link", { name: /Знакомство с Markdown/ }).first().click();
+  await expect(page).toHaveURL(/\/courses\/markdown\/lessons\/vvedenie\/$/);
+
+  await page.getByRole("link", { name: /Следующий урок: Заголовки/ }).click();
+  await page.getByRole("link", { name: /Следующий урок: Ссылки и код/ }).click();
+  await page.getByRole("link", { name: /Перейти к проверке Модуля/ }).click();
+  await expect(page).toHaveURL(
+    /\/courses\/markdown\/modules\/osnovy\/checkpoint\/$/,
+  );
+  await expect(
+    page.getByRole("heading", {
+      level: 1,
+      name: "Собери Markdown-памятку",
+    }),
+  ).toBeVisible();
+
+  await page.getByRole("link", { name: /Перейти к итоговой работе/ }).click();
+  await expect(page).toHaveURL(/\/courses\/markdown\/capstone\/$/);
+  await expect(
+    page.getByRole("heading", {
+      level: 1,
+      name: "Понятная инструкция в Markdown",
+    }),
+  ).toBeVisible();
+});
+
 test("learner reads the first Lesson from the Course Catalog", async (
   { page },
   testInfo,
@@ -148,6 +188,6 @@ test("learner follows the complete Lesson sequence", async ({
   ).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("link", { name: /Следующий урок/ })).toHaveCount(0);
   await expect(
-    page.getByRole("link", { name: "Вернуться к курсу →" }),
-  ).toHaveAttribute("href", /\/courses\/markdown\/$/);
+    page.getByRole("link", { name: /Перейти к проверке Модуля/ }),
+  ).toHaveAttribute("href", /\/courses\/markdown\/modules\/osnovy\/checkpoint\/$/);
 });

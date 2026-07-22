@@ -1,0 +1,111 @@
+---
+import { getCollection, render, type CollectionEntry } from "astro:content";
+import CourseLessonList from "../../../../components/CourseLessonList.astro";
+import CourseOutline from "../../../../components/CourseOutline.astro";
+import KnowledgeCheck from "../../../../components/KnowledgeCheck.astro";
+import BaseLayout from "../../../../layouts/BaseLayout.astro";
+import {
+  checkpointPath,
+  coursePath,
+  getCourseTree,
+  getLessonLinks,
+  lessonPath,
+  lessonSlug,
+  moduleCourseSlug,
+  moduleSlug,
+  type CourseModule,
+  type CourseTree,
+} from "../../../../lib/courses";
+
+export async function getStaticPaths() {
+  const [courses, modules] = await Promise.all([
+    getCollection("courses"),
+    getCollection("modules"),
+  ]);
+  const paths = [];
+  for (const module of modules) {
+    const courseSlug = moduleCourseSlug(module);
+    const course = courses.find((candidate) => candidate.id === courseSlug);
+    if (!course) continue;
+    paths.push({
+      params: { course: courseSlug, module: moduleSlug(module) },
+      props: { course, module, tree: await getCourseTree(courseSlug) },
+    });
+  }
+  return paths;
+}
+
+type Props = {
+  course: CollectionEntry<"courses">;
+  module: CollectionEntry<"modules">;
+  tree: CourseTree;
+};
+
+const { course, module, tree } = Astro.props;
+const current = tree.modules.find(
+  (candidate) => candidate.module.id === module.id,
+) as CourseModule;
+const slug = moduleSlug(module);
+const allLessons = tree.modules.flatMap((entry) => entry.lessons);
+const lessonLinks = getLessonLinks(course.id, allLessons);
+const { Content } = await render(module);
+---
+<BaseLayout title={`${module.data.title} | ${course.data.title}`}>
+  <div
+    class="container module-shell"
+    data-progress-root
+    data-course-slug={course.id}
+    data-lessons={JSON.stringify(lessonLinks)}
+  >
+    <nav class="course-navigation" aria-label="Навигация по курсу">
+      <a class="overview-link" href={coursePath(course.id)}>О курсе</a>
+      <CourseOutline
+        courseSlug={course.id}
+        tree={tree}
+        lessonListLabel="Уроки в навигации курса"
+        current={{ kind: "module", slug }}
+      />
+    </nav>
+    <article class="module-content">
+      <header>
+        <p class="eyebrow">Модуль {module.data.order} из {tree.modules.length}</p>
+        <h1>{module.data.title}</h1>
+        <p class="summary">{module.data.summary}</p>
+        <a
+          class="button"
+          href={lessonPath(course.id, lessonSlug(current.lessons[0]))}
+        >Начать Модуль</a>
+      </header>
+      <div class="prose"><Content components={{ KnowledgeCheck }} /></div>
+      <section aria-labelledby="module-lessons-heading">
+        <h2 id="module-lessons-heading">Уроки Модуля</h2>
+        <CourseLessonList
+          courseSlug={course.id}
+          lessons={current.lessons}
+          label="Уроки Модуля"
+        />
+        <a class="checkpoint" href={checkpointPath(course.id, slug)}>
+          {current.checkpoint.data.title} →
+        </a>
+      </section>
+    </article>
+  </div>
+  <script src="../../../../scripts/progress.ts"></script>
+</BaseLayout>
+
+<style>
+  .module-shell { display: grid; grid-template-columns: minmax(16rem, 21rem) minmax(0, 48rem); gap: 3rem; align-items: start; padding-top: 2rem; }
+  .course-navigation { position: sticky; top: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); padding: .8rem; }
+  .overview-link { display: inline-block; margin: .2rem 0 .9rem; font-weight: 700; }
+  .module-content { min-width: 0; }
+  header { padding: 1.4rem 0 1.8rem; border-bottom: 1px solid var(--color-border); }
+  h1 { margin: .15rem 0 .6rem; font-size: clamp(2.2rem, 6vw, 3.6rem); line-height: 1.08; letter-spacing: -.045em; }
+  .summary { color: var(--color-muted); font-size: 1.1rem; }
+  .prose { padding-top: 1rem; }
+  section { margin-top: 2.5rem; }
+  .checkpoint { display: inline-block; margin-top: 1rem; font-weight: 750; }
+  @media (max-width: 52rem) {
+    .module-shell { grid-template-columns: 1fr; gap: 1rem; }
+    .course-navigation { position: static; }
+  }
+</style>

@@ -1,0 +1,84 @@
+---
+import type { CourseTree } from "../lib/courses";
+import {
+  capstonePath,
+  checkpointPath,
+  modulePath,
+  moduleSlug,
+} from "../lib/courses";
+import CourseLessonList from "./CourseLessonList.astro";
+
+interface Props {
+  courseSlug: string;
+  tree: CourseTree;
+  lessonListLabel?: string;
+  current?: {
+    kind: "module" | "lesson" | "checkpoint" | "capstone";
+    slug: string;
+  };
+}
+
+const {
+  courseSlug,
+  tree,
+  lessonListLabel = "Уроки курса",
+  current,
+} = Astro.props;
+---
+<div class="outline">
+  <ol class="module-list">
+    {tree.modules.map(({ module, lessons, checkpoint }) => {
+      const slug = moduleSlug(module);
+      const label = tree.modules.length === 1
+        ? lessonListLabel
+        : `${lessonListLabel}: ${module.data.title}`;
+      return (
+        <li class="module">
+          <a
+            class="module-link"
+            href={modulePath(courseSlug, slug)}
+            aria-current={current?.kind === "module" && current.slug === slug
+              ? "page"
+              : undefined}
+          >
+            <span aria-hidden="true">{module.data.order}</span>
+            {module.data.title}
+          </a>
+          <CourseLessonList
+            courseSlug={courseSlug}
+            lessons={lessons}
+            label={label}
+            currentLessonSlug={current?.kind === "lesson" ? current.slug : undefined}
+          />
+          <a
+            class="assessment-link"
+            href={checkpointPath(courseSlug, slug)}
+            aria-current={current?.kind === "checkpoint" && current.slug === slug
+              ? "page"
+              : undefined}
+          >
+            Проверка Модуля: {checkpoint.data.title}
+          </a>
+        </li>
+      );
+    })}
+  </ol>
+  <a
+    class="capstone-link"
+    href={capstonePath(courseSlug)}
+    aria-current={current?.kind === "capstone" ? "page" : undefined}
+  >
+    Итоговая работа: {tree.capstone.data.title}
+  </a>
+</div>
+
+<style>
+  .outline { display: grid; gap: .75rem; }
+  .module-list { list-style: none; display: grid; gap: 1rem; margin: 0; padding: 0; }
+  .module { display: grid; gap: .65rem; }
+  .module-link { display: flex; align-items: center; gap: .65rem; color: var(--color-ink); font-weight: 800; text-decoration: none; }
+  .module-link span { display: grid; width: 1.8rem; height: 1.8rem; place-items: center; border-radius: 50%; background: var(--color-brand); color: white; font-size: .85rem; }
+  .assessment-link, .capstone-link { border: 1px dashed var(--color-border); border-radius: .65rem; padding: .7rem .8rem; color: var(--color-ink); font-weight: 720; text-decoration: none; }
+  .capstone-link { border-style: solid; border-color: var(--color-brand); }
+  a[aria-current="page"] { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+</style>

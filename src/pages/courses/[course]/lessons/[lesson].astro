@@ -1,10 +1,21 @@
 ---
 import { getCollection, render, type CollectionEntry } from "astro:content";
-import CourseLessonList from "../../../../components/CourseLessonList.astro";
+import CourseOutline from "../../../../components/CourseOutline.astro";
 import KnowledgeCheck from "../../../../components/KnowledgeCheck.astro";
 import ProgressStatus from "../../../../components/ProgressStatus.astro";
 import BaseLayout from "../../../../layouts/BaseLayout.astro";
-import { coursePath, getLessonLinks, getLessons, lessonCourseSlug, lessonPath, lessonSlug, type LessonEntry } from "../../../../lib/courses";
+import {
+  checkpointPath,
+  coursePath,
+  getCourseTree,
+  getLessonLinks,
+  lessonCourseSlug,
+  lessonModuleSlug,
+  lessonPath,
+  lessonSlug,
+  type CourseModule,
+  type CourseTree,
+} from "../../../../lib/courses";
 import { completionActionCopy } from "../../../../lib/ui-copy";
 
 export async function getStaticPaths() {
@@ -17,23 +28,29 @@ export async function getStaticPaths() {
     if (!course) continue;
     paths.push({
       params: { course: courseSlug, lesson: lessonSlug(lesson) },
-      props: { course, lesson, lessons: await getLessons(courseSlug) },
+      props: { course, lesson, tree: await getCourseTree(courseSlug) },
     });
   }
   return paths;
 }
 
-interface Props {
+type Props = {
   course: CollectionEntry<"courses">;
   lesson: CollectionEntry<"lessons">;
-  lessons: LessonEntry[];
-}
-const { course, lesson, lessons } = Astro.props;
+  tree: CourseTree;
+};
+const { course, lesson, tree } = Astro.props;
 const { Content } = await render(lesson);
 const slug = lessonSlug(lesson);
-const lessonIndex = lessons.findIndex((candidate) => candidate.id === lesson.id);
-const previous = lessons[lessonIndex - 1];
-const next = lessons[lessonIndex + 1];
+const currentModule = tree.modules.find(
+  (candidate) => candidate.module.id.split("/")[1] === lessonModuleSlug(lesson),
+) as CourseModule;
+const lessonIndex = currentModule.lessons.findIndex(
+  (candidate) => candidate.id === lesson.id,
+);
+const previous = currentModule.lessons[lessonIndex - 1];
+const next = currentModule.lessons[lessonIndex + 1];
+const lessons = tree.modules.flatMap((module) => module.lessons);
 const lessonLinks = getLessonLinks(course.id, lessons);
 ---
 <BaseLayout
@@ -44,17 +61,17 @@ const lessonLinks = getLessonLinks(course.id, lessons);
       <summary>{course.data.title}: уроки курса</summary>
       <nav aria-label="Навигация по курсу">
         <a class="overview-link" href={coursePath(course.id)}>О курсе</a>
-        <CourseLessonList
+        <CourseOutline
           courseSlug={course.id}
-          lessons={lessons}
-          label="Уроки в навигации курса"
-          currentLessonSlug={slug}
+          tree={tree}
+          lessonListLabel="Уроки в навигации курса"
+          current={{ kind: "lesson", slug }}
         />
       </nav>
     </details>
     <article class="lesson-content">
       <header>
-        <p class="eyebrow">Урок {lesson.data.order} из {lessons.length}</p>
+        <p class="eyebrow">Урок {lesson.data.order} из {currentModule.lessons.length}</p>
         <h1>{lesson.data.title}</h1>
         <ProgressStatus lessonSlug={slug} />
       </header>
@@ -66,7 +83,9 @@ const lessonLinks = getLessonLinks(course.id, lessons);
       </section>
       <nav class="sequence" aria-label="Последовательность уроков">
         {previous ? <a href={lessonPath(course.id, lessonSlug(previous))}>← Предыдущий урок: {previous.data.title}</a> : <span></span>}
-        {next ? <a href={lessonPath(course.id, lessonSlug(next))}>Следующий урок: {next.data.title} →</a> : <a href={coursePath(course.id)}>Вернуться к курсу →</a>}
+        {next
+          ? <a href={lessonPath(course.id, lessonSlug(next))}>Следующий урок: {next.data.title} →</a>
+          : <a href={checkpointPath(course.id, lessonModuleSlug(lesson))}>Перейти к проверке Модуля: {currentModule.checkpoint.data.title} →</a>}
       </nav>
     </article>
   </div>

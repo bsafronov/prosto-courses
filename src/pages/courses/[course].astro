@@ -1,22 +1,27 @@
 ---
 import { getCollection, render, type CollectionEntry } from "astro:content";
-import CourseLessonList from "../../components/CourseLessonList.astro";
+import CourseOutline from "../../components/CourseOutline.astro";
 import KnowledgeCheck from "../../components/KnowledgeCheck.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { getLessonLinks, getLessons, type LessonEntry } from "../../lib/courses";
+import {
+  getCourseTree,
+  getLessonLinks,
+  type CourseTree,
+} from "../../lib/courses";
 import { courseActionCopy } from "../../lib/ui-copy";
 
 export async function getStaticPaths() {
   const courses = await getCollection("courses");
   return Promise.all(courses.map(async (course) => ({
     params: { course: course.id },
-    props: { course, lessons: await getLessons(course.id) },
+    props: { course, tree: await getCourseTree(course.id) },
   })));
 }
 
-interface Props { course: CollectionEntry<"courses">; lessons: LessonEntry[] }
-const { course, lessons } = Astro.props;
+interface Props { course: CollectionEntry<"courses">; tree: CourseTree }
+const { course, tree } = Astro.props;
 const { Content } = await render(course);
+const lessons = tree.modules.flatMap((module) => module.lessons);
 const lessonLinks = getLessonLinks(course.id, lessons);
 ---
 <BaseLayout
@@ -34,11 +39,13 @@ const lessonLinks = getLessonLinks(course.id, lessons);
       <article class="prose reading-width">
         <Content components={{ KnowledgeCheck }} />
         <h2>Чему ты научишься</h2>
-        <ul>{course.data.outcomes.map((outcome) => <li>{outcome}</li>)}</ul>
+        <ul>{course.data.outcomes.map((outcome) => <li>{outcome.statement}</li>)}</ul>
       </article>
       <aside>
-        <h2>Уроки</h2>
-        <CourseLessonList courseSlug={course.id} lessons={lessons} />
+        <h2>Маршрут курса</h2>
+        <nav aria-label="Маршрут курса">
+          <CourseOutline courseSlug={course.id} tree={tree} />
+        </nav>
       </aside>
     </div>
   </div>
