@@ -1,6 +1,6 @@
 # Course authoring contract
 
-An Authoring Agent creates content only. Do not import layouts, navigation, progress controls, styles, or application components. The platform applies those concerns automatically.
+An Authoring Agent creates content only through this provider-independent contract. It needs no provider SDK, prompt interface, or generation script. Do not import layouts, navigation, progress controls, styles, or application components. The platform applies those concerns automatically.
 
 ## Directory convention
 
@@ -69,7 +69,7 @@ All four props are required and static. `options` must be a JSON array containin
 ## Content quality
 
 - Keep each Course internally consistent in one language. Platform interface copy remains English.
-- Begin with the learner need, organize headings in order, and keep paragraphs easy to scan.
+- Give each Lesson one clear focus. Begin with the learner need, introduce ideas before using them, organize headings in order, and keep paragraphs easy to scan.
 - State Learning Outcomes as observable knowledge or ability.
 - Put a Knowledge Check near the explanation it reinforces. Write one unambiguous correct answer and plausible alternatives.
 - Explain why the correct answer is correct; do not merely repeat it.
@@ -86,4 +86,4 @@ Run the public authoring validation entry point before committing:
 pnpm validate
 ```
 
-It rejects malformed metadata, empty Courses, invalid Lesson order, and invalid Knowledge Checks with file-specific messages. `pnpm build` always runs the same validation before producing the static site.
+It rejects malformed metadata, Lessons outside an owning Course directory, empty Courses, invalid Lesson order, and invalid Knowledge Checks with file-specific messages. `pnpm build` always runs the same validation before producing the static site.

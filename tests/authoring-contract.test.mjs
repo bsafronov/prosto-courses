@@ -35,6 +35,12 @@ test("accepts the canonical Russian Course through the public contract", async (
   assert.match(result.output, /Validated 1 Course and 3 Lessons/);
 });
 
+test("accepts a fresh Course through the public authoring contract", async () => {
+  const result = await validateFixture("valid-course");
+  assert.equal(result.exitCode, 0, result.output);
+  assert.match(result.output, /Validated 1 Course and 2 Lessons/);
+});
+
 const fencedExamples = [
   ["fenced-import-example", "import"],
   ["fenced-knowledge-check-example", "Knowledge Check"],
@@ -50,6 +56,8 @@ for (const [fixture, example] of fencedExamples) {
 const invalidFixtures = [
   ["missing-course-metadata", "summary"],
   ["missing-lesson-metadata", "title"],
+  ["orphan-lesson", "must belong to a Course directory"],
+  ["misplaced-lesson", "must be index.mdx or belong under lessons"],
   ["empty-course", "at least one Lesson"],
   ["duplicate-order", "duplicate Lesson order 1"],
   ["order-gap", "contiguous starting at 1"],

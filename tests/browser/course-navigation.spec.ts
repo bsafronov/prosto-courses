@@ -6,10 +6,14 @@ const lessonSequence = [
   "3Ссылки и код",
 ];
 
-async function expectLessonSequence(page: Page, label: string) {
+async function expectLessonSequence(
+  page: Page,
+  label: string,
+  sequence = lessonSequence,
+) {
   await expect(
     page.getByRole("list", { name: label }).getByRole("link"),
-  ).toContainText(lessonSequence);
+  ).toContainText(sequence);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -54,6 +58,33 @@ test("learner reads the first Lesson from the Course Catalog", async ({
   await expect(page).toHaveURL(/\/courses\/markdown\/lessons\/formatting\/$/);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole("navigation", { name: "Course navigation" })).toBeVisible();
+});
+
+test("fresh authoring fixture follows the Catalog-to-Lesson path", async ({
+  page,
+}) => {
+  const card = page.getByRole("article", { name: "Writing useful alt text" });
+  await expect(card).toContainText("Write concise image descriptions");
+
+  await card
+    .getByRole("link", { name: "Writing useful alt text", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/courses\/accessible-images\/$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Writing useful alt text" }),
+  ).toBeVisible();
+  await expectLessonSequence(page, "Course lessons", [
+    "1Describe the image purpose",
+    "2Edit for clarity",
+  ]);
+
+  await page.getByRole("link", { name: "Start course" }).click();
+  await expect(page).toHaveURL(
+    /\/courses\/accessible-images\/lessons\/describe-purpose\/$/,
+  );
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Describe the image purpose" }),
+  ).toBeVisible();
 });
 
 test("learner follows the complete Lesson sequence", async ({

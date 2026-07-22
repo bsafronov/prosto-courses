@@ -3,7 +3,7 @@ import { glob } from "astro/loaders";
 import { z } from "astro/zod";
 import { isSupportedLanguage } from "../scripts/content-contract.mjs";
 
-const base = "./src/content/courses";
+const base = process.env.COURSE_CONTENT_ROOT ?? "./src/content/courses";
 
 const courses = defineCollection({
   loader: glob({

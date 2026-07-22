@@ -4,7 +4,9 @@ import process from "node:process";
 import matter from "gray-matter";
 import { isSupportedLanguage } from "./content-contract.mjs";
 
-const contentRoot = path.resolve(process.argv[2] ?? "src/content/courses");
+const contentRoot = path.resolve(
+  process.argv[2] ?? process.env.COURSE_CONTENT_ROOT ?? "src/content/courses",
+);
 const errors = [];
 let lessonCount = 0;
 
@@ -126,8 +128,44 @@ async function readMdx(file) {
   }
 }
 
+async function findMdxFiles(directory) {
+  let entries;
+  try {
+    entries = await readdir(directory, { withFileTypes: true });
+  } catch (error) {
+    report(directory, `could not inspect Course content: ${error.message}`);
+    return [];
+  }
+
+  const files = [];
+  for (const entry of entries) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await findMdxFiles(entryPath)));
+    } else if (entry.isFile() && entry.name.endsWith(".mdx")) {
+      files.push(entryPath);
+    }
+  }
+  return files;
+}
+
+async function validateCourseOwnership(courseDir) {
+  for (const file of await findMdxFiles(courseDir)) {
+    const parts = path.relative(courseDir, file).split(path.sep);
+    const isOverview = parts.length === 1 && parts[0] === "index.mdx";
+    const isLesson =
+      parts.length === 2 &&
+      parts[0] === "lessons" &&
+      parts[1].endsWith(".mdx");
+    if (!isOverview && !isLesson) {
+      report(file, "Course MDX must be index.mdx or belong under lessons/");
+    }
+  }
+}
+
 async function validateCourse(courseEntry) {
   const courseDir = path.join(contentRoot, courseEntry.name);
+  await validateCourseOwnership(courseDir);
   const overviewFile = path.join(courseDir, "index.mdx");
   const overview = await readMdx(overviewFile);
 
@@ -203,16 +241,24 @@ async function validateCourse(courseEntry) {
   }
 }
 
-let courseEntries = [];
+let contentEntries = [];
 try {
-  courseEntries = (await readdir(contentRoot, { withFileTypes: true })).filter(
-    (entry) => entry.isDirectory(),
-  );
+  contentEntries = await readdir(contentRoot, { withFileTypes: true });
 } catch (error) {
   console.error(`Content validation failed:\n${contentRoot}: ${error.message}`);
   process.exit(1);
 }
 
+for (const entry of contentEntries) {
+  if (entry.isFile() && entry.name.endsWith(".mdx")) {
+    report(
+      path.join(contentRoot, entry.name),
+      "Lesson must belong to a Course directory under lessons/",
+    );
+  }
+}
+
+const courseEntries = contentEntries.filter((entry) => entry.isDirectory());
 for (const courseEntry of courseEntries) {
   await validateCourse(courseEntry);
 }
