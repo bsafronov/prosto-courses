@@ -96,6 +96,10 @@ _Avoid_: First lesson, template, prototype Course
 The Course Brief's hierarchy of acceptable evidence, jurisdiction, version and freshness requirements, and citation placement. It distinguishes primary authority from commentary and verified fact from simplification, opinion, and simulated cases.
 _Avoid_: Bibliography quota, unverified reading list
 
+**Factual Risk**:
+The `standard` or `high` classification of the consequences of presenting a Course's factual material incorrectly or after it becomes stale. It describes publication risk and never represents independent expert review or approval.
+_Avoid_: Expert approval, Course quality
+
 **Content Freshness**:
 The verified currency of source-dependent claims, recorded separately from file modification time. Time-sensitive Lessons may declare their own verification window; Module and Course freshness is derived from the earliest dependent review deadline.
 _Avoid_: Creation date, modification date, recent edit

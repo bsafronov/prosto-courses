@@ -1,6 +1,7 @@
 ---
 import { getCollection, render, type CollectionEntry } from "astro:content";
 import CourseOutline from "../../components/CourseOutline.astro";
+import ContentFreshness from "../../components/ContentFreshness.astro";
 import { semanticComponents } from "../../components/semantic-components";
 import WorkloadSummary from "../../components/WorkloadSummary.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
@@ -8,6 +9,7 @@ import {
   getCourseTree,
   getLessonLinks,
   courseMinutes,
+  courseFreshnessState,
   formatLessonCount,
   formatMinutes,
   formatModuleCount,
@@ -45,6 +47,10 @@ const lessonLinks = getLessonLinks(course.id, lessons);
           { label: "Уроки", value: formatLessonCount(lessons.length) },
           { label: "Общее время", value: formatMinutes(courseMinutes(tree)) },
         ]}
+      />
+      <ContentFreshness
+        state={courseFreshnessState(course, tree)}
+        metadata={course.data.freshness}
       />
       <a class="button" data-course-action href={lessonLinks[0].href}>{courseActionCopy.start}</a>
     </header>

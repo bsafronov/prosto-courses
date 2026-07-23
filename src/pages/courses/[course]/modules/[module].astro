@@ -2,6 +2,7 @@
 import { getCollection, render, type CollectionEntry } from "astro:content";
 import CourseLessonList from "../../../../components/CourseLessonList.astro";
 import CourseOutline from "../../../../components/CourseOutline.astro";
+import ContentFreshness from "../../../../components/ContentFreshness.astro";
 import { semanticComponents } from "../../../../components/semantic-components";
 import WorkloadSummary from "../../../../components/WorkloadSummary.astro";
 import BaseLayout from "../../../../layouts/BaseLayout.astro";
@@ -17,6 +18,7 @@ import {
   lessonSlug,
   moduleCourseSlug,
   moduleMinutes,
+  moduleFreshnessState,
   moduleSlug,
   type CourseModule,
   type CourseTree,
@@ -88,6 +90,7 @@ const { Content } = await render(module);
             { label: "Вместе с проверкой", value: formatMinutes(moduleMinutes(current)) },
           ]}
         />
+        <ContentFreshness state={moduleFreshnessState(course, current)} />
         <a
           class="button"
           href={lessonPath(course.id, lessonSlug(current.lessons[0]))}

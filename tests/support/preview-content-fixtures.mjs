@@ -43,6 +43,7 @@ const environment = {
   ASTRO_OUT_DIR: outDir,
   ASTRO_CACHE_DIR: cacheDir,
   COURSE_CONTENT_ROOT: contentRoot,
+  CONTENT_VALIDATION_DATE: "2026-10-23",
 };
 
 await buildFixtureSite(environment);

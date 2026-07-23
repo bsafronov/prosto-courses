@@ -7,6 +7,7 @@ import {
   assessmentSchema,
   capstoneSchema,
   capabilityPackDependenciesSchema,
+  courseBriefSchema,
   courseSchema,
   lessonSchema,
   moduleSchema,
@@ -28,6 +29,7 @@ const capabilityPackManifestFile = path.resolve(
   process.env.CAPABILITY_PACK_MANIFEST ?? "platform/capability-packs.json",
 );
 const errors = [];
+const warnings = [];
 const counts = {
   courses: 0,
   modules: 0,
@@ -50,6 +52,34 @@ const diagramAccessibilityProps = [
   "howToRead",
   "takeaway",
 ];
+const factualRiskClassifications = new Set(["standard", "high"]);
+
+function validationDate() {
+  const injected = process.env.CONTENT_VALIDATION_DATE;
+  if (!injected) {
+    return new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`);
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(injected)) {
+    console.error(
+      "Content validation failed:\nCONTENT_VALIDATION_DATE must use YYYY-MM-DD",
+    );
+    process.exit(1);
+  }
+
+  const date = new Date(`${injected}T00:00:00.000Z`);
+  if (
+    Number.isNaN(date.valueOf()) ||
+    date.toISOString().slice(0, 10) !== injected
+  ) {
+    console.error(
+      "Content validation failed:\nCONTENT_VALIDATION_DATE must be a valid calendar date",
+    );
+    process.exit(1);
+  }
+  return date;
+}
+
+const currentValidationDate = validationDate();
 
 async function readCapabilityPackManifest() {
   let manifest;
@@ -108,12 +138,44 @@ function validateMetadata(schema, data, file, owner) {
   for (const issue of result.error.issues) {
     if (issue.code === "unrecognized_keys") {
       for (const field of issue.keys) {
-        report(file, `${owner} frontmatter does not allow a ${field} field`);
+        const article = /^[aeiou]/i.test(field) ? "an" : "a";
+        report(
+          file,
+          `${owner} frontmatter does not allow ${article} ${field} field`,
+        );
       }
       continue;
     }
     const location = issue.path.length > 0 ? ` ${issue.path.join(".")}` : "";
     report(file, `${owner} frontmatter${location}: ${issue.message}`);
+  }
+}
+
+function validateFreshnessDeadline(freshness, file, owner, factualRisk) {
+  if (
+    freshness?.mode !== "time-sensitive" ||
+    !factualRiskClassifications.has(factualRisk)
+  ) {
+    return;
+  }
+
+  const reviewAfter = new Date(freshness.reviewAfter);
+  if (
+    Number.isNaN(reviewAfter.valueOf()) ||
+    currentValidationDate <= reviewAfter
+  ) {
+    return;
+  }
+
+  const deadline = reviewAfter.toISOString().slice(0, 10);
+  const asOf = currentValidationDate.toISOString().slice(0, 10);
+  const action =
+    `review deadline ${deadline} has passed as of ${asOf}; ` +
+    "verify authoritative sources and update verifiedAt and reviewAfter";
+  if (factualRisk === "high") {
+    report(file, `${owner} contains stale high factual-risk content: ${action}`);
+  } else {
+    warnings.push(`${path.relative(process.cwd(), file)}: ${owner} ${action}`);
   }
 }
 
@@ -791,9 +853,10 @@ async function validateArtifact(file, label) {
   }
 }
 
-async function validateCourseBriefCapabilityPacks(file, dependencies) {
+async function validateCourseBrief(file, dependencies) {
   const brief = await readMdx(file);
-  if (!brief) return;
+  if (!brief) return undefined;
+  validateMetadata(courseBriefSchema, brief.data, file, "Course Brief");
   const courseDependencies = Array.isArray(dependencies) ? dependencies : [];
   const declared = brief.data.capabilityPacks ?? [];
   const result = capabilityPackDependenciesSchema.safeParse(declared);
@@ -843,6 +906,10 @@ async function validateCourseBriefCapabilityPacks(file, dependencies) {
       );
     }
   }
+
+  return factualRiskClassifications.has(brief.data.factualRisk)
+    ? brief.data.factualRisk
+    : undefined;
 }
 
 async function directoryEntries(directory) {
@@ -859,6 +926,7 @@ async function validateModule(
   moduleEntry,
   alignment,
   declaredPacks,
+  factualRisk,
 ) {
   const moduleDir = path.join(courseDir, "modules", moduleEntry.name);
   validateSlug(moduleEntry.name, moduleDir, "Module");
@@ -928,6 +996,14 @@ async function validateModule(
     await validateLearnerSource(lesson, lessonFile, "Lesson", declaredPacks);
     if (lesson) {
       validateMetadata(lessonSchema, lesson.data, lessonFile, "Lesson");
+      if (lesson.data.freshness) {
+        validateFreshnessDeadline(
+          lesson.data.freshness,
+          lessonFile,
+          "Lesson",
+          factualRisk,
+        );
+      }
       alignment.registerOutcomeReferences({
         alignmentScope: moduleEntry.name,
         evidenceKind: outcomeEvidence.lessonInstruction,
@@ -955,6 +1031,12 @@ async function validateCourse(courseEntry) {
 
   const overviewFile = path.join(courseDir, "index.mdx");
   const overview = await readRequiredMdx(overviewFile, "Course");
+  const briefFile = path.join(courseDir, "_authoring", "brief.md");
+  await validateArtifact(briefFile, "Course Brief at _authoring/brief.md");
+  const factualRisk = await validateCourseBrief(
+    briefFile,
+    overview?.data.capabilityPacks,
+  );
   const declaredPacks = validateCapabilityPackDependencies(
     overview?.data.capabilityPacks,
     overviewFile,
@@ -967,6 +1049,12 @@ async function validateCourse(courseEntry) {
   });
   if (overview) {
     validateMetadata(courseSchema, overview.data, overviewFile, "Course");
+    validateFreshnessDeadline(
+      overview.data.freshness,
+      overviewFile,
+      "Course",
+      factualRisk,
+    );
   }
 
   const capstoneFile = path.join(courseDir, "capstone.mdx");
@@ -1007,12 +1095,6 @@ async function validateCourse(courseEntry) {
     counts.capstones += 1;
   }
 
-  const briefFile = path.join(courseDir, "_authoring", "brief.md");
-  await validateArtifact(briefFile, "Course Brief at _authoring/brief.md");
-  await validateCourseBriefCapabilityPacks(
-    briefFile,
-    overview?.data.capabilityPacks,
-  );
   await validateArtifact(
     path.join(courseDir, "_authoring", "blueprint.md"),
     "Course Blueprint at _authoring/blueprint.md",
@@ -1041,6 +1123,7 @@ async function validateCourse(courseEntry) {
       moduleEntry,
       alignment,
       declaredPacks,
+      factualRisk,
     );
     if (moduleSource) {
       validateOrder(
@@ -1103,6 +1186,14 @@ for (const entry of contentEntries) {
 const courseEntries = contentEntries.filter((entry) => entry.isDirectory());
 counts.courses = courseEntries.length;
 for (const courseEntry of courseEntries) await validateCourse(courseEntry);
+
+if (warnings.length > 0) {
+  console.warn(
+    `Content freshness warning:\n${warnings
+      .map((warning) => `- ${warning}`)
+      .join("\n")}`,
+  );
+}
 
 if (errors.length > 0) {
   console.error(

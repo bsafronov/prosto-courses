@@ -14,7 +14,10 @@ const canonicalCoursePath = fileURLToPath(
   new URL("../src/content/courses", import.meta.url),
 );
 
-async function validateContent(contentPath, { capabilityPackManifest } = {}) {
+async function validateContent(
+  contentPath,
+  { capabilityPackManifest, validationDate } = {},
+) {
   try {
     const result = await execFileAsync(
       process.execPath,
@@ -25,6 +28,9 @@ async function validateContent(contentPath, { capabilityPackManifest } = {}) {
           ...process.env,
           ...(capabilityPackManifest
             ? { CAPABILITY_PACK_MANIFEST: capabilityPackManifest }
+            : {}),
+          ...(validationDate
+            ? { CONTENT_VALIDATION_DATE: validationDate }
             : {}),
         },
       },
@@ -76,6 +82,201 @@ test("accepts a fresh Course through the public authoring contract", async () =>
   );
 });
 
+test("uses an injected validation date without depending on the machine clock", async () => {
+  const result = await validateContent(fixturePath("valid-course"), {
+    validationDate: "2026-10-22",
+  });
+  assert.equal(result.exitCode, 0, result.output);
+  assert.doesNotMatch(result.output, /Content freshness warning/i);
+});
+
+test("requires a standard or high factual-risk classification in the Course Brief", async () => {
+  await withChangedValidCourse(
+    {
+      "_authoring/brief.md": (source) =>
+        source.replace("factualRisk: standard\n", ""),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Course Brief frontmatter factualRisk.*standard.*high/i,
+      );
+    },
+  );
+});
+
+test("rejects Course Brief metadata that claims expert approval", async () => {
+  await withChangedValidCourse(
+    {
+      "_authoring/brief.md": (source) =>
+        source.replace(
+          "factualRisk: standard",
+          "factualRisk: standard\nexpertApproved: true",
+        ),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Course Brief frontmatter does not allow an expertApproved field/i,
+      );
+    },
+  );
+});
+
+test("warns actionably when standard factual content is stale on the injected validation date", async () => {
+  await withChangedValidCourse(
+    {
+      "index.mdx": (source) =>
+        source.replace(
+          "reviewAfter: 2026-12-31",
+          "reviewAfter: 2026-08-01",
+        ),
+    },
+    (result) => {
+      assert.equal(result.exitCode, 0, result.output);
+      assert.match(result.output, /Content freshness warning/i);
+      assert.match(result.output, /review deadline 2026-08-01 has passed/i);
+      assert.match(
+        result.output,
+        /verify authoritative sources and update verifiedAt and reviewAfter/i,
+      );
+    },
+    { validationDate: "2026-08-02" },
+  );
+});
+
+test("fails publication when high factual-risk content is stale", async () => {
+  await withChangedValidCourse(
+    {
+      "_authoring/brief.md": (source) =>
+        source.replace("factualRisk: standard", "factualRisk: high"),
+      "index.mdx": (source) =>
+        source.replace(
+          "reviewAfter: 2026-12-31",
+          "reviewAfter: 2026-08-01",
+        ),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(result.output, /stale high factual-risk content/i);
+      assert.match(result.output, /review deadline 2026-08-01 has passed/i);
+    },
+    { validationDate: "2026-08-02" },
+  );
+});
+
+test("rejects a time-sensitive review deadline that does not follow factual verification", async () => {
+  await withChangedValidCourse(
+    {
+      "index.mdx": (source) =>
+        source.replace(
+          "reviewAfter: 2026-12-31",
+          "reviewAfter: 2026-07-21",
+        ),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Course frontmatter freshness\.reviewAfter.*must follow verifiedAt/i,
+      );
+    },
+  );
+});
+
+const malformedFreshnessCases = [
+  {
+    name: "Course factual verification date",
+    change: (source) => source.replace("  verifiedAt: 2026-07-22\n", ""),
+    expected: /Course frontmatter freshness.*verifiedAt/i,
+  },
+  {
+    name: "non-date factual verification value",
+    change: (source) =>
+      source.replace("verifiedAt: 2026-07-22", "verifiedAt: 42"),
+    expected: /Course frontmatter freshness\.verifiedAt/i,
+  },
+  {
+    name: "time-sensitive Course review deadline",
+    change: (source) => source.replace("  reviewAfter: 2026-12-31\n", ""),
+    expected: /Course frontmatter freshness.*reviewAfter/i,
+  },
+  {
+    name: "fields outside the selected freshness mode",
+    change: (source) =>
+      source.replace("mode: time-sensitive", "mode: stable"),
+    expected: /Course frontmatter does not allow a reviewAfter field/i,
+  },
+  {
+    name: "empty jurisdiction when jurisdiction is declared",
+    change: (source) =>
+      source.replace(
+        "jurisdiction: Международные рекомендации по доступности",
+        "jurisdiction: '   '",
+      ),
+    expected: /Course frontmatter freshness\.jurisdiction/i,
+  },
+  {
+    name: "missing applicability declaration",
+    change: (source) =>
+      source.replace("  applicability: jurisdiction-specific\n", ""),
+    expected: /Course frontmatter freshness\.applicability/i,
+  },
+  {
+    name: "missing jurisdiction for jurisdiction-specific applicability",
+    change: (source) =>
+      source.replace(
+        "  jurisdiction: Международные рекомендации по доступности\n",
+        "",
+      ),
+    expected:
+      /Course frontmatter freshness\.jurisdiction.*jurisdiction-specific applicability/i,
+  },
+  {
+    name: "jurisdiction on globally applicable content",
+    change: (source) =>
+      source.replace(
+        "applicability: jurisdiction-specific",
+        "applicability: global",
+      ),
+    expected:
+      /Course frontmatter freshness\.jurisdiction.*omitted for global applicability/i,
+  },
+];
+
+for (const { name, change, expected } of malformedFreshnessCases) {
+  test(`rejects malformed ${name}`, async () => {
+    await withChangedValidCourse(
+      { "index.mdx": change },
+      (result) => {
+        assert.notEqual(result.exitCode, 0);
+        assert.match(result.output, expected);
+      },
+    );
+  });
+}
+
+test("uses a stale Lesson freshness override before the Course review deadline", async () => {
+  await withChangedValidCourse(
+    {},
+    (result) => {
+      assert.equal(result.exitCode, 0, result.output);
+      assert.match(result.output, /Content freshness warning/i);
+      assert.match(
+        result.output,
+        /modules\/alt-text\/lessons\/describe-purpose\.mdx: Lesson review deadline 2026-10-22 has passed/i,
+      );
+      assert.doesNotMatch(
+        result.output,
+        /index\.mdx: Course review deadline 2026-12-31 has passed/i,
+      );
+    },
+    { validationDate: "2026-10-23" },
+  );
+});
+
 test("accepts an available Capability Pack dependency and its components", async () => {
   await withChangedValidCourse(
     {
@@ -85,7 +286,10 @@ test("accepts an available Capability Pack dependency and its components", async
           "capabilityPacks:\n  - name: fixture-lab\n    version: 1.2.0",
         ),
       "_authoring/brief.md": (source) =>
-        `---\ncapabilityPacks:\n  - name: fixture-lab\n    version: 1.2.0\n---\n${source}`,
+        source.replace(
+          "factualRisk: standard",
+          "factualRisk: standard\ncapabilityPacks:\n  - name: fixture-lab\n    version: 1.2.0",
+        ),
       "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
         `${source}\n<FixtureLab runtime="fixture-runtime" service="fixture-service" />\n`,
     },
@@ -118,7 +322,10 @@ test("rejects an invented Capability Pack declared only by the Course Brief", as
   await withChangedValidCourse(
     {
       "_authoring/brief.md": (source) =>
-        `---\ncapabilityPacks:\n  - name: invented-pack\n    version: 1.0.0\n---\n${source}`,
+        source.replace(
+          "factualRisk: standard",
+          "factualRisk: standard\ncapabilityPacks:\n  - name: invented-pack\n    version: 1.0.0",
+        ),
     },
     (result) => {
       assert.notEqual(result.exitCode, 0);
@@ -217,7 +424,10 @@ test("rejects runtimes and services not declared by an available dependency", as
           "capabilityPacks:\n  - name: fixture-lab\n    version: 1.2.0",
         ),
       "_authoring/brief.md": (source) =>
-        `---\ncapabilityPacks:\n  - name: fixture-lab\n    version: 1.2.0\n---\n${source}`,
+        source.replace(
+          "factualRisk: standard",
+          "factualRisk: standard\ncapabilityPacks:\n  - name: fixture-lab\n    version: 1.2.0",
+        ),
       "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
         `${source}\n<FixtureLab prompt="x > y" runtime="python" service="invented.example" />\n`,
     },
@@ -245,7 +455,10 @@ test("rejects spread props that can hide undeclared runtimes or services", async
           "capabilityPacks:\n  - name: fixture-lab\n    version: 1.2.0",
         ),
       "_authoring/brief.md": (source) =>
-        `---\ncapabilityPacks:\n  - name: fixture-lab\n    version: 1.2.0\n---\n${source}`,
+        source.replace(
+          "factualRisk: standard",
+          "factualRisk: standard\ncapabilityPacks:\n  - name: fixture-lab\n    version: 1.2.0",
+        ),
       "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
         `${source}\n<FixtureLab {...{ runtime: "python", service: "invented.example" }} />\n`,
     },

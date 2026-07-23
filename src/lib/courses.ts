@@ -15,6 +15,11 @@ export type CourseTree = {
   modules: CourseModule[];
   capstone: CapstoneEntry;
 };
+type ContentFreshness = CourseEntry["data"]["freshness"];
+export type ContentFreshnessState = {
+  status: "stable" | "current" | "stale";
+  freshness: ContentFreshness;
+};
 
 export const lessonMinutes = (lesson: LessonEntry) =>
   lesson.data.time.study +
@@ -32,6 +37,74 @@ export const courseMinutes = (tree: CourseTree) =>
     (total, courseModule) => total + moduleMinutes(courseModule),
     tree.capstone.data.time,
   );
+
+function contentValidationDate() {
+  const injected = process.env.CONTENT_VALIDATION_DATE;
+  const calendarDate = injected ?? new Date().toISOString().slice(0, 10);
+  return new Date(`${calendarDate}T00:00:00.000Z`);
+}
+
+function aggregateFreshness(
+  applicableFreshness: ContentFreshness[],
+): ContentFreshnessState {
+  const timeSensitive = applicableFreshness
+    .filter(
+      (
+        freshness,
+      ): freshness is Extract<
+        ContentFreshness,
+        { mode: "time-sensitive" }
+      > => freshness.mode === "time-sensitive",
+    )
+    .sort(
+      (left, right) =>
+        left.reviewAfter.valueOf() - right.reviewAfter.valueOf(),
+    );
+  const controllingFreshness = timeSensitive[0];
+  if (!controllingFreshness) {
+    return { status: "stable", freshness: applicableFreshness[0] };
+  }
+  return {
+    status:
+      contentValidationDate() > controllingFreshness.reviewAfter
+        ? "stale"
+        : "current",
+    freshness: controllingFreshness,
+  };
+}
+
+export function moduleFreshnessState(
+  course: CourseEntry,
+  courseModule: CourseModule,
+) {
+  return aggregateFreshness(
+    courseModule.lessons.map(
+      (lesson) => lesson.data.freshness ?? course.data.freshness,
+    ),
+  );
+}
+
+export function courseFreshnessState(
+  course: CourseEntry,
+  tree: CourseTree,
+) {
+  return aggregateFreshness([
+    course.data.freshness,
+    ...tree.modules.map(
+      (courseModule) =>
+        moduleFreshnessState(course, courseModule).freshness,
+    ),
+  ]);
+}
+
+export function formatFreshnessDate(date: Date) {
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
+}
 
 export function formatMinutes(minutes: number) {
   const hours = Math.floor(minutes / 60);

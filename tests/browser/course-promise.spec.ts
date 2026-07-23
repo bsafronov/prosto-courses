@@ -24,6 +24,37 @@ test("Course Overview explains the promise and derived workload", async ({
   await expect(workload).toContainText("1 ч 30 мин");
 });
 
+test("Course Overview shows factual verification and its derived freshness state", async ({
+  page,
+}) => {
+  const freshness = page.getByRole("group", {
+    name: "Актуальность материалов",
+  });
+  await expect(freshness).toContainText(/Проверено\s*22 июля 2026 г\./);
+  await expect(freshness).toContainText("Стабильные сведения");
+  await expect(freshness).not.toContainText(/изменен|обновлен/i);
+
+  await page.goto("./courses/accessible-images/");
+  const staleFreshness = page.getByRole("group", {
+    name: "Актуальность материалов",
+  });
+  await expect(staleFreshness).toContainText(
+    /Проверено\s*22 июля 2026 г\./,
+  );
+  await expect(staleFreshness).toContainText(
+    /Юрисдикция\s*Международные рекомендации по доступности/,
+  );
+  await expect(staleFreshness).toContainText(
+    "Требуется повторная проверка",
+  );
+  await expect(staleFreshness).toContainText("22 октября 2026 г.");
+
+  await page.goto("./courses/accessible-images/modules/alt-text/");
+  await expect(
+    page.getByRole("group", { name: "Актуальность материалов" }),
+  ).toContainText("Требуется повторная проверка");
+});
+
 test("Module Overview explains its capability, outcomes, and derived workload", async ({
   page,
 }) => {

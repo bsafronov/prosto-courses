@@ -18,7 +18,28 @@ export const capabilityPackDependenciesSchema = z.array(
     })
     .strict(),
 );
-const date = z.coerce.date();
+const calendarDateMessage = "must be a YYYY-MM-DD calendar date";
+const date = z.union([
+  z.date().refine(
+    (value) =>
+      value.getUTCHours() === 0 &&
+      value.getUTCMinutes() === 0 &&
+      value.getUTCSeconds() === 0 &&
+      value.getUTCMilliseconds() === 0,
+    calendarDateMessage,
+  ),
+  z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, calendarDateMessage)
+    .refine((value) => {
+      const parsed = new Date(`${value}T00:00:00.000Z`);
+      return (
+        !Number.isNaN(parsed.valueOf()) &&
+        parsed.toISOString().slice(0, 10) === value
+      );
+    }, calendarDateMessage)
+    .transform((value) => new Date(`${value}T00:00:00.000Z`)),
+]);
 const lessonTime = z
   .object({
     study: z.number().int().nonnegative(),
@@ -26,23 +47,62 @@ const lessonTime = z
     advanced: z.number().int().nonnegative().optional(),
   })
   .strict();
-const freshness = z.discriminatedUnion("mode", [
-  z
-    .object({
-      mode: z.literal("stable"),
-      verifiedAt: date,
-      jurisdiction: nonEmptyString.optional(),
-    })
-    .strict(),
-  z
-    .object({
-      mode: z.literal("time-sensitive"),
-      verifiedAt: date,
-      reviewAfter: date,
-      jurisdiction: nonEmptyString.optional(),
-    })
-    .strict(),
-]);
+const freshness = z
+  .discriminatedUnion("mode", [
+    z
+      .object({
+        mode: z.literal("stable"),
+        applicability: z.enum(["global", "jurisdiction-specific"]),
+        verifiedAt: date,
+        jurisdiction: nonEmptyString.optional(),
+      })
+      .strict(),
+    z
+      .object({
+        mode: z.literal("time-sensitive"),
+        applicability: z.enum(["global", "jurisdiction-specific"]),
+        verifiedAt: date,
+        reviewAfter: date,
+        jurisdiction: nonEmptyString.optional(),
+      })
+      .strict(),
+  ])
+  .superRefine((value, context) => {
+    if (
+      value.applicability === "jurisdiction-specific" &&
+      !value.jurisdiction
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["jurisdiction"],
+        message: "jurisdiction is required for jurisdiction-specific applicability",
+      });
+    }
+    if (value.applicability === "global" && value.jurisdiction) {
+      context.addIssue({
+        code: "custom",
+        path: ["jurisdiction"],
+        message: "jurisdiction must be omitted for global applicability",
+      });
+    }
+    if (
+      value.mode === "time-sensitive" &&
+      value.reviewAfter <= value.verifiedAt
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["reviewAfter"],
+        message: "reviewAfter must follow verifiedAt",
+      });
+    }
+  });
+
+export const courseBriefSchema = z
+  .object({
+    factualRisk: z.enum(["standard", "high"]),
+    capabilityPacks: capabilityPackDependenciesSchema.optional(),
+  })
+  .strict();
 
 export const courseSchema = z
   .object({

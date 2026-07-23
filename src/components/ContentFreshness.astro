@@ -1,0 +1,101 @@
+---
+import {
+  formatFreshnessDate,
+  type ContentFreshnessState,
+} from "../lib/courses";
+
+interface Props {
+  state: ContentFreshnessState;
+  metadata?: ContentFreshnessState["freshness"];
+}
+
+const { state, metadata = state.freshness } = Astro.props;
+const verifiedAt = metadata.verifiedAt.toISOString().slice(0, 10);
+const reviewAfter =
+  state.freshness.mode === "time-sensitive"
+    ? state.freshness.reviewAfter.toISOString().slice(0, 10)
+    : undefined;
+---
+<dl class="freshness" role="group" aria-label="Актуальность материалов">
+  <div>
+    <dt>Проверено</dt>
+    <dd>
+      <time datetime={verifiedAt}>
+        {formatFreshnessDate(metadata.verifiedAt)}
+      </time>
+    </dd>
+  </div>
+  {metadata.jurisdiction && (
+    <div>
+      <dt>Юрисдикция</dt>
+      <dd>{metadata.jurisdiction}</dd>
+    </div>
+  )}
+  <div class:list={["state", state.status]}>
+    <dt>Состояние</dt>
+    <dd>
+      {state.status === "stable" && "Стабильные сведения"}
+      {state.status === "current" && state.freshness.mode === "time-sensitive" && (
+        <>
+          Актуально до <time datetime={reviewAfter}>
+            {formatFreshnessDate(state.freshness.reviewAfter)}
+          </time>
+        </>
+      )}
+      {state.status === "stale" && state.freshness.mode === "time-sensitive" && (
+        <span role="status">
+          <strong>Требуется повторная проверка</strong>
+          <span>
+            Срок проверки истёк <time datetime={reviewAfter}>
+              {formatFreshnessDate(state.freshness.reviewAfter)}
+            </time>. Сверься с актуальными источниками.
+          </span>
+        </span>
+      )}
+    </dd>
+  </div>
+</dl>
+
+<style>
+  .freshness {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .7rem;
+    margin: 1.5rem 0;
+  }
+
+  .freshness > div {
+    min-width: 10rem;
+    border: 1px solid var(--color-border);
+    border-radius: .7rem;
+    padding: .75rem .9rem;
+    background: var(--color-surface);
+  }
+
+  .freshness > .stale {
+    border-color: #b65c40;
+    background: #fff1eb;
+  }
+
+  dt {
+    color: var(--color-muted);
+    font-size: .78rem;
+    font-weight: 750;
+  }
+
+  dd {
+    margin: .15rem 0 0;
+    font-weight: 750;
+  }
+
+  dd span {
+    display: grid;
+    gap: .2rem;
+  }
+
+  dd span span {
+    color: var(--color-muted);
+    font-size: .88rem;
+    font-weight: 500;
+  }
+</style>

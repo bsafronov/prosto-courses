@@ -1,3 +1,7 @@
+---
+factualRisk: standard
+---
+
 # Course Brief: Основы Markdown
 
 Версия: 1

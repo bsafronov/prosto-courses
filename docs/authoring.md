@@ -63,15 +63,22 @@ Create `_authoring/brief.md`. It is versioned but never learner-facing. It must 
 
 Do not design the Course structure until the Course Owner explicitly approves the Course Brief.
 
-When Capability Packs are required, confirm the same exact dependencies in Course Brief frontmatter:
+Course Brief frontmatter classifies the Course's factual risk:
 
 ```yaml
 ---
+factualRisk: standard
 capabilityPacks:
   - name: approved-pack-name
     version: 1.2.0
 ---
 ```
+
+Use `standard` for ordinary factual content and `high` for medical, legal,
+financial, safety, or similarly consequential material. This is a risk
+classification, not an expert-review claim. Do not add approval or reviewer
+credentials to the Course Brief. When Capability Packs are required, confirm
+the same exact dependencies in Course Brief and Course metadata.
 
 ### 3. Agree the Course Blueprint
 
@@ -186,6 +193,7 @@ createdAt: 2026-07-22
 capabilityPacks: []
 freshness:
   mode: time-sensitive
+  applicability: jurisdiction-specific
   verifiedAt: 2026-07-22
   reviewAfter: 2026-10-22
   jurisdiction: Российская Федерация
@@ -201,9 +209,12 @@ Rules:
 - `createdAt` is the original Course creation date and never changes.
 - `capabilityPacks` contains exact `{ name, version }` dependencies when required. Names and versions must match the platform manifest; version ranges and combined strings such as `pack@1.2.0` are invalid.
 - `freshness.mode` is `stable` or `time-sensitive`.
+- `applicability` is `global` or `jurisdiction-specific`.
 - `verifiedAt` records factual verification, not the last file edit.
 - `reviewAfter` is required for time-sensitive content.
-- `jurisdiction` is required when applicability depends on location or legal regime.
+- `reviewAfter` must be later than `verifiedAt`.
+- `jurisdiction` is required for `jurisdiction-specific` applicability and is
+  not allowed for `global` applicability.
 
 Do not add manually maintained module counts, lesson counts, total duration, progress, or last-modified dates.
 
@@ -673,7 +684,18 @@ At the current project stage, Course Owner approval and authoritative sourcing a
 
 A time-sensitive Lesson may override Course freshness. Module freshness is derived from its Lessons, and Course freshness uses the earliest dependent `reviewAfter`. A law or source change can make content stale even when no file changed. Fixing a typo does not refresh factual verification.
 
-The target validator warns about stale standard content and rejects publication of stale high-risk content.
+The validator emits an actionable warning for stale standard content and
+rejects publication of stale high-risk content. Validation normally compares
+deadlines with the current date. Contract and browser tests inject a calendar
+date without changing the machine clock:
+
+```sh
+CONTENT_VALIDATION_DATE=2026-10-23 pnpm validate
+```
+
+The Course Overview shows the authored factual verification date,
+jurisdiction when declared, and the derived freshness state. Git modification
+time is not verification metadata and is never shown as such.
 
 ## Content Revision and progress durability
 
