@@ -1,19 +1,22 @@
 ---
 import {
-  lessonStatusAriaLabel,
-  lessonStatusCopy,
+  progressStatusAriaLabel,
+  progressStatusCopy,
 } from "../lib/ui-copy";
+import type { CoreDestinationRef } from "../lib/courses";
 
-interface Props { lessonSlug: string }
-const { lessonSlug } = Astro.props;
-const initialStatus = lessonStatusCopy["not-started"];
+interface Props {
+  destination: CoreDestinationRef;
+}
+const { destination } = Astro.props;
+const initialStatus = progressStatusCopy["not-started"];
 ---
 <span
   class="status"
   data-progress-status
-  data-lesson-slug={lessonSlug}
+  data-destination-id={destination.id}
   data-state="not-started"
-  aria-label={lessonStatusAriaLabel(initialStatus.label)}
+  aria-label={progressStatusAriaLabel(destination.kind, initialStatus.label)}
 >
   <span data-status-icon aria-hidden="true">{initialStatus.icon}</span>
   <span data-status-label>{initialStatus.label}</span>

@@ -1,0 +1,31 @@
+---
+import type { CoreDestinationKind } from "../lib/courses";
+import { completionControlCopy } from "../lib/ui-copy";
+
+interface Props {
+  kind: CoreDestinationKind;
+}
+
+const { kind } = Astro.props;
+const copy = completionControlCopy[kind];
+const headingId = `${kind}-completion-heading`;
+---
+<section class="completion" aria-labelledby={headingId}>
+  <h2 id={headingId}>{copy.heading}</h2>
+  <p>{copy.description}</p>
+  <button type="button" data-completion-toggle aria-pressed="false">
+    {copy.complete}
+  </button>
+</section>
+
+<style>
+  .completion {
+    margin-top: 3rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 1.2rem;
+    background: var(--color-surface);
+  }
+  .completion h2 { margin: 0; font-size: 1.25rem; }
+  .completion p { color: var(--color-muted); }
+</style>

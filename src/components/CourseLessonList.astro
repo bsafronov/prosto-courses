@@ -1,6 +1,10 @@
 ---
 import type { LessonEntry } from "../lib/courses";
-import { lessonPath, lessonSlug } from "../lib/courses";
+import {
+  lessonDestination,
+  lessonPath,
+  lessonSlug,
+} from "../lib/courses";
 import ProgressStatus from "./ProgressStatus.astro";
 
 interface Props {
@@ -25,7 +29,9 @@ const {
       >
         <span class="lesson-number" aria-hidden="true">{lessonIndex + 1}</span>
         <span class="lesson-title">{lesson.data.title}</span>
-        <ProgressStatus lessonSlug={lessonSlug(lesson)} />
+        <ProgressStatus
+          destination={lessonDestination(lessonSlug(lesson))}
+        />
       </a>
     </li>
   ))}

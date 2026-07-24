@@ -1,0 +1,30 @@
+---
+import type { CoreDestinationLink } from "../lib/courses";
+import ProgressStatus from "./ProgressStatus.astro";
+
+interface Props {
+  destination: CoreDestinationLink;
+  align?: "start" | "end";
+}
+
+const { destination, align = "start" } = Astro.props;
+---
+<a href={destination.href} data-align={align}>
+  <span><slot /></span>
+  <ProgressStatus destination={destination} />
+</a>
+
+<style>
+  a {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .45rem;
+    font-weight: 750;
+  }
+  a[data-align="end"] {
+    justify-content: flex-end;
+    margin-left: auto;
+    text-align: right;
+  }
+</style>

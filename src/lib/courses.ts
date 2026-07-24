@@ -5,7 +5,18 @@ export type ModuleEntry = CollectionEntry<"modules">;
 export type LessonEntry = CollectionEntry<"lessons">;
 export type CheckpointEntry = CollectionEntry<"checkpoints">;
 export type CapstoneEntry = CollectionEntry<"capstones">;
-export type LessonLink = { slug: string; href: string };
+export type CoreDestinationKind = "lesson" | "checkpoint" | "capstone";
+export type CoreDestinationRef =
+  | { id: string; kind: "lesson" }
+  | { id: string; kind: "checkpoint" }
+  | { id: "capstone:capstone"; kind: "capstone" };
+export type CoreDestinationLink = CoreDestinationRef & {
+  href: string;
+};
+export type CoreRouteContext = {
+  destinations: CoreDestinationLink[];
+  current: CoreDestinationLink;
+};
 export type CourseModule = {
   module: ModuleEntry;
   lessons: LessonEntry[];
@@ -244,12 +255,79 @@ export const checkpointPath = (courseSlug: string, moduleSlug: string) =>
 export const capstonePath = (courseSlug: string) =>
   sitePath(`courses/${courseSlug}/capstone/`);
 
-export function getLessonLinks(
+const coreDestination = <Kind extends CoreDestinationKind>(
+  kind: Kind,
+  slug: string,
+) => ({
+  id: `${kind}:${slug}`,
+  kind,
+});
+
+export const lessonDestination = (lessonSlug: string): CoreDestinationRef =>
+  coreDestination("lesson", lessonSlug);
+
+export const checkpointDestination = (
+  moduleSlug: string,
+): CoreDestinationRef => coreDestination("checkpoint", moduleSlug);
+
+export const capstoneDestination = (): CoreDestinationRef => ({
+  id: "capstone:capstone",
+  kind: "capstone",
+});
+
+export const lessonDestinationLink = (
   courseSlug: string,
-  lessons: LessonEntry[],
-): LessonLink[] {
-  return lessons.map((lesson) => ({
-    slug: lessonSlug(lesson),
-    href: lessonPath(courseSlug, lessonSlug(lesson)),
-  }));
+  slug: string,
+): CoreDestinationLink => ({
+  ...lessonDestination(slug),
+  href: lessonPath(courseSlug, slug),
+});
+
+export const checkpointDestinationLink = (
+  courseSlug: string,
+  moduleSlug: string,
+): CoreDestinationLink => ({
+  ...checkpointDestination(moduleSlug),
+  href: checkpointPath(courseSlug, moduleSlug),
+});
+
+export const capstoneDestinationLink = (
+  courseSlug: string,
+): CoreDestinationLink => ({
+  ...capstoneDestination(),
+  href: capstonePath(courseSlug),
+});
+
+export function getCoreDestinationLinks(
+  courseSlug: string,
+  tree: CourseTree,
+): CoreDestinationLink[] {
+  return [
+    ...tree.modules.flatMap((courseModule) => {
+      const checkpointSlug = moduleSlug(courseModule.module);
+      return [
+        ...courseModule.lessons.map((lesson) =>
+          lessonDestinationLink(courseSlug, lessonSlug(lesson))),
+        checkpointDestinationLink(courseSlug, checkpointSlug),
+      ];
+    }),
+    capstoneDestinationLink(courseSlug),
+  ];
+}
+
+export function getCoreRouteContext(
+  courseSlug: string,
+  tree: CourseTree,
+  ref: CoreDestinationRef,
+): CoreRouteContext {
+  const destinations = getCoreDestinationLinks(courseSlug, tree);
+  const current = destinations.find(
+    (destination) => destination.id === ref.id,
+  );
+  if (!current) {
+    throw new Error(
+      `Course ${courseSlug} has no ${ref.kind} destination ${ref.id}`,
+    );
+  }
+  return { destinations, current };
 }

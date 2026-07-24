@@ -10,8 +10,8 @@ import {
   checkpointPath,
   coursePath,
   formatLessonCount,
+  getCoreDestinationLinks,
   getCourseTree,
-  getLessonLinks,
   getModuleOutcomes,
   formatMinutes,
   lessonPath,
@@ -57,8 +57,7 @@ const modulePosition = tree.modules.findIndex(
 ) + 1;
 const supportedOutcomes = getModuleOutcomes(course, module);
 const slug = moduleSlug(module);
-const allLessons = tree.modules.flatMap((entry) => entry.lessons);
-const lessonLinks = getLessonLinks(course.id, allLessons);
+const coreDestinations = getCoreDestinationLinks(course.id, tree);
 const { Content } = await render(module);
 ---
 <BaseLayout title={`${module.data.title} | ${course.data.title}`}>
@@ -66,7 +65,7 @@ const { Content } = await render(module);
     class="container module-shell"
     data-progress-root
     data-course-slug={course.id}
-    data-lessons={JSON.stringify(lessonLinks)}
+    data-core-destinations={JSON.stringify(coreDestinations)}
   >
     <nav class="course-navigation" aria-label="Навигация по курсу">
       <a class="overview-link" href={coursePath(course.id)}>О курсе</a>

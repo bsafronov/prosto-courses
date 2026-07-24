@@ -1,12 +1,15 @@
 ---
 import type { CourseTree } from "../lib/courses";
 import {
+  capstoneDestination,
   capstonePath,
+  checkpointDestination,
   checkpointPath,
   modulePath,
   moduleSlug,
 } from "../lib/courses";
 import CourseLessonList from "./CourseLessonList.astro";
+import ProgressStatus from "./ProgressStatus.astro";
 
 interface Props {
   courseSlug: string;
@@ -57,7 +60,10 @@ const {
               ? "page"
               : undefined}
           >
-            Проверка Модуля: {checkpoint.data.title}
+            <span>Проверка Модуля: {checkpoint.data.title}</span>
+            <ProgressStatus
+              destination={checkpointDestination(slug)}
+            />
           </a>
         </li>
       );
@@ -68,7 +74,10 @@ const {
     href={capstonePath(courseSlug)}
     aria-current={current?.kind === "capstone" ? "page" : undefined}
   >
-    Итоговая работа: {tree.capstone.data.title}
+    <span>Итоговая работа: {tree.capstone.data.title}</span>
+    <ProgressStatus
+      destination={capstoneDestination()}
+    />
   </a>
 </div>
 
@@ -78,7 +87,7 @@ const {
   .module { display: grid; gap: .65rem; }
   .module-link { display: flex; align-items: center; gap: .65rem; color: var(--color-ink); font-weight: 800; text-decoration: none; }
   .module-link span { display: grid; width: 1.8rem; height: 1.8rem; place-items: center; border-radius: 50%; background: var(--color-brand); color: white; font-size: .85rem; }
-  .assessment-link, .capstone-link { border: 1px dashed var(--color-border); border-radius: .65rem; padding: .7rem .8rem; color: var(--color-ink); font-weight: 720; text-decoration: none; }
+  .assessment-link, .capstone-link { display: flex; align-items: center; justify-content: space-between; gap: .65rem; border: 1px dashed var(--color-border); border-radius: .65rem; padding: .7rem .8rem; color: var(--color-ink); font-weight: 720; text-decoration: none; }
   .capstone-link { border-style: solid; border-color: var(--color-brand); }
   a[aria-current="page"] { outline: 2px solid var(--color-brand); outline-offset: 2px; }
 </style>
