@@ -137,6 +137,15 @@ Create `_authoring/quality-report.md` with:
 
 The Course Owner approves the completed Course after reviewing this report.
 
+The public validator treats these as structured artifacts, not placeholder
+files. Each uses its documented level-one heading, a positive `Version` or
+`Версия`, an explicitly approved `Status` or `Статус`, and non-empty level-two
+sections named above. Headings inside fenced examples do not satisfy the
+artifact contract. The status must name the Course Owner as the approver;
+Authoring Agent self-review is not approval. The Blueprint also records
+Reference Lesson calibration and workload; the quality report also records its
+validation run and remaining limitations.
+
 ## Target directory convention
 
 Create one self-contained directory:
@@ -549,7 +558,7 @@ The base catalog is closed and versioned:
 
 The Authoring Agent may use only documented components and props. If a needed component is unavailable, use clear Markdown, revise the learning design, or record a platform requirement. Never invent an MDX API.
 
-Presentation-only primitives are forbidden in Course source, including layout wrappers, `Progress`, `DifficultyBadge`, generic `Tabs`, generic `Accordion`, generic `Spoiler`, and colored containers. The platform derives progress and visual treatment. A semantic component may render with tabs or disclosure internally without exposing that presentation choice to authors.
+Presentation-only primitives are forbidden in Course source, including layout wrappers, `Progress`, `DifficultyBadge`, generic `Tabs`, generic `Accordion`, generic `Spoiler`, and colored containers. Raw HTML elements and authored `class`, `style`, event-handler, or hydration props are likewise invalid. The platform derives progress and visual treatment. A semantic component may render with tabs or disclosure internally without exposing that presentation choice to authors.
 
 ### Callout
 
@@ -691,7 +700,21 @@ Mermaid source is fenced inside `Diagram`; raw Mermaid outside the component is 
 
 Do not add visuals by quota or as decoration. Explain a visual close to where it appears.
 
-External images require a permitted license, provenance, useful alt text, and a meaningful caption. AI-generated images are a last resort and may illustrate atmosphere, metaphor, or a clearly simulated scenario. They must not serve as factual evidence, a precise technical or medical diagram, or a historical document. Label them as illustrative whenever confusion is possible.
+External images require a permitted license, provenance, useful alt text, and a
+meaningful caption. Use inline Markdown image syntax with JSON title metadata;
+the platform turns it into an accessible figure:
+
+```md
+![Краткое описание](https://example.org/image.png '{"caption":"Подпись, объясняющая назначение изображения.","source":{"label":"Точный источник","url":"https://example.org/source"},"license":"CC BY 4.0","origin":"external"}')
+```
+
+`caption`, `source.label`, `license`, and `origin` are required. External
+images require an HTTP(S) `source.url`. Generated images use
+`"origin":"generated"` and must also declare `"illustrative":true`; their
+source URL is optional when no public generation record exists. Unknown
+metadata fields are invalid.
+
+AI-generated images are a last resort and may illustrate atmosphere, metaphor, or a clearly simulated scenario. They must not serve as factual evidence, a precise technical or medical diagram, or a historical document. Label them as illustrative whenever confusion is possible.
 
 ## Accessibility
 
@@ -753,9 +776,10 @@ date without changing the machine clock:
 CONTENT_VALIDATION_DATE=2026-10-23 pnpm validate
 ```
 
-The Course Overview shows the authored factual verification date,
-jurisdiction when declared, and the derived freshness state. Git modification
-time is not verification metadata and is never shown as such.
+Course and Module overviews show the verification date, jurisdiction, review
+deadline, and state from the same controlling freshness record: the dependent
+time-sensitive record with the earliest `reviewAfter`. Git modification time
+is not verification metadata and is never shown as such.
 
 ## Content Revision and progress durability
 

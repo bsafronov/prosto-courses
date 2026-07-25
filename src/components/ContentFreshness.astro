@@ -6,11 +6,10 @@ import {
 
 interface Props {
   state: ContentFreshnessState;
-  metadata?: ContentFreshnessState["freshness"];
 }
 
-const { state, metadata = state.freshness } = Astro.props;
-const verifiedAt = metadata.verifiedAt.toISOString().slice(0, 10);
+const { state } = Astro.props;
+const verifiedAt = state.freshness.verifiedAt.toISOString().slice(0, 10);
 const reviewAfter =
   state.freshness.mode === "time-sensitive"
     ? state.freshness.reviewAfter.toISOString().slice(0, 10)
@@ -21,14 +20,14 @@ const reviewAfter =
     <dt>Проверено</dt>
     <dd>
       <time datetime={verifiedAt}>
-        {formatFreshnessDate(metadata.verifiedAt)}
+        {formatFreshnessDate(state.freshness.verifiedAt)}
       </time>
     </dd>
   </div>
-  {metadata.jurisdiction && (
+  {state.freshness.jurisdiction && (
     <div>
       <dt>Юрисдикция</dt>
-      <dd>{metadata.jurisdiction}</dd>
+      <dd>{state.freshness.jurisdiction}</dd>
     </div>
   )}
   <div class:list={["state", state.status]}>

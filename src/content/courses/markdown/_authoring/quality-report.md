@@ -101,8 +101,8 @@ Final results on 2026-07-25:
 
 - `pnpm validate`: passed; canonical tree reported 1 Course, 3 Modules, 6 Lessons, 3 Module Checkpoints and 1 Capstone Demonstration; Astro reported 0 errors, warnings or hints;
 - `pnpm build`: passed with static output and the configured repository base path;
-- `pnpm test:contract`: 114 passed;
-- `pnpm test:browser`: 59 passed;
+- `pnpm test:contract`: 122 passed;
+- `pnpm test:browser`: 60 passed;
 - repository-base-path deployment coverage loaded Course Overview, every Module and Module Checkpoint, one Lesson per Module, Capstone and their generated assets successfully;
 - canonical route QA passed at desktop and narrow widths for Course Overview, Capstone and all six Lessons;
 - targeted keyboard QA passed for canonical `single`, `multiple`, `ordering` and `exact`, plus progressive Practice Task support, Reflection, Diagram and Chart;

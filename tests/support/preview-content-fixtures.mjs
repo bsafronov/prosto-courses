@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { spawn } from "node:child_process";
+import { completeContentRootAuthoringArtifacts } from "./complete-authoring-artifacts.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname, "../..");
 const temporaryRoot = await mkdtemp(
@@ -38,6 +39,7 @@ await mkdir(contentRoot, { recursive: true });
 await copyCourses(path.join(projectRoot, "src/content/courses"));
 await copyCourses(path.join(projectRoot, "tests/fixtures/valid-course"));
 await copyCourses(path.join(projectRoot, "tests/fixtures/browser"));
+await completeContentRootAuthoringArtifacts(contentRoot);
 
 const environment = {
   ...process.env,

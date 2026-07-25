@@ -1,3 +1,4 @@
+import AuthoredImage from "./AuthoredImage.astro";
 import Callout from "./Callout.astro";
 import Chart from "./Chart.astro";
 import Diagram from "./Diagram.astro";
@@ -8,6 +9,7 @@ import TaskRubric from "./TaskRubric.astro";
 import TaskSolution from "./TaskSolution.astro";
 
 export const semanticComponents = {
+  img: AuthoredImage,
   Callout,
   Chart,
   Diagram,

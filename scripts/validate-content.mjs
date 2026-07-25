@@ -20,6 +20,7 @@ import {
 const mermaidDom = new JSDOM("<!doctype html><html><body></body></html>");
 globalThis.window = mermaidDom.window;
 globalThis.document = mermaidDom.window.document;
+const authoredEventTarget = mermaidDom.window.document.createElement("div");
 const { default: mermaid } = await import("mermaid");
 
 const contentRoot = path.resolve(
@@ -231,7 +232,7 @@ function componentAttributes(source) {
 
     const nameMatch = source
       .slice(cursor)
-      .match(/^[A-Za-z][A-Za-z0-9_-]*/);
+      .match(/^[A-Za-z][A-Za-z0-9_:-]*/);
     if (!nameMatch) {
       cursor += 1;
       continue;
@@ -1544,6 +1545,24 @@ function validateSemanticComponents(body, file, declaredPacks = new Map()) {
       continue;
     }
 
+    const authoredControlProps = attributeNames(source).filter(
+      (name) => {
+        const lowerName = name.toLowerCase();
+        return (
+          ["class", "classname", "id", "style"].includes(lowerName) ||
+          /^(?:client|set|is):/.test(lowerName) ||
+          /^on(?::|[A-Z])/.test(name) ||
+          (lowerName.startsWith("on") && lowerName in authoredEventTarget)
+        );
+      },
+    );
+    if (authoredControlProps.length > 0) {
+      report(
+        file,
+        `${componentName} must not author presentation or runtime props: ${authoredControlProps.join(", ")}`,
+      );
+    }
+
     if (/\{\s*\.\.\./.test(source)) {
       report(
         file,
@@ -1651,6 +1670,127 @@ function validateAuthoringBoundary(body, file) {
   if (/^\s*(?:import|export)\b/m.test(authoringSource)) {
     report(file, "Course content must not import presentation modules");
   }
+  const rawHtmlElements = [
+    ...new Set(
+      [...authoringSource.matchAll(/<\/?([a-z][a-z0-9-]*)(?=[\s/>])/gi)]
+        .map((match) => match[1])
+        .filter((name) => /^[a-z]/.test(name))
+        .map((name) => name.toLowerCase()),
+    ),
+  ];
+  if (rawHtmlElements.length > 0) {
+    report(
+      file,
+      `Course content must not author raw HTML elements: ${rawHtmlElements.join(", ")}`,
+    );
+  }
+}
+
+function validateImages(body, file) {
+  const authoringSource = withoutFencedCode(body);
+  const images = [
+    ...authoringSource.matchAll(
+      /!\[([^\]\n]*)\]\(\s*(?:<([^>\n]+)>|([^\s)\n]+))(?:\s+(?:"((?:\\.|[^"\n])*)"|'((?:\\.|[^'\n])*)'|\(([^)\n]*)\)))?\s*\)/g,
+    ),
+  ];
+  const imageStarts = authoringSource.match(/!\[/g)?.length ?? 0;
+  if (imageStarts !== images.length) {
+    report(
+      file,
+      "Images must use the documented inline Markdown syntax with JSON title metadata",
+    );
+  }
+
+  for (const [index, image] of images.entries()) {
+    const label = `Image ${index + 1}`;
+    const alt = image[1].trim();
+    const title = image[4] ?? image[5] ?? image[6];
+    if (!alt) report(file, `${label} requires useful alternative text`);
+    if (!title) {
+      report(
+        file,
+        `${label} requires JSON title metadata for caption, source, license, and origin`,
+      );
+      continue;
+    }
+
+    let metadata;
+    try {
+      metadata = JSON.parse(title);
+    } catch {
+      report(
+        file,
+        `${label} requires valid JSON title metadata for caption, source, license, and origin`,
+      );
+      continue;
+    }
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+      report(file, `${label} metadata must be an object`);
+      continue;
+    }
+
+    const authoredFields = Object.keys(metadata).filter(
+      (field) =>
+        !["caption", "source", "license", "origin", "illustrative"].includes(
+          field,
+        ),
+    );
+    if (authoredFields.length > 0) {
+      report(
+        file,
+        `${label} metadata does not allow fields: ${authoredFields.join(", ")}`,
+      );
+    }
+    if (typeof metadata.caption !== "string" || !metadata.caption.trim()) {
+      report(file, `${label} requires a non-empty caption`);
+    }
+    if (typeof metadata.license !== "string" || !metadata.license.trim()) {
+      report(file, `${label} requires a non-empty license`);
+    }
+    if (!["external", "generated"].includes(metadata.origin)) {
+      report(file, `${label} origin must be external or generated`);
+    }
+
+    const source = metadata.source;
+    if (!source || typeof source !== "object" || Array.isArray(source)) {
+      report(file, `${label} requires source provenance`);
+    } else {
+      const sourceFields = Object.keys(source).filter(
+        (field) => !["label", "url"].includes(field),
+      );
+      if (sourceFields.length > 0) {
+        report(
+          file,
+          `${label} source does not allow fields: ${sourceFields.join(", ")}`,
+        );
+      }
+      if (typeof source.label !== "string" || !source.label.trim()) {
+        report(file, `${label} source requires a non-empty label`);
+      }
+      if (
+        metadata.origin === "external" &&
+        (typeof source.url !== "string" ||
+          !/^https?:\/\/\S+$/i.test(source.url))
+      ) {
+        report(file, `${label} external origin requires an HTTP(S) source URL`);
+      } else if (
+        source.url !== undefined &&
+        (typeof source.url !== "string" ||
+          !/^https?:\/\/\S+$/i.test(source.url))
+      ) {
+        report(file, `${label} source URL must use HTTP(S)`);
+      }
+    }
+    if (
+      metadata.origin === "generated" &&
+      metadata.illustrative !== true
+    ) {
+      report(
+        file,
+        `${label} generated origin must declare illustrative: true`,
+      );
+    }
+  }
 }
 
 function validateSharedMetadata(data, file) {
@@ -1670,6 +1810,7 @@ async function validateLearnerSource(
   requiredString(source.data, "title", file, owner);
   validateSharedMetadata(source.data, file);
   validateAuthoringBoundary(source.content, file);
+  validateImages(source.content, file);
   validateSemanticComponents(source.content, file, declaredPacks);
   validateKnowledgeChecks(source.content, file, alignment);
   validateReflections(source.content, file, alignment);
@@ -1799,10 +1940,146 @@ function validateContiguousOrders(
   }
 }
 
-async function validateArtifact(file, label) {
+const authoringArtifactContracts = {
+  brief: {
+    name: "Course Brief",
+    heading: /^#\s+Course Brief\b/im,
+    sections: [
+      ["Learner Profile", /^##\s+.*Learner Profile/im],
+      ["Scope", /^##\s+.*Scope/im],
+      ["Learning Outcomes", /^##\s+.*Learning Outcomes/im],
+      ["Capstone Demonstration", /^##\s+.*Capstone/im],
+      ["Time budget", /^##\s+.*Time budget/im],
+      ["Source Policy", /^##\s+.*Source Policy/im],
+      ["Accessibility and safety constraints", /^##\s+.*Accessibility.*(?:safety|constraints)/im],
+      ["assumptions and unresolved risks", /^##\s+.*assumptions.*risks/im],
+      ["Approval record", /^##\s+.*Approval record/im],
+    ],
+  },
+  blueprint: {
+    name: "Course Blueprint",
+    heading: /^#\s+Course Blueprint\b/im,
+    sections: [
+      ["Concept map", /^##\s+.*Concept map/im],
+      ["Sequence", /^##\s+.*Sequence/im],
+      ["Outcome Alignment", /^##\s+.*Outcome Alignment/im],
+      ["Instructional Scaffolding", /^##\s+.*Instructional Scaffolding/im],
+      ["Cumulative Retrieval", /^##\s+.*Cumulative Retrieval/im],
+      ["Reference Lesson", /^##\s+.*Reference Lesson/im],
+      ["Coverage audit", /^##\s+.*Coverage audit/im],
+      ["Workload", /^##\s+.*Workload/im],
+    ],
+  },
+  qualityReport: {
+    name: "quality report",
+    heading: /^#\s+Quality report\b/im,
+    sections: [
+      ["Outcome Alignment", /^##\s+.*Outcome Alignment/im],
+      ["Coverage and dependency checks", /^##\s+.*Coverage.*dependency/im],
+      ["Deterministic answers", /^##\s+.*Deterministic answers/im],
+      ["Practice solvability", /^##\s+.*Practice solvability/im],
+      ["Source, version, jurisdiction and freshness", /^##\s+.*Source.*freshness/im],
+      ["Accessibility and render-QA scope", /^##\s+.*Accessibility.*render-QA/im],
+      ["Validation record", /^##\s+.*Validation record/im],
+      ["Remaining limitations", /^##\s+.*Remaining limitations/im],
+    ],
+  },
+};
+
+function hasApprovedArtifactStatus(source) {
+  const status = source.match(/^(?:Status|Статус)\s*:\s*(.+)$/im)?.[1].trim();
+  if (!status) return false;
+  if (
+    /\b(?:not|pending|unapproved|disapproved|rejected)\b|не\s+одобрен|ожида/i.test(
+      status,
+    )
+  ) {
+    return false;
+  }
+  return (
+    /^(?:approved|одобрен(?:а|о|ы)?)(?=\s|[.;,]|$).*Course Owner/i.test(
+      status,
+    ) ||
+    /Course Owner approval.*(?:recorded|зафиксирован)/i.test(status)
+  );
+}
+
+function disclosesMissingIndependentExpertReview(source) {
+  return (
+    /(?:no|without|absence of)\s+independent\s+expert\s+review/i.test(
+      source,
+    ) ||
+    /independent\s+expert\s+review\s+(?:was\s+)?not\s+(?:performed|conducted)/i.test(
+      source,
+    ) ||
+    /независим\w*\s+expert\s+review\s+не\s+(?:было|проводил\w*)/i.test(
+      source,
+    ) ||
+    /независим\w*\s+экспертн\w*\s+проверк\w*\s+(?:не\s+(?:было|проводил\w*)|отсутств)/i.test(
+      source,
+    )
+  );
+}
+
+async function validateArtifact(
+  file,
+  label,
+  contractName,
+  { factualRisk } = {},
+) {
   try {
     const source = await readFile(file, "utf8");
-    if (source.trim() === "") report(file, `${label} must not be empty`);
+    if (source.trim() === "") {
+      report(file, `${label} must not be empty`);
+      return;
+    }
+    const contract = authoringArtifactContracts[contractName];
+    if (!contract) return;
+    const artifactSource = withoutFencedCode(source);
+    if (!contract.heading.test(artifactSource)) {
+      report(file, `${contract.name} must use its documented level-one heading`);
+    }
+    if (!/^(?:Version|Версия)\s*:?\s*[1-9]\d*\b/im.test(artifactSource)) {
+      report(file, `${contract.name} must declare a positive Version`);
+    }
+    if (!hasApprovedArtifactStatus(artifactSource)) {
+      report(
+        file,
+        `${contract.name} must record an explicitly approved Course Owner status`,
+      );
+    }
+    for (const [section, pattern] of contract.sections) {
+      const heading = artifactSource.match(pattern);
+      if (!heading) {
+        const article = /^[aeiou]/i.test(section) ? "an" : "a";
+        report(file, `${contract.name} requires ${article} ${section} section`);
+        continue;
+      }
+      const afterHeading = artifactSource.slice(
+        (heading.index ?? 0) + heading[0].length,
+      );
+      const nextSectionIndex = afterHeading.search(/^#{1,2}\s+/m);
+      const sectionContent = afterHeading
+        .slice(
+          0,
+          nextSectionIndex === -1 ? afterHeading.length : nextSectionIndex,
+        )
+        .replace(/<!--[\s\S]*?-->/g, "")
+        .trim();
+      if (!sectionContent) {
+        report(file, `${contract.name} ${section} section must not be empty`);
+      }
+    }
+    if (
+      contractName === "qualityReport" &&
+      factualRisk === "high" &&
+      !disclosesMissingIndependentExpertReview(artifactSource)
+    ) {
+      report(
+        file,
+        "high factual-risk quality report must disclose the absence of independent expert review",
+      );
+    }
   } catch (error) {
     if (error.code === "ENOENT") report(file, `Course must own a ${label}`);
     else report(file, `could not read ${label}: ${error.message}`);
@@ -2001,7 +2278,11 @@ async function validateCourse(courseEntry) {
   const overviewFile = path.join(courseDir, "index.mdx");
   const overview = await readRequiredMdx(overviewFile, "Course");
   const briefFile = path.join(courseDir, "_authoring", "brief.md");
-  await validateArtifact(briefFile, "Course Brief at _authoring/brief.md");
+  await validateArtifact(
+    briefFile,
+    "Course Brief at _authoring/brief.md",
+    "brief",
+  );
   const factualRisk = await validateCourseBrief(
     briefFile,
     overview?.data.capabilityPacks,
@@ -2074,10 +2355,13 @@ async function validateCourse(courseEntry) {
   await validateArtifact(
     path.join(courseDir, "_authoring", "blueprint.md"),
     "Course Blueprint at _authoring/blueprint.md",
+    "blueprint",
   );
   await validateArtifact(
     path.join(courseDir, "_authoring", "quality-report.md"),
     "quality report at _authoring/quality-report.md",
+    "qualityReport",
+    { factualRisk },
   );
 
   const modulesDir = path.join(courseDir, "modules");

@@ -43,10 +43,10 @@ test("Course Overview shows factual verification and its derived freshness state
     name: "Актуальность материалов",
   });
   await expect(staleFreshness).toContainText(
-    /Проверено\s*22 июля 2026 г\./,
+    /Проверено\s*23 июля 2026 г\./,
   );
   await expect(staleFreshness).toContainText(
-    /Юрисдикция\s*Международные рекомендации по доступности/,
+    /Юрисдикция\s*WCAG 2\.2 SC 1\.1\.1/,
   );
   await expect(staleFreshness).toContainText(
     "Требуется повторная проверка",
@@ -54,9 +54,12 @@ test("Course Overview shows factual verification and its derived freshness state
   await expect(staleFreshness).toContainText("22 октября 2026 г.");
 
   await page.goto("./courses/accessible-images/modules/alt-text/");
-  await expect(
-    page.getByRole("group", { name: "Актуальность материалов" }),
-  ).toContainText("Требуется повторная проверка");
+  const moduleFreshness = page.getByRole("group", {
+    name: "Актуальность материалов",
+  });
+  await expect(moduleFreshness).toContainText("Требуется повторная проверка");
+  await expect(moduleFreshness).toContainText(/Проверено\s*23 июля 2026 г\./);
+  await expect(moduleFreshness).toContainText(/Юрисдикция\s*WCAG 2\.2 SC 1\.1\.1/);
 });
 
 test("Module Overview explains its capability, outcomes, and derived workload", async ({

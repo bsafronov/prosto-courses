@@ -186,6 +186,24 @@ test("canonical Chart overflow regions are keyboard reachable", async ({ page })
   await expect(tableRegion).toBeFocused();
 });
 
+test("sourced images expose alternative text, caption, provenance, and illustrative status", async ({
+  page,
+}) => {
+  await page.goto("./courses/accessible-images/lessons/describe-purpose/");
+
+  const figure = page.getByRole("figure", {
+    name: "Illustrative context label used to test sourced-image alternatives.",
+  });
+  await expect(
+    figure.getByRole("img", { name: "A gray rectangle labeled Context" }),
+  ).toBeVisible();
+  await expect(figure).toContainText("Generated platform fixture");
+  await expect(figure).toContainText("Course-owned");
+  await expect(figure).toContainText(
+    "Иллюстративное сгенерированное изображение.",
+  );
+});
+
 test("semantic visuals remain usable at a narrow width and reduced motion", async ({
   page,
 }) => {

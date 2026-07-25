@@ -6,6 +6,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import test from "node:test";
+import {
+  completeAuthoringArtifacts,
+  completeContentRootAuthoringArtifacts,
+} from "./support/complete-authoring-artifacts.mjs";
 
 const execFileAsync = promisify(execFile);
 const fixturePath = (name) =>
@@ -44,7 +48,17 @@ async function validateContent(
   }
 }
 
-const validateFixture = (name) => validateContent(fixturePath(name));
+async function validateFixture(name, options) {
+  const root = await mkdtemp(path.join(tmpdir(), "prosto-content-fixture-"));
+  const content = path.join(root, "content");
+  await cp(fixturePath(name), content, { recursive: true });
+  try {
+    await completeContentRootAuthoringArtifacts(content);
+    return await validateContent(content, options);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
 
 async function withChangedValidCourse(changes, run, options) {
   const root = await mkdtemp(path.join(tmpdir(), "prosto-authoring-contract-"));
@@ -54,6 +68,7 @@ async function withChangedValidCourse(changes, run, options) {
   });
 
   try {
+    await completeAuthoringArtifacts(course);
     for (const [relativePath, change] of Object.entries(changes)) {
       const file = path.join(course, relativePath);
       await writeFile(file, change(await readFile(file, "utf8")));
@@ -83,7 +98,7 @@ test("accepts a fresh Course through the public authoring contract", async () =>
 });
 
 test("uses an injected validation date without depending on the machine clock", async () => {
-  const result = await validateContent(fixturePath("valid-course"), {
+  const result = await validateFixture("valid-course", {
     validationDate: "2026-10-22",
   });
   assert.equal(result.exitCode, 0, result.output);
@@ -924,6 +939,52 @@ test("accepts an accessible sourced Chart with consistent structured series", as
 />\n`,
     },
     (result) => assert.equal(result.exitCode, 0, result.output),
+  );
+});
+
+test("accepts sourced external and explicitly illustrative generated images", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}
+![External example](https://example.com/external.png '{"caption":"External example caption","source":{"label":"Example source","url":"https://example.com/source"},"license":"CC BY 4.0","origin":"external"}')
+![Generated example](https://example.com/generated.png '{"caption":"Generated example caption","source":{"label":"Fixture generator"},"license":"Course-owned","origin":"generated","illustrative":true}')
+`,
+    },
+    (result) => assert.equal(result.exitCode, 0, result.output),
+  );
+});
+
+test("rejects images without accessible provenance and generated-image disclosure", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}
+![](https://example.com/external.png '{"caption":"External example","source":{"label":"Example source","url":"https://example.com/source"},"license":"CC BY 4.0","origin":"external"}')
+![Generated example](https://example.com/generated.png '{"caption":"Generated example","source":{"label":"Fixture generator"},"license":"","origin":"generated","illustrative":false}')
+![Undocumented image](https://example.com/undocumented.png)
+![Reference-style image][asset]
+
+[asset]: https://example.com/reference.png
+`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(result.output, /Image \d+ requires useful alternative text/i);
+      assert.match(result.output, /Image \d+ requires a non-empty license/i);
+      assert.match(
+        result.output,
+        /Image \d+ generated origin must declare illustrative: true/i,
+      );
+      assert.match(
+        result.output,
+        /Image \d+ requires JSON title metadata for caption, source, license, and origin/i,
+      );
+      assert.match(
+        result.output,
+        /Images must use the documented inline Markdown syntax with JSON title metadata/i,
+      );
+    },
   );
 });
 
@@ -2011,6 +2072,177 @@ for (const [fixture, example] of fencedExamples) {
     assert.equal(result.exitCode, 0, result.output);
   });
 }
+
+test("requires versioned, approved, structurally complete authoring artifacts", async () => {
+  await withChangedValidCourse(
+    {
+      "_authoring/brief.md": (source) => source.replace("Version 1.", ""),
+      "_authoring/blueprint.md": (source) =>
+        source.replace("## Outcome Alignment", "## Alignment"),
+      "_authoring/quality-report.md": (source) =>
+        source.replace("## Remaining limitations", "## Limitations"),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Course Brief must declare a positive Version/i,
+      );
+      assert.match(
+        result.output,
+        /Course Blueprint requires an Outcome Alignment section/i,
+      );
+      assert.match(
+        result.output,
+        /quality report requires a Remaining limitations section/i,
+      );
+    },
+  );
+});
+
+test("rejects empty artifact sections and ignores headings inside examples", async () => {
+  await withChangedValidCourse(
+    {
+      "_authoring/brief.md": (source) =>
+        source.replace(
+          "## Scope\n\nLimited to the one validator behavior named by the fixture.",
+          "## Scope",
+        ),
+      "_authoring/blueprint.md": (source) =>
+        `${source.replace("## Outcome Alignment", "## Alignment")}
+
+\`\`\`md
+## Outcome Alignment
+
+Example content is not an approved Blueprint section.
+\`\`\`
+`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Course Brief Scope section must not be empty/i,
+      );
+      assert.match(
+        result.output,
+        /Course Blueprint requires an Outcome Alignment section/i,
+      );
+    },
+  );
+});
+
+test("rejects negated, disapproved, or pending artifact statuses", async () => {
+  await withChangedValidCourse(
+    {
+      "_authoring/brief.md": (source) =>
+        source.replace(
+          "Status: approved by Course Owner for contract-fixture use.",
+          "Status: not approved by Course Owner.",
+        ),
+      "_authoring/blueprint.md": (source) =>
+        source.replace(
+          "Status: approved by Course Owner for contract-fixture use.",
+          "Status: disapproved by Course Owner.",
+        ),
+      "_authoring/quality-report.md": (source) =>
+        source.replace(
+          "Status: approved by Course Owner for contract-fixture use.",
+          "Status: Course Owner approval pending.",
+        ),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /brief\.md: Course Brief must record an explicitly approved Course Owner status/i,
+      );
+      assert.match(
+        result.output,
+        /blueprint\.md: Course Blueprint must record an explicitly approved Course Owner status/i,
+      );
+      assert.match(
+        result.output,
+        /quality-report\.md: quality report must record an explicitly approved Course Owner status/i,
+      );
+    },
+  );
+});
+
+test("requires Course Owner to be the recorded artifact approver", async () => {
+  await withChangedValidCourse(
+    {
+      "_authoring/brief.md": (source) =>
+        source.replace(
+          "Status: approved by Course Owner for contract-fixture use.",
+          "Status: approved by Authoring Agent.",
+        ),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /brief\.md: Course Brief must record an explicitly approved Course Owner status/i,
+      );
+    },
+  );
+});
+
+test("requires high factual-risk quality reports to disclose missing expert review", async () => {
+  await withChangedValidCourse(
+    {
+      "_authoring/brief.md": (source) =>
+        source.replace("factualRisk: standard", "factualRisk: high"),
+      "_authoring/quality-report.md": (source) =>
+        source.replace(
+          "No independent expert review was performed.",
+          "No limitations remain. Independent expert review was performed.",
+        ),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /high factual-risk quality report must disclose the absence of independent expert review/i,
+      );
+    },
+  );
+});
+
+test("rejects raw HTML and authored presentation or runtime controls", async () => {
+  await withChangedValidCourse(
+    {
+      "index.mdx": (source) =>
+        source.replace(
+          "capabilityPacks: []",
+          "capabilityPacks:\n  - name: fixture-lab\n    version: 1.2.0",
+        ),
+      "_authoring/brief.md": (source) =>
+        source.replace(
+          "factualRisk: standard",
+          "factualRisk: standard\ncapabilityPacks:\n  - name: fixture-lab\n    version: 1.2.0",
+        ),
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}
+<sCrIpT src="/authored-runtime.js"></sCrIpT>
+<details><summary>Authored disclosure</summary>Hidden prose</details>
+<FixtureLab class="authored-layout" onClick={() => alert("runtime")} onclick="runtime()" ondblclick="runtime()" oncontextmenu="runtime()" oncopy="runtime()" ondragstart="runtime()" on:click={() => alert("directive")} client:load />
+`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Course content must not author raw HTML elements: script, details, summary/i,
+      );
+      assert.match(
+        result.output,
+        /FixtureLab must not author presentation or runtime props: class, onClick, onclick, ondblclick, oncontextmenu, oncopy, ondragstart, on:click, client:load/i,
+      );
+    },
+    { capabilityPackManifest: fixturePath("capability-packs.json") },
+  );
+});
 
 const invalidFixtures = [
   ["duplicate-module-order", "duplicate Module order 1"],
