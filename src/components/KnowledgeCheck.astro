@@ -1,4 +1,6 @@
 ---
+import { createHash } from "node:crypto";
+
 interface ChoiceOption {
   id: string;
   text: string;
@@ -68,6 +70,13 @@ function shuffleAwayFromAuthoredOrder<T>(values: T[]) {
   return shuffled;
 }
 
+function opaqueResponseKey(kind: "matching" | "ordering", authoredId: string) {
+  return createHash("sha256")
+    .update(`${kind}\0${authoredId}`)
+    .digest("base64url")
+    .slice(0, 16);
+}
+
 const props = Astro.props;
 const { type, prompt, explanation } = props;
 const inputName = `knowledge-check-${crypto.randomUUID()}`;
@@ -75,7 +84,7 @@ const options = "options" in props ? props.options : [];
 const matchingRows =
   type === "matching"
     ? props.pairs.map((pair) => ({
-        answerKey: crypto.randomUUID(),
+        answerKey: opaqueResponseKey("matching", pair.id),
         feedback: pair.feedback,
         left: pair.left,
         right: pair.right,
@@ -87,7 +96,7 @@ const matchingOptions = shuffleAwayFromAuthoredOrder(
 const authoredOrderingRows =
   type === "ordering"
     ? props.items.map((item) => ({
-        answerKey: crypto.randomUUID(),
+        answerKey: opaqueResponseKey("ordering", item.id),
         text: item.text,
       }))
     : [];
@@ -321,7 +330,14 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
         item.parentElement?.insertBefore(item.nextElementSibling, item);
       }
       updateOrderingPositions(item);
-      button.focus();
+      const focusTarget = button.disabled
+        ? item.querySelector<HTMLButtonElement>(
+            button.dataset.orderingMove === "up"
+              ? '[data-ordering-move="down"]'
+              : '[data-ordering-move="up"]',
+          )
+        : button;
+      focusTarget?.focus();
     });
 
     form.addEventListener("submit", (event) => {

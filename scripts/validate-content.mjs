@@ -329,7 +329,7 @@ function numberAttribute(source, name) {
   }
 }
 
-function objectArrayAttribute(source, name) {
+function staticJsonAttribute(source, name) {
   const attribute = componentAttribute(source, name);
   if (!attribute) return { present: false };
   if (typeof attribute.expression !== "string") return { present: true };
@@ -351,7 +351,7 @@ function attributeNames(source) {
 }
 
 function validateChartAxis(componentSource, file, prop) {
-  const axis = objectArrayAttribute(componentSource, prop).value;
+  const axis = staticJsonAttribute(componentSource, prop).value;
   const authoredFields = Object.keys(axis ?? {}).filter(
     (field) => !["label", "unit"].includes(field),
   );
@@ -369,7 +369,7 @@ function validateChartAxis(componentSource, file, prop) {
 }
 
 function validateChartSource(componentSource, file) {
-  const source = objectArrayAttribute(componentSource, "source").value;
+  const source = staticJsonAttribute(componentSource, "source").value;
   const authoredFields = Object.keys(source ?? {}).filter(
     (field) => !["label", "url"].includes(field),
   );
@@ -392,7 +392,7 @@ function validateChartSource(componentSource, file) {
 }
 
 function validateChartSeries(componentSource, file) {
-  const series = objectArrayAttribute(componentSource, "series").value;
+  const series = staticJsonAttribute(componentSource, "series").value;
   if (!Array.isArray(series) || series.length === 0) {
     report(file, "Chart series must be a non-empty static array");
     return;
@@ -674,7 +674,7 @@ function validateKnowledgeChecks(body, file, alignment) {
     }
 
     if (type === "matching") {
-      const pairs = objectArrayAttribute(check.source, "pairs");
+      const pairs = staticJsonAttribute(check.source, "pairs");
       if (
         !Array.isArray(pairs.value) ||
         pairs.value.length < 2 ||
@@ -741,7 +741,7 @@ function validateKnowledgeChecks(body, file, alignment) {
     }
 
     if (type === "ordering") {
-      const items = objectArrayAttribute(check.source, "items");
+      const items = staticJsonAttribute(check.source, "items");
       if (
         !Array.isArray(items.value) ||
         items.value.length < 2 ||
@@ -808,7 +808,7 @@ function validateKnowledgeChecks(body, file, alignment) {
         );
       }
 
-      const normalization = objectArrayAttribute(
+      const normalization = staticJsonAttribute(
         check.source,
         "normalization",
       ).value;
@@ -894,7 +894,7 @@ function validateKnowledgeChecks(body, file, alignment) {
       continue;
     }
 
-    const options = objectArrayAttribute(check.source, "options");
+    const options = staticJsonAttribute(check.source, "options");
     if (
       !Array.isArray(options.value) ||
       options.value.length < 2 ||
@@ -1187,7 +1187,7 @@ function validateTaskRubric(rubric, file, index) {
     "structured criteria",
   );
 
-  const criteria = objectArrayAttribute(rubric.source, "criteria");
+  const criteria = staticJsonAttribute(rubric.source, "criteria");
   const scoreFields = new Set(["score", "points", "rating", "grade"]);
   const hasScoreField =
     Array.isArray(criteria.value) &&

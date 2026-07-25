@@ -225,6 +225,17 @@ test("matching Knowledge Check shuffles opaque values and supports keyboard retr
     "Выбери соответствие",
     "Выбери соответствие",
   ]);
+  expect(
+    await page
+      .locator(
+        '[data-knowledge-check][data-type="matching"] select',
+      )
+      .first()
+      .locator("option:not([value=''])")
+      .evaluateAll((options) =>
+        options.map((option) => (option as HTMLOptionElement).value),
+      ),
+  ).toEqual(optionValues);
   await expect(
     page.locator('[data-knowledge-check][data-type="matching"] [data-feedback]'),
   ).toBeHidden();
@@ -260,6 +271,26 @@ test("ordering Knowledge Check announces keyboard moves and allows retries", asy
   await check.getByRole("button", { name: "Проверить ответ" }).press("Enter");
   await expect(feedback).toContainText("Почти! Попробуй ещё раз.");
 
+  const boundaryText = await list
+    .locator("[data-ordering-item]")
+    .nth(1)
+    .locator("[data-ordering-text]")
+    .textContent();
+  expect(boundaryText).not.toBeNull();
+  const boundaryRow = list
+    .locator("[data-ordering-item]")
+    .filter({ hasText: boundaryText ?? "" });
+  await boundaryRow
+    .getByRole("button", {
+      name: `Переместить «${boundaryText}» выше`,
+    })
+    .press("Enter");
+  await expect(
+    boundaryRow.getByRole("button", {
+      name: `Переместить «${boundaryText}» ниже`,
+    }),
+  ).toBeFocused();
+
   for (const [desiredIndex, text] of authoredOrder.entries()) {
     const row = list
       .locator("[data-ordering-item]")
@@ -288,9 +319,18 @@ test("ordering Knowledge Check announces keyboard moves and allows retries", asy
   );
 
   await page.reload();
-  await expect(
-    page.locator('[data-knowledge-check][data-type="ordering"] [data-feedback]'),
-  ).toBeHidden();
+  const reloaded = page.locator(
+    '[data-knowledge-check][data-type="ordering"]',
+  );
+  await expect(reloaded.locator("[data-feedback]")).toBeHidden();
+  expect(
+    await reloaded.locator("[data-ordering-text]").allTextContents(),
+  ).not.toEqual(authoredOrder);
+  expect(
+    await reloaded.locator("[data-ordering-item]").evaluateAll((rows) =>
+      rows.map((row) => (row as HTMLElement).dataset.orderKey),
+    ),
+  ).toEqual(initialRows.map((row) => row.key));
 });
 
 test("exact Knowledge Check applies declared normalization and clears on reload", async ({
