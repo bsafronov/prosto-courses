@@ -40,6 +40,18 @@ _Avoid_: Difficulty quota, repeated full solution, permanent hinting
 The browsable collection of independent courses and the destination for cross-course navigation. It does not impose an order between courses.
 _Avoid_: Curriculum, course sequence
 
+**Offline Availability**:
+The browser-local state in which the entire currently published Course Catalog and its platform-owned learner interactions remain usable without a network connection. External references are outside this guarantee; Offline Availability neither requires installation nor implies synchronization between browsers or devices.
+_Avoid_: Installation, synchronization, downloaded Course
+
+**Catalog Update**:
+A browser-local transition from one complete offline-available Course Catalog release to a newer complete release. The prepared release replaces the active release only after the learner accepts it, so releases are never mixed during a learning session.
+_Avoid_: Partial refresh, automatic reload, Content Revision
+
+**External Reference**:
+A link from published course content to a resource the platform does not own or make available offline. It may supplement a Course but cannot be required to complete its core learning path.
+_Avoid_: Offline resource, required external step
+
 **Course Overview**:
 The introduction to a course, containing its description, learning outcomes, ordered lesson list, progress, and start or continue action.
 _Avoid_: First lesson, course index
