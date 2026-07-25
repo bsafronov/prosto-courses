@@ -2,6 +2,7 @@ import {
   expect,
   test,
   type APIRequestContext,
+  type Page,
 } from "@playwright/test";
 
 test.use({ serviceWorkers: "allow" });
@@ -25,6 +26,79 @@ async function getReleaseInventory(
   );
   expect(response.ok()).toBe(true);
   return (await response.json()) as ReleaseInventory;
+}
+
+async function expectControlledRelease(page: Page, scopeUrl: string) {
+  await page.reload();
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const registration = await navigator.serviceWorker.getRegistration();
+        return {
+          controller: navigator.serviceWorker.controller?.scriptURL,
+          scope: registration?.scope,
+        };
+      }),
+    )
+    .toEqual({
+      controller: new URL("sw.js", scopeUrl).href,
+      scope: scopeUrl,
+    });
+}
+
+async function unavailableReleaseUrls(page: Page, releaseUrls: string[]) {
+  return page.evaluate(async (urls) => {
+    const results = await Promise.all(
+      urls.map(async (url) => {
+        try {
+          const response = await fetch(url);
+          return response.ok ? undefined : `${url}: ${response.status}`;
+        } catch (error) {
+          return `${url}: ${String(error)}`;
+        }
+      }),
+    );
+    return results.filter(Boolean);
+  }, releaseUrls);
+}
+
+async function pageAssetUrls(page: Page) {
+  return page.evaluate(() => {
+    const urls = new Set(
+      performance
+        .getEntriesByType("resource")
+        .map((entry) => entry.name),
+    );
+    for (const element of document.querySelectorAll<
+      HTMLLinkElement | HTMLScriptElement | HTMLImageElement
+    >("link[href], script[src], img[src]")) {
+      const url =
+        element instanceof HTMLLinkElement
+          ? element.href
+          : element instanceof HTMLScriptElement
+            ? element.src
+            : element.currentSrc || element.src;
+      if (url) urls.add(url);
+    }
+    return [...urls].filter((url) => new URL(url).origin === location.origin);
+  });
+}
+
+async function expectOfflineFallback(
+  page: Page,
+  unavailableUrl: string,
+  catalogHref: string,
+) {
+  await page.goto(unavailableUrl);
+  await expect(
+    page.getByRole("heading", { name: "Эта страница не сохранена" }),
+  ).toBeVisible();
+  const catalog = page.getByRole("link", { name: "Перейти в Каталог курсов" });
+  await expect(catalog).toHaveAttribute("href", catalogHref);
+  await catalog.click();
+  await expect(
+    page.getByRole("heading", { name: "Учись новому — урок за уроком." }),
+  ).toBeVisible();
 }
 
 test.beforeEach(async ({ baseURL, request }) => {
@@ -226,6 +300,91 @@ test("the deployable release exposes root-scoped install identity", async ({
   });
 });
 
+test("the root-deployed release remains complete and scoped offline", async ({
+  browser,
+  page,
+}) => {
+  const rootUrl = "http://127.0.0.1:4323/";
+  const routesResponse = await page.request.get(
+    new URL("__test__/routes", rootUrl).href,
+  );
+  expect(routesResponse.ok()).toBe(true);
+  const { routes } = (await routesResponse.json()) as { routes: string[] };
+
+  const assets = new Set<string>();
+  const routeHeadings = new Map<string, string>();
+  for (const route of routes) {
+    await page.goto(new URL(route, rootUrl).href);
+    await expect(page.locator("main")).not.toBeEmpty();
+    const heading = (await page.locator("h1").first().textContent())?.trim();
+    expect(heading).toBeTruthy();
+    routeHeadings.set(route, heading!);
+    const diagrams = page.locator("[data-mermaid-container]");
+    if ((await diagrams.count()) > 0) {
+      await expect(diagrams.first()).toHaveAttribute(
+        "data-mermaid-rendered",
+        "true",
+      );
+    }
+    for (const assetUrl of await pageAssetUrls(page)) assets.add(assetUrl);
+  }
+  const manifestUrl = new URL(
+    (await page.locator('link[rel="manifest"]').getAttribute("href"))!,
+    rootUrl,
+  ).href;
+  const manifestResponse = await page.request.get(manifestUrl);
+  expect(manifestResponse.ok()).toBe(true);
+  assets.add(manifestUrl);
+  const manifest = (await manifestResponse.json()) as {
+    icons: { src: string }[];
+  };
+  for (const icon of manifest.icons) {
+    assets.add(new URL(icon.src, rootUrl).href);
+  }
+  expect(routes.length).toBeGreaterThan(2);
+  expect(assets.size).toBeGreaterThan(5);
+  for (const assetUrl of assets) {
+    const parsed = new URL(assetUrl);
+    expect(parsed.origin).toBe(new URL(rootUrl).origin);
+    expect(parsed.pathname).not.toMatch(/^\/prosto-courses(?:\/|$)/);
+  }
+  await expect(unavailableReleaseUrls(page, [...assets])).resolves.toEqual([]);
+
+  const offlineContext = await browser.newContext({ serviceWorkers: "allow" });
+  const offlinePage = await offlineContext.newPage();
+  try {
+    await offlinePage.goto(rootUrl);
+    const status = offlinePage
+      .getByRole("group", { name: "Офлайн-доступ" })
+      .locator("[data-pwa-status]");
+    await expect(status).toHaveText("Доступно офлайн", { timeout: 20_000 });
+    await expectControlledRelease(offlinePage, rootUrl);
+    await offlineContext.setOffline(true);
+
+    for (const route of routes) {
+      await offlinePage.goto(new URL(route, rootUrl).href);
+      await expect(
+        offlinePage.locator("h1").first(),
+      ).toHaveText(routeHeadings.get(route)!);
+      await expect(
+        offlinePage.getByRole("heading", {
+          name: "Эта страница не сохранена",
+        }),
+      ).toHaveCount(0);
+    }
+    await expect(
+      unavailableReleaseUrls(offlinePage, [...assets]),
+    ).resolves.toEqual([]);
+    await expectOfflineFallback(
+      offlinePage,
+      new URL("courses/removed-from-release/", rootUrl).href,
+      "/",
+    );
+  } finally {
+    await offlineContext.close();
+  }
+});
+
 test("the header reports complete Offline Availability and recovers unknown routes offline", async ({
   baseURL,
   context,
@@ -234,7 +393,6 @@ test("the header reports complete Offline Availability and recovers unknown rout
 }) => {
   const release = await getReleaseInventory(baseURL, request);
   const expectedScope = fixtureServerUrl(baseURL, "./");
-  const expectedController = fixtureServerUrl(baseURL, "./sw.js");
   const workerErrors: string[] = [];
   page.on("console", (message) => {
     if (message.type() === "error") {
@@ -268,21 +426,7 @@ test("the header reports complete Offline Availability and recovers unknown rout
     )
     .toEqual({ status: "Доступно офлайн", workerErrors: [] });
 
-  await page.reload();
-  await expect
-    .poll(() =>
-      page.evaluate(async () => {
-        const registration = await navigator.serviceWorker.getRegistration();
-        return {
-          controller: navigator.serviceWorker.controller?.scriptURL,
-          scope: registration?.scope,
-        };
-      }),
-    )
-    .toEqual({
-      controller: expectedController,
-      scope: expectedScope,
-    });
+  await expectControlledRelease(page, expectedScope);
 
   await context.setOffline(true);
   await expect(status).toHaveText("Сейчас офлайн");
@@ -297,20 +441,9 @@ test("the header reports complete Offline Availability and recovers unknown rout
     ).toHaveText("Сейчас офлайн");
   }
 
-  const unavailableReleaseUrls = await page.evaluate(async (releaseUrls) => {
-    const results = await Promise.all(
-      releaseUrls.map(async (url) => {
-        try {
-          const response = await fetch(url);
-          return response.ok ? undefined : `${url}: ${response.status}`;
-        } catch (error) {
-          return `${url}: ${String(error)}`;
-        }
-      }),
-    );
-    return results.filter(Boolean);
-  }, release.releaseUrls);
-  expect(unavailableReleaseUrls).toEqual([]);
+  await expect(unavailableReleaseUrls(page, release.releaseUrls)).resolves.toEqual(
+    [],
+  );
 
   await page.goto("./courses/markdown/lessons/vvedenie/");
   await expect(page.locator("[data-mermaid-container]")).toHaveAttribute(
@@ -346,16 +479,11 @@ test("the header reports complete Offline Availability and recovers unknown rout
     "true",
   );
 
-  await page.goto("./courses/removed-from-release/");
-  await expect(
-    page.getByRole("heading", { name: "Эта страница не сохранена" }),
-  ).toBeVisible();
-  const catalog = page.getByRole("link", { name: "Перейти в Каталог курсов" });
-  await expect(catalog).toHaveAttribute("href", "/prosto-courses/");
-  await catalog.click();
-  await expect(
-    page.getByRole("heading", { name: "Учись новому — урок за уроком." }),
-  ).toBeVisible();
+  await expectOfflineFallback(
+    page,
+    "./courses/removed-from-release/",
+    "/prosto-courses/",
+  );
 });
 
 test("preparing Offline Availability keeps focus stable through completion", async ({

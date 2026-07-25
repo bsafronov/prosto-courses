@@ -187,10 +187,49 @@ const collectReleaseInventory = async (root, directory = root) => {
   };
 };
 
+const collectExpectedLearnerRoutes = async (contentRoot, scope) => {
+  const routes = [scope];
+  for (const course of await readdir(contentRoot, { withFileTypes: true })) {
+    if (!course.isDirectory()) continue;
+    const coursePath = path.join(contentRoot, course.name);
+    routes.push(
+      `${scope}courses/${course.name}/`,
+      `${scope}courses/${course.name}/capstone/`,
+    );
+
+    const modulesPath = path.join(coursePath, "modules");
+    for (const module of await readdir(modulesPath, { withFileTypes: true })) {
+      if (!module.isDirectory()) continue;
+      routes.push(
+        `${scope}courses/${course.name}/modules/${module.name}/`,
+        `${scope}courses/${course.name}/modules/${module.name}/checkpoint/`,
+      );
+
+      const lessonsPath = path.join(modulesPath, module.name, "lessons");
+      for (const lesson of await readdir(lessonsPath, {
+        withFileTypes: true,
+      })) {
+        if (!lesson.isFile() || path.extname(lesson.name) !== ".mdx") continue;
+        routes.push(
+          `${scope}courses/${course.name}/lessons/${path.basename(
+            lesson.name,
+            ".mdx",
+          )}/`,
+        );
+      }
+    }
+  }
+  return routes.sort();
+};
+
 const releaseInventories = new Map([
   [firstOutputRoot, await collectReleaseInventory(firstOutputRoot)],
   [secondOutputRoot, await collectReleaseInventory(secondOutputRoot)],
 ]);
+const rootLearnerRoutes = await collectExpectedLearnerRoutes(
+  firstContentRoot,
+  "/",
+);
 
 let activeOutputRoot = firstOutputRoot;
 let failRequiredPrecacheRequest = false;
@@ -357,6 +396,12 @@ const server = createServer(async (request, response) => {
 const rootServer = createServer(async (request, response) => {
   try {
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
+
+    if (request.method === "GET" && url.pathname === "/__test__/routes") {
+      sendJson(response, 200, { routes: rootLearnerRoutes });
+      return;
+    }
+
     let requestPath;
     try {
       requestPath = decodeURIComponent(url.pathname);
