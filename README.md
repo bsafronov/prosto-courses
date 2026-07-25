@@ -20,6 +20,8 @@ pnpm build          # Exact static production build
 ```
 
 See [the Authoring Agent guide](docs/authoring.md) to add a Course.
+Use [the PWA manual acceptance checklist](docs/pwa-manual-acceptance.md) for
+native Safari installation and standalone-launch changes.
 
 ## Deployment
 

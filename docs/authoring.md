@@ -747,6 +747,20 @@ For law- or regulation-dependent content, distinguish an official act from comme
 
 Place a citation close to the claim it supports. Clearly label simulations, simplifications, opinions, disputed interpretations, and uncertainty. Do not invent facts about real organizations.
 
+### External References
+
+An External Reference may supplement explanation or let a learner verify a
+claim, but it cannot be required to complete the core learning path. Every
+core Lesson explanation, Knowledge Check, Practice Task, Module Checkpoint,
+and Capstone Demonstration must remain understandable and completable from
+platform-owned material alone.
+
+Use descriptive link text and link to the exact relevant resource. Do not add
+installation, offline, new-window, badge, icon, or connectivity markup to
+Course source. The platform marks External References as requiring internet,
+opens them separately when online, and explains why navigation is blocked
+when the learner is offline.
+
 For medical, legal, financial, safety, or other high-risk content:
 
 - state applicability boundaries;
@@ -838,6 +852,7 @@ Technical validity is necessary but not sufficient. Before approval, confirm:
 - no Lesson is overloaded or padded;
 - visuals reduce cognitive load and remain understandable without color;
 - claims satisfy the Source Policy;
+- External References are supplemental and the core learning path is self-contained;
 - Russian prose follows the Course Voice;
 - the Capstone genuinely demonstrates all Learning Outcomes.
 

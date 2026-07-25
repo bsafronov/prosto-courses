@@ -1,0 +1,87 @@
+---
+import { sitePath } from "../lib/courses";
+---
+
+<div
+  class="pwa-control"
+  data-pwa-control
+  data-catalog-url={sitePath()}
+  data-release-url={sitePath("offline-release.json")}
+  role="group"
+  aria-label="Офлайн-доступ"
+  hidden
+>
+  <span class="pwa-indicator" aria-hidden="true"></span>
+  <span
+    class="pwa-status"
+    data-pwa-status
+    aria-live="polite"
+    aria-atomic="true"
+  ></span>
+  <span class="pwa-detail" data-pwa-detail hidden></span>
+  <button class="pwa-action" data-pwa-action type="button" hidden></button>
+</div>
+
+<script>
+  import { initialisePwaControls } from "../scripts/pwa-controller";
+
+  initialisePwaControls();
+</script>
+
+<style>
+  .pwa-control {
+    position: relative;
+    display: inline-flex;
+    min-height: 2.35rem;
+    align-items: center;
+    gap: .5rem;
+    border: 1px solid var(--color-border);
+    border-radius: .65rem;
+    padding: .3rem .35rem .3rem .6rem;
+    background: #fbfcff;
+    color: var(--color-muted);
+    font-size: .82rem;
+    line-height: 1.25;
+  }
+  .pwa-control[hidden] { display: none; }
+  .pwa-indicator {
+    width: .55rem;
+    height: .55rem;
+    flex: 0 0 auto;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    background: #fff;
+  }
+  .pwa-control[data-status="preparing"] .pwa-indicator,
+  .pwa-control[data-status="deferred"] .pwa-indicator {
+    border-color: #8a6500;
+    background: var(--color-started);
+  }
+  .pwa-control[data-status="ready"] .pwa-indicator {
+    border-color: var(--color-completed-ink);
+    background: #64c77d;
+  }
+  .pwa-control[data-status="offline"] .pwa-indicator,
+  .pwa-control[data-status="failure"] .pwa-indicator {
+    border-color: #8f2d22;
+    background: #e1685b;
+  }
+  .pwa-status { color: var(--color-ink); font-weight: 750; white-space: nowrap; }
+  .pwa-detail { max-width: 24rem; }
+  .pwa-action {
+    min-height: 1.75rem;
+    border: 1px solid #aab3df;
+    border-radius: .4rem;
+    padding: .2rem .55rem;
+    background: white;
+    color: var(--color-brand-dark);
+    font-size: .8rem;
+    white-space: nowrap;
+  }
+  .pwa-action:hover { background: #edf0ff; color: var(--color-brand-dark); }
+  .pwa-action:disabled { cursor: not-allowed; opacity: .55; }
+  @media (max-width: 42rem) {
+    .pwa-control { max-width: 100%; flex-wrap: wrap; }
+    .pwa-detail { order: 3; flex-basis: 100%; }
+  }
+</style>

@@ -1,5 +1,7 @@
 ---
+import PwaControl from "../components/PwaControl.astro";
 import { sitePath } from "../lib/courses";
+import { pwaInfo } from "virtual:pwa-info";
 import "../styles/global.css";
 
 interface Props { title: string; description?: string }
@@ -14,23 +16,37 @@ const {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <meta name="description" content={description} />
+    <meta name="theme-color" content="#3347a8" />
+    <link rel="icon" href={sitePath("favicon.svg")} type="image/svg+xml" />
+    <link rel="icon" href={sitePath("favicon.ico")} sizes="48x48" />
+    <link rel="apple-touch-icon" href={sitePath("apple-touch-icon-180x180.png")} />
+    {pwaInfo && <Fragment set:html={pwaInfo.webManifest.linkTag} />}
     <title>{title}</title>
   </head>
   <body>
     <header class="site-header">
       <div class="container header-inner">
         <a class="brand" href={sitePath()}>Prosto.Courses</a>
-        <a href={sitePath()}>Все курсы</a>
+        <div class="header-actions">
+          <a href={sitePath()}>Все курсы</a>
+          <PwaControl />
+        </div>
       </div>
     </header>
     <main><slot /></main>
     <footer class="site-footer"><div class="container">Учись в своём темпе.</div></footer>
+    <script src="../scripts/external-references.ts"></script>
   </body>
 </html>
 
 <style>
   .site-header { border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
   .header-inner { min-height: 4.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .header-actions { display: flex; align-items: center; justify-content: flex-end; gap: .75rem; }
   .brand { color: var(--color-ink); font-weight: 850; text-decoration: none; letter-spacing: -.025em; }
   .site-footer { margin-top: 5rem; border-top: 1px solid var(--color-border); padding: 2rem 0; color: var(--color-muted); }
+  @media (max-width: 42rem) {
+    .header-inner { align-items: flex-start; padding-block: .75rem; }
+    .header-actions { flex-wrap: wrap; }
+  }
 </style>

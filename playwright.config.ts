@@ -12,9 +12,11 @@ const siteRootUrl = `http://127.0.0.1:4322${
 export default defineConfig({
   testDir: "tests/browser",
   fullyParallel: false,
+  workers: 1,
   use: {
     baseURL: siteRootUrl,
     channel: "chrome",
+    serviceWorkers: "block",
   },
   webServer: {
     command: "node tests/support/preview-content-fixtures.mjs",

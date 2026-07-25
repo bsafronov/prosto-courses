@@ -1,4 +1,9 @@
 allowBuilds:
   esbuild: true
+  sharp: true
 minimumReleaseAgeExclude:
   - astro@7.1.3
+peerDependencyRules:
+  allowedVersions:
+    # Current upstream metadata stops at Astro 5; see docs/pwa-manual-acceptance.md.
+    "@vite-pwa/astro>astro": "7"

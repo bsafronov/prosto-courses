@@ -1,4 +1,6 @@
 ---
+import ExternalReference from "./ExternalReference.astro";
+
 interface ImageMetadata {
   caption: string;
   source: {
@@ -27,7 +29,9 @@ const metadata = JSON.parse(title) as ImageMetadata;
     <span class="provenance">
       Источник:
       {metadata.source.url
-        ? <a href={metadata.source.url}>{metadata.source.label}</a>
+        ? <ExternalReference href={metadata.source.url}>
+            {metadata.source.label}
+          </ExternalReference>
         : metadata.source.label}.
       Лицензия: {metadata.license}.
     </span>

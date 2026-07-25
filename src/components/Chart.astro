@@ -1,4 +1,6 @@
 ---
+import ExternalReference from "./ExternalReference.astro";
+
 interface Axis {
   label: string;
   unit: string;
@@ -283,7 +285,11 @@ const chartKey = crypto.randomUUID();
       <p><strong>Описание:</strong> {description}</p>
       <p><strong>Как читать:</strong> {howToRead}</p>
       <p><strong>Главный вывод:</strong> {takeaway}</p>
-      <p><strong>Источник:</strong> <a href={source.url}>{source.label}</a></p>
+      <p>
+        <strong>Источник:</strong>
+        {" "}
+        <ExternalReference href={source.url}>{source.label}</ExternalReference>
+      </p>
     </div>
   </div>
 </figure>
