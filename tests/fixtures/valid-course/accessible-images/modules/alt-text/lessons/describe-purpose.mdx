@@ -21,6 +21,27 @@ freshness:
 
 Ask why the image appears beside the surrounding text. Describe the information or action it contributes.
 
+The simulated editorial dataset below lets you compare the quantitative
+relationship communicated by a Chart with its exact data table. The values are
+illustrative, not evidence about a real publishing team.
+
+<Chart
+  title="Average published and reviewed lessons per editor"
+  description="Average published and reviewed lesson counts per editor are compared for June and July."
+  howToRead="Read months from left to right and compare each pair of bars."
+  takeaway="Reviews kept pace in June but lagged behind publishing in July."
+  xAxis={{ label: "Month", unit: "month" }}
+  yAxis={{ label: "Average lessons per editor", unit: "lesson" }}
+  series={[
+    { name: "Published", values: [{ x: "June", y: 1.001 }, { x: "July", y: 3.003 }] },
+    { name: "Reviewed", values: [{ x: "June", y: 1.002 }, { x: "July", y: 2.002 }] },
+  ]}
+  source={{
+    label: "Simulated dataset in this lesson source",
+    url: "https://github.com/bsafronov/prosto-courses/blob/main/tests/fixtures/valid-course/accessible-images/modules/alt-text/lessons/describe-purpose.mdx",
+  }}
+/>
+
 <KnowledgeCheck
   prompt="What should determine an image description?"
   options={["Its file name", "Its purpose in context", "Its pixel dimensions"]}

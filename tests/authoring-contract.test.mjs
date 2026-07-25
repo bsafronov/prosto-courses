@@ -648,6 +648,285 @@ test("accepts every Callout meaning and an accessible Diagram", async () => {
   );
 });
 
+test("rejects a Chart without every accessibility input", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Chart
+  title="Published lessons by month"
+  xAxis={{ label: "Month", unit: "month" }}
+  yAxis={{ label: "Published lessons", unit: "lesson" }}
+  series={[{ name: "Lessons", values: [{ x: "July", y: 3 }] }]}
+  source={{ label: "Editorial report", url: "https://example.com/report" }}
+/>\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      for (const prop of ["description", "howToRead", "takeaway"]) {
+        assert.match(
+          result.output,
+          new RegExp(`Chart requires a non-empty ${prop}`, "i"),
+        );
+      }
+    },
+  );
+});
+
+test("rejects a Chart with missing axis units", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Chart
+  title="Published lessons by month"
+  description="One lesson was published in June and three in July."
+  howToRead="Read months from left to right and compare bar heights."
+  takeaway="Publishing increased in July."
+  xAxis={{ label: "Month" }}
+  yAxis={{ label: "Published lessons", unit: "lesson" }}
+  series={[{ name: "Lessons", values: [{ x: "June", y: 1 }, { x: "July", y: 3 }] }]}
+  source={{ label: "Editorial report", url: "https://example.com/report" }}
+/>\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(result.output, /Chart xAxis requires a non-empty unit/i);
+    },
+  );
+});
+
+test("rejects a Chart with missing provenance", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Chart
+  title="Published lessons by month"
+  description="One lesson was published in June and three in July."
+  howToRead="Read months from left to right and compare bar heights."
+  takeaway="Publishing increased in July."
+  xAxis={{ label: "Month", unit: "month" }}
+  yAxis={{ label: "Published lessons", unit: "lesson" }}
+  series={[{ name: "Lessons", values: [{ x: "June", y: 1 }, { x: "July", y: 3 }] }]}
+  source={{ label: "Editorial report" }}
+/>\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(result.output, /Chart source requires a valid http\(s\) url/i);
+    },
+  );
+});
+
+test("rejects malformed Chart series values", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Chart
+  title="Published lessons by month"
+  description="One lesson was published in June and three in July."
+  howToRead="Read months from left to right and compare bar heights."
+  takeaway="Publishing increased in July."
+  xAxis={{ label: "Month", unit: "month" }}
+  yAxis={{ label: "Published lessons", unit: "lesson" }}
+  series={[{ name: "Lessons", values: [{ x: "June", y: "one" }] }]}
+  source={{ label: "Editorial report", url: "https://example.com/report" }}
+/>\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Chart series 1 value 1 requires a finite numeric y/i,
+      );
+    },
+  );
+});
+
+test("rejects Chart series with inconsistent x values", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Chart
+  title="Published and reviewed lessons"
+  description="Published and reviewed lesson counts are compared for June and July."
+  howToRead="Read months from left to right and compare each pair of values."
+  takeaway="Reviews did not keep pace with publishing in July."
+  xAxis={{ label: "Month", unit: "month" }}
+  yAxis={{ label: "Lessons", unit: "lesson" }}
+  series={[
+    { name: "Published", values: [{ x: "June", y: 1 }, { x: "July", y: 3 }] },
+    { name: "Reviewed", values: [{ x: "June", y: 1 }, { x: "August", y: 2 }] },
+  ]}
+  source={{ label: "Editorial report", url: "https://example.com/report" }}
+/>\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Chart series 2 must use the same ordered x values as series 1/i,
+      );
+    },
+  );
+});
+
+test("rejects authored drawing instructions on Charts", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Chart
+  title="Published lessons by month"
+  description="One lesson was published in June and three in July."
+  howToRead="Read months from left to right and compare bar heights."
+  takeaway="Publishing increased in July."
+  xAxis={{ label: "Month", unit: "month" }}
+  yAxis={{ label: "Published lessons", unit: "lesson" }}
+  series={[{ name: "Lessons", values: [{ x: "June", y: 1 }, { x: "July", y: 3 }] }]}
+  source={{ label: "Editorial report", url: "https://example.com/report" }}
+  color="red"
+  chartType="line"
+/>\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Chart does not allow authored props: color, chartType/i,
+      );
+    },
+  );
+});
+
+test("rejects Chart prop spreads that can hide drawing instructions", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Chart
+  title="Published lessons by month"
+  description="One lesson was published in June."
+  howToRead="Read the month and its value."
+  takeaway="One lesson was published."
+  xAxis={{ label: "Month", unit: "month" }}
+  yAxis={{ label: "Published lessons", unit: "lesson" }}
+  series={[{ name: "Lessons", values: [{ x: "June", y: 1 }] }]}
+  source={{ label: "Editorial report", url: "https://example.com/report" }}
+  {...{ color: "red", chartType: "line" }}
+/>\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Chart must use explicit static props; spread props can hide undeclared runtimes or services/i,
+      );
+    },
+  );
+});
+
+test("rejects drawing instructions nested in Chart data", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Chart
+  title="Published lessons by month"
+  description="One lesson was published in June and three in July."
+  howToRead="Read months from left to right and compare bar heights."
+  takeaway="Publishing increased in July."
+  xAxis={{ label: "Month", unit: "month" }}
+  yAxis={{ label: "Published lessons", unit: "lesson" }}
+  series={[{ name: "Lessons", color: "red", values: [{ x: "June", y: 1 }] }]}
+  source={{ label: "Editorial report", url: "https://example.com/report" }}
+/>\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Chart series 1 does not allow authored fields: color/i,
+      );
+    },
+  );
+});
+
+test("rejects extra fields nested in Chart axes, values, and provenance", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Chart
+  title="Published lessons by month"
+  description="One lesson was published in June."
+  howToRead="Read the month and its value."
+  takeaway="One lesson was published."
+  xAxis={{ label: "Month", unit: "month", scale: "band" }}
+  yAxis={{ label: "Published lessons", unit: "lesson" }}
+  series={[{ name: "Lessons", values: [{ x: "June", y: 1, shape: "circle" }] }]}
+  source={{ label: "Editorial report", url: "https://example.com/report", color: "red" }}
+/>\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Chart xAxis does not allow authored fields: scale/i,
+      );
+      assert.match(
+        result.output,
+        /Chart series 1 value 1 does not allow authored fields: shape/i,
+      );
+      assert.match(
+        result.output,
+        /Chart source does not allow authored fields: color/i,
+      );
+    },
+  );
+});
+
+test("requires Chart to be self-closing with static props", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Chart
+  title="Published lessons by month"
+  description="One lesson was published in June."
+  howToRead="Read the month and its value."
+  takeaway="One lesson was published."
+  xAxis={{ label: "Month", unit: "month" }}
+  yAxis={{ label: "Published lessons", unit: "lesson" }}
+  series={[{ name: "Lessons", values: [{ x: "June", y: 1 }] }]}
+  source={{ label: "Editorial report", url: "https://example.com/report" }}
+>Authored drawing area</Chart>\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Chart must be a self-closing component with static props/i,
+      );
+    },
+  );
+});
+
+test("accepts an accessible sourced Chart with consistent structured series", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Chart
+  title="Published and reviewed lessons"
+  description="Published and reviewed lesson counts are compared for June and July."
+  howToRead="Read months from left to right and compare each pair of values."
+  takeaway="Reviews did not keep pace with publishing in July."
+  xAxis={{ label: "Month", unit: "month" }}
+  yAxis={{ label: "Lessons", unit: "lesson" }}
+  series={[
+    { name: "Published", values: [{ x: "June", y: 1 }, { x: "July", y: 3 }] },
+    { name: "Reviewed", values: [{ x: "June", y: 1 }, { x: "July", y: 2 }] },
+  ]}
+  source={{ label: "Editorial report", url: "https://example.com/report" }}
+/>\n`,
+    },
+    (result) => assert.equal(result.exitCode, 0, result.output),
+  );
+});
+
 const solutionPracticeTask = `
 <PracticeTask
   title="Draft useful alternative text"

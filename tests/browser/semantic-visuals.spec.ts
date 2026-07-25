@@ -54,6 +54,92 @@ test("Diagram renders Mermaid with an equivalent visible interpretation", async 
   await expect(firstCheckOption).toBeFocused();
 });
 
+test("Chart exposes its visual, axes, legend, exact data, and provenance", async ({
+  page,
+}) => {
+  await page.goto("./courses/accessible-images/lessons/describe-purpose/");
+
+  const chart = page.getByRole("figure", {
+    name: "Average published and reviewed lessons per editor",
+  });
+  await expect(chart).toBeVisible();
+  const visual = chart.getByRole("img", {
+    name: "Average published and reviewed lesson counts per editor are compared for June and July.",
+  });
+  await expect(visual).toBeVisible();
+  for (const text of [
+    "June",
+    "July",
+    "1: 1.001",
+    "2: 1.002",
+    "1: 3.003",
+    "2: 2.002",
+  ]) {
+    await expect(visual.getByText(text, { exact: true })).toBeVisible();
+  }
+  await expect(
+    chart.getByRole("definition").filter({ hasText: "Month (month)" }),
+  ).toBeVisible();
+  await expect(
+    chart
+      .getByRole("definition")
+      .filter({ hasText: "Average lessons per editor (lesson)" }),
+  ).toBeVisible();
+
+  const legend = chart.getByRole("list", { name: "Легенда графика" });
+  await expect(legend).toContainText("Published");
+  await expect(legend).toContainText("Reviewed");
+
+  const table = chart.getByRole("table", {
+    name: "Данные: Average published and reviewed lessons per editor",
+  });
+  await expect(table.getByRole("columnheader")).toHaveText([
+    "Month (month)",
+    "Published (lesson)",
+    "Reviewed (lesson)",
+  ]);
+  await expect(
+    table.getByRole("row", { name: "June 1.001 1.002" }),
+  ).toBeVisible();
+  await expect(
+    table.getByRole("row", { name: "July 3.003 2.002" }),
+  ).toBeVisible();
+  await expect(chart).toContainText(
+    "Reviews kept pace in June but lagged behind publishing in July.",
+  );
+  await expect(
+    chart.getByRole("link", {
+      name: "Simulated dataset in this lesson source",
+    }),
+  ).toHaveAttribute(
+    "href",
+    "https://github.com/bsafronov/prosto-courses/blob/main/tests/fixtures/valid-course/accessible-images/modules/alt-text/lessons/describe-purpose.mdx",
+  );
+});
+
+test("Chart overflow regions are keyboard reachable", async ({ page }) => {
+  await page.goto("./courses/accessible-images/lessons/describe-purpose/");
+
+  const chart = page.getByRole("figure", {
+    name: "Average published and reviewed lessons per editor",
+  });
+  const visual = chart.getByRole("img");
+  const tableRegion = chart.getByRole("region", {
+    name: "Таблица данных: Average published and reviewed lessons per editor",
+  });
+
+  for (let step = 0; step < 40; step += 1) {
+    const visualIsFocused = await visual.evaluate(
+      (element) => element === document.activeElement,
+    );
+    if (visualIsFocused) break;
+    await page.keyboard.press("Tab");
+  }
+  await expect(visual).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(tableRegion).toBeFocused();
+});
+
 test("semantic visuals remain usable at a narrow width and reduced motion", async ({
   page,
 }) => {
@@ -65,12 +151,33 @@ test("semantic visuals remain usable at a narrow width and reduced motion", asyn
   });
   await expect(diagram.getByRole("img")).toHaveAttribute("aria-busy", "false");
   expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390);
+  expect(
     await diagram.evaluate(() =>
       document
         .getAnimations()
         .some((animation) => animation.playState === "running"),
     ),
   ).toBe(false);
+
+  await page.goto("./courses/accessible-images/lessons/describe-purpose/");
+  const chart = page.getByRole("figure", {
+    name: "Average published and reviewed lessons per editor",
+  });
+  const chartVisual = chart.getByRole("img");
+  await expect(chartVisual).toBeVisible();
+  expect(
+    await chartVisual.evaluate(
+      (element) => element.scrollWidth > element.clientWidth,
+    ),
+  ).toBe(true);
+  await expect(
+    chart.getByRole("region", {
+      name: "Таблица данных: Average published and reviewed lessons per editor",
+    }),
+  ).toBeVisible();
+
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(390);

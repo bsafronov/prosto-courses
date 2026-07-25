@@ -650,7 +650,44 @@ Mermaid source is fenced inside `Diagram`; raw Mermaid outside the component is 
 </Diagram>
 ````
 
-`Chart` receives static `series` data plus `xAxis`, `yAxis`, and `source` objects. The platform derives the visual marks and data table; the Authoring Agent does not supply drawing instructions or colors.
+`Chart` is self-closing and receives only explicit static props:
+
+```mdx
+<Chart
+  title="Среднее число опубликованных и проверенных уроков"
+  description="Средние числа опубликованных и проверенных уроков на редактора сопоставлены за июнь и июль."
+  howToRead="Читай месяцы слева направо и сравнивай пары столбцов."
+  takeaway="В июне проверка успевала за публикацией, а в июле начала отставать."
+  xAxis={{ label: "Месяц", unit: "месяц" }}
+  yAxis={{ label: "Среднее число уроков на редактора", unit: "урок" }}
+  series={[
+    {
+      name: "Опубликовано",
+      values: [{ x: "Июнь", y: 1.001 }, { x: "Июль", y: 3.003 }],
+    },
+    {
+      name: "Проверено",
+      values: [{ x: "Июнь", y: 1.002 }, { x: "Июль", y: 2.002 }],
+    },
+  ]}
+  source={{
+    label: "Смоделированный набор данных в исходнике учебного примера",
+    url: "https://github.com/bsafronov/prosto-courses/blob/main/tests/fixtures/valid-course/accessible-images/modules/alt-text/lessons/describe-purpose.mdx",
+  }}
+/>
+```
+
+- `title`, `description`, `howToRead`, and `takeaway` are required non-empty strings.
+- `xAxis` and `yAxis` contain exactly a non-empty `label` and `unit`.
+- `series` is a non-empty array of uniquely named series. Every series contains
+  a non-empty `values` array of exact `{ x, y }` points. `x` is a non-empty
+  string or finite number; `y` is a finite number.
+- All series use the same unique `x` values in the same order. The platform uses
+  that shared domain to generate one equivalent comparison table.
+- `source` contains exactly a non-empty `label` and an HTTP(S) `url`.
+- Do not author chart types, marks, colors, scales, dimensions, labels, or other
+  drawing instructions at any level. The platform owns them and communicates
+  series identity with text identifiers and patterns as well as color.
 
 Do not add visuals by quota or as decoration. Explain a visual close to where it appears.
 

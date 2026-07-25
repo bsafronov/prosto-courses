@@ -46,7 +46,7 @@ const calloutKinds = new Set([
   "advanced",
   "context",
 ]);
-const diagramAccessibilityProps = [
+const learningVisualAccessibilityProps = [
   "title",
   "description",
   "howToRead",
@@ -335,6 +335,126 @@ function objectArrayAttribute(source, name) {
 
 function attributeNames(source) {
   return componentAttributes(source).map((attribute) => attribute.name);
+}
+
+function validateChartAxis(componentSource, file, prop) {
+  const axis = objectArrayAttribute(componentSource, prop).value;
+  const authoredFields = Object.keys(axis ?? {}).filter(
+    (field) => !["label", "unit"].includes(field),
+  );
+  if (authoredFields.length > 0) {
+    report(
+      file,
+      `Chart ${prop} does not allow authored fields: ${authoredFields.join(", ")}`,
+    );
+  }
+  for (const field of ["label", "unit"]) {
+    if (typeof axis?.[field] !== "string" || !axis[field].trim()) {
+      report(file, `Chart ${prop} requires a non-empty ${field}`);
+    }
+  }
+}
+
+function validateChartSource(componentSource, file) {
+  const source = objectArrayAttribute(componentSource, "source").value;
+  const authoredFields = Object.keys(source ?? {}).filter(
+    (field) => !["label", "url"].includes(field),
+  );
+  if (authoredFields.length > 0) {
+    report(
+      file,
+      `Chart source does not allow authored fields: ${authoredFields.join(", ")}`,
+    );
+  }
+  if (typeof source?.label !== "string" || !source.label.trim()) {
+    report(file, "Chart source requires a non-empty label");
+  }
+
+  try {
+    const url = new URL(source?.url);
+    if (!["http:", "https:"].includes(url.protocol)) throw new Error();
+  } catch {
+    report(file, "Chart source requires a valid http(s) URL");
+  }
+}
+
+function validateChartSeries(componentSource, file) {
+  const series = objectArrayAttribute(componentSource, "series").value;
+  if (!Array.isArray(series) || series.length === 0) {
+    report(file, "Chart series must be a non-empty static array");
+    return;
+  }
+
+  const names = new Set();
+  let expectedXValues;
+  for (const [seriesIndex, item] of series.entries()) {
+    const label = `Chart series ${seriesIndex + 1}`;
+    const authoredFields = Object.keys(item ?? {}).filter(
+      (field) => !["name", "values"].includes(field),
+    );
+    if (authoredFields.length > 0) {
+      report(
+        file,
+        `${label} does not allow authored fields: ${authoredFields.join(", ")}`,
+      );
+    }
+    if (typeof item?.name !== "string" || !item.name.trim()) {
+      report(file, `${label} requires a non-empty name`);
+    } else if (names.has(item.name.trim())) {
+      report(file, `${label} name must be unique`);
+    } else {
+      names.add(item.name.trim());
+    }
+
+    if (!Array.isArray(item?.values) || item.values.length === 0) {
+      report(file, `${label} values must be a non-empty array`);
+      continue;
+    }
+
+    const xValues = new Set();
+    for (const [valueIndex, value] of item.values.entries()) {
+      const valueLabel = `${label} value ${valueIndex + 1}`;
+      const authoredFields = Object.keys(value ?? {}).filter(
+        (field) => !["x", "y"].includes(field),
+      );
+      if (authoredFields.length > 0) {
+        report(
+          file,
+          `${valueLabel} does not allow authored fields: ${authoredFields.join(", ")}`,
+        );
+      }
+      const hasValidX =
+        (typeof value?.x === "string" && value.x.trim() !== "") ||
+        (typeof value?.x === "number" && Number.isFinite(value.x));
+      if (!hasValidX) {
+        report(file, `${valueLabel} requires a non-empty string or finite numeric x`);
+      } else {
+        const xKey = `${typeof value.x}:${value.x}`;
+        if (xValues.has(xKey)) {
+          report(file, `${valueLabel} x must be unique within its series`);
+        }
+        xValues.add(xKey);
+      }
+      if (typeof value?.y !== "number" || !Number.isFinite(value.y)) {
+        report(file, `${valueLabel} requires a finite numeric y`);
+      }
+    }
+
+    const orderedXValues = item.values.map(
+      (value) => `${typeof value?.x}:${value?.x}`,
+    );
+    if (seriesIndex === 0) {
+      expectedXValues = orderedXValues;
+    } else if (
+      orderedXValues.length !== expectedXValues.length ||
+      orderedXValues.some((value, index) => value !== expectedXValues[index])
+    ) {
+      report(
+        file,
+        `${label} must use the same ordered x values as series 1`,
+      );
+    }
+  }
 }
 
 function inspectFencedCode(body) {
@@ -1029,7 +1149,7 @@ function validateSemanticComponents(body, file, declaredPacks = new Map()) {
   const authoringSource = withoutFencedCode(body);
   const components = openingComponentTags(authoringSource);
 
-  for (const { name: componentName, source } of components) {
+  for (const { name: componentName, selfClosing, source } of components) {
     const isBaseComponent = baseComponents.has(componentName);
     const owners = componentPacks.get(componentName) ?? [];
     const declaredOwner = owners.find(
@@ -1082,13 +1202,13 @@ function validateSemanticComponents(body, file, declaredPacks = new Map()) {
       }
     }
     if (componentName === "Diagram") {
-      for (const prop of diagramAccessibilityProps) {
+      for (const prop of learningVisualAccessibilityProps) {
         if (!stringAttribute(source, prop)?.trim()) {
           report(file, `Diagram requires a non-empty ${prop}`);
         }
       }
       const authoredProps = attributeNames(source).filter(
-        (name) => !diagramAccessibilityProps.includes(name),
+        (name) => !learningVisualAccessibilityProps.includes(name),
       );
       if (authoredProps.length > 0) {
         report(
@@ -1096,6 +1216,37 @@ function validateSemanticComponents(body, file, declaredPacks = new Map()) {
           `Diagram does not allow authored props: ${authoredProps.join(", ")}`,
         );
       }
+    }
+    if (componentName === "Chart") {
+      if (!selfClosing) {
+        report(file, "Chart must be a self-closing component with static props");
+      }
+      const allowedProps = [
+        ...learningVisualAccessibilityProps,
+        "xAxis",
+        "yAxis",
+        "series",
+        "source",
+      ];
+      const authoredProps = attributeNames(source).filter(
+        (name) => !allowedProps.includes(name),
+      );
+      if (authoredProps.length > 0) {
+        report(
+          file,
+          `Chart does not allow authored props: ${authoredProps.join(", ")}`,
+        );
+      }
+      for (const prop of learningVisualAccessibilityProps) {
+        if (!stringAttribute(source, prop)?.trim()) {
+          report(file, `Chart requires a non-empty ${prop}`);
+        }
+      }
+      for (const axis of ["xAxis", "yAxis"]) {
+        validateChartAxis(source, file, axis);
+      }
+      validateChartSource(source, file);
+      validateChartSeries(source, file);
     }
 
     for (const resource of ["runtime", "service"]) {

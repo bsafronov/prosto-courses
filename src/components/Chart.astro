@@ -1,0 +1,422 @@
+---
+interface Axis {
+  label: string;
+  unit: string;
+}
+
+interface ChartValue {
+  x: string | number;
+  y: number;
+}
+
+interface ChartSeries {
+  name: string;
+  values: ChartValue[];
+}
+
+interface ChartSource {
+  label: string;
+  url: string;
+}
+
+interface Props {
+  title: string;
+  description: string;
+  howToRead: string;
+  takeaway: string;
+  xAxis: Axis;
+  yAxis: Axis;
+  series: ChartSeries[];
+  source: ChartSource;
+}
+
+const {
+  title,
+  description,
+  howToRead,
+  takeaway,
+  xAxis,
+  yAxis,
+  series,
+  source,
+} = Astro.props;
+
+const tickNumberFormatter = new Intl.NumberFormat("ru-RU", {
+  maximumFractionDigits: 2,
+});
+const exactValue = (value: number) => String(value);
+const xValues = series[0].values.map((value) => value.x);
+const allYValues = series.flatMap((item) => item.values.map((value) => value.y));
+const domainMinimum = Math.min(0, ...allYValues);
+const authoredDomainMaximum = Math.max(0, ...allYValues);
+const domainMaximum =
+  authoredDomainMaximum === domainMinimum
+    ? authoredDomainMaximum + 1
+    : authoredDomainMaximum;
+const domainSpan = domainMaximum - domainMinimum;
+const plot = {
+  left: 76,
+  top: 28,
+  right: 24,
+  bottom: 70,
+  width: Math.max(540, xValues.length * Math.max(110, series.length * 58)),
+  height: 260,
+};
+const svgWidth = plot.left + plot.width + plot.right;
+const svgHeight = plot.top + plot.height + plot.bottom;
+const groupWidth = plot.width / xValues.length;
+const barAreaWidth = groupWidth * 0.72;
+const barGap = 6;
+const barWidth = Math.max(
+  10,
+  (barAreaWidth - barGap * (series.length - 1)) / series.length,
+);
+const yPosition = (value: number) =>
+  plot.top + ((domainMaximum - value) / domainSpan) * plot.height;
+const baselineY = yPosition(0);
+const ticks = Array.from({ length: 5 }, (_, index) => {
+  const value = domainMinimum + (domainSpan * index) / 4;
+  return { value, y: yPosition(value) };
+}).reverse();
+const palette = ["#3347a8", "#b54708", "#18794e", "#7c3aed", "#a11b4b"];
+const patternKinds = ["solid", "diagonal", "dots", "crosshatch"];
+const chartKey = crypto.randomUUID();
+---
+
+<figure class="chart" aria-label={title}>
+  <figcaption>{title}</figcaption>
+
+  <div
+    class="chart-visual"
+    role="img"
+    aria-label={description}
+    tabindex="0"
+  >
+    <svg
+      width={svgWidth}
+      height={svgHeight}
+      viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+      aria-hidden="true"
+    >
+      <defs>
+        {series.map((_, index) => {
+          const color = palette[index % palette.length];
+          const pattern = patternKinds[index % patternKinds.length];
+          return (
+            <pattern
+              id={`chart-${chartKey}-series-${index}`}
+              width="10"
+              height="10"
+              patternUnits="userSpaceOnUse"
+            >
+              <rect width="10" height="10" fill={color} />
+              {pattern === "diagonal" && (
+                <path
+                  d="M-2 2 L2 -2 M0 10 L10 0 M8 12 L12 8"
+                  stroke="white"
+                  stroke-width="2"
+                  opacity=".72"
+                />
+              )}
+              {pattern === "dots" && (
+                <circle cx="5" cy="5" r="2" fill="white" opacity=".78" />
+              )}
+              {pattern === "crosshatch" && (
+                <path
+                  d="M0 0 L10 10 M10 0 L0 10"
+                  stroke="white"
+                  stroke-width="1.5"
+                  opacity=".68"
+                />
+              )}
+            </pattern>
+          );
+        })}
+      </defs>
+
+      {ticks.map((tick) => (
+        <g>
+          <line
+            x1={plot.left}
+            y1={tick.y}
+            x2={plot.left + plot.width}
+            y2={tick.y}
+            class="chart-grid-line"
+          />
+          <text
+            x={plot.left - 12}
+            y={tick.y + 5}
+            text-anchor="end"
+            class="chart-tick-label"
+          >
+            {tickNumberFormatter.format(tick.value)}
+          </text>
+        </g>
+      ))}
+
+      <line
+        x1={plot.left}
+        y1={baselineY}
+        x2={plot.left + plot.width}
+        y2={baselineY}
+        class="chart-axis-line"
+      />
+
+      {xValues.map((xValue, valueIndex) => {
+        const groupStart =
+          plot.left + valueIndex * groupWidth + (groupWidth - barAreaWidth) / 2;
+        return (
+          <g>
+            {series.map((item, seriesIndex) => {
+              const value = item.values[valueIndex].y;
+              const valueY = yPosition(value);
+              const barY = Math.min(valueY, baselineY);
+              const height = Math.max(1, Math.abs(baselineY - valueY));
+              const x = groupStart + seriesIndex * (barWidth + barGap);
+              return (
+                <g>
+                  <rect
+                    x={x}
+                    y={barY}
+                    width={barWidth}
+                    height={height}
+                    rx="3"
+                    fill={`url(#chart-${chartKey}-series-${seriesIndex})`}
+                  />
+                  <text
+                    x={x + barWidth / 2}
+                    y={value >= 0 ? barY - 7 : barY + height + 16}
+                    text-anchor="middle"
+                    class="chart-value-label"
+                  >
+                    {seriesIndex + 1}: {exactValue(value)}
+                  </text>
+                </g>
+              );
+            })}
+            <text
+              x={plot.left + valueIndex * groupWidth + groupWidth / 2}
+              y={plot.top + plot.height + 28}
+              text-anchor="middle"
+              class="chart-category-label"
+            >
+              {xValue}
+            </text>
+          </g>
+        );
+      })}
+
+      <text
+        x={plot.left + plot.width / 2}
+        y={svgHeight - 12}
+        text-anchor="middle"
+        class="chart-axis-label"
+      >
+        {xAxis.label} ({xAxis.unit})
+      </text>
+      <text
+        transform={`translate(18 ${plot.top + plot.height / 2}) rotate(-90)`}
+        text-anchor="middle"
+        class="chart-axis-label"
+      >
+        {yAxis.label} ({yAxis.unit})
+      </text>
+    </svg>
+  </div>
+
+  <div class="chart-details">
+    <dl class="chart-axes">
+      <div>
+        <dt>Горизонтальная ось</dt>
+        <dd>{xAxis.label} ({xAxis.unit})</dd>
+      </div>
+      <div>
+        <dt>Вертикальная ось</dt>
+        <dd>{yAxis.label} ({yAxis.unit})</dd>
+      </div>
+    </dl>
+
+    <ul class="chart-legend" aria-label="Легенда графика">
+      {series.map((item, index) => (
+        <li>
+          <span
+            class={`chart-swatch chart-swatch-${patternKinds[index % patternKinds.length]}`}
+            style={`--chart-color: ${palette[index % palette.length]}`}
+            aria-hidden="true"
+          ></span>
+          <span class="chart-series-key" aria-hidden="true">{index + 1}</span>
+          <span>{item.name}</span>
+        </li>
+      ))}
+    </ul>
+
+    <div
+      class="chart-table-scroll"
+      role="region"
+      aria-label={`Таблица данных: ${title}`}
+      tabindex="0"
+    >
+      <table>
+        <caption>Данные: {title}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{xAxis.label} ({xAxis.unit})</th>
+            {series.map((item) => (
+              <th scope="col">{item.name} ({yAxis.unit})</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {xValues.map((xValue, valueIndex) => (
+            <tr>
+              <th scope="row">{xValue}</th>
+              {series.map((item) => (
+                <td>{exactValue(item.values[valueIndex].y)}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="chart-interpretation">
+      <p><strong>Описание:</strong> {description}</p>
+      <p><strong>Как читать:</strong> {howToRead}</p>
+      <p><strong>Главный вывод:</strong> {takeaway}</p>
+      <p><strong>Источник:</strong> <a href={source.url}>{source.label}</a></p>
+    </div>
+  </div>
+</figure>
+
+<style>
+  .chart {
+    min-width: 0;
+    margin: 2rem 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    background: var(--color-surface);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  figcaption {
+    border-bottom: 1px solid var(--color-border);
+    padding: .9rem 1rem;
+    font-weight: 800;
+  }
+  .chart-visual {
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 1rem;
+    background: #fbfcff;
+  }
+  .chart-visual svg { display: block; max-width: none; }
+  .chart-grid-line { stroke: #d9d5ca; stroke-width: 1; }
+  .chart-axis-line { stroke: #172033; stroke-width: 1.5; }
+  .chart-tick-label,
+  .chart-category-label,
+  .chart-value-label,
+  .chart-axis-label {
+    fill: #172033;
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  }
+  .chart-tick-label,
+  .chart-category-label { font-size: 13px; }
+  .chart-value-label { font-size: 12px; font-weight: 800; }
+  .chart-axis-label { font-size: 14px; font-weight: 800; }
+  .chart-details {
+    display: grid;
+    gap: 1rem;
+    border-top: 1px solid var(--color-border);
+    padding: 1rem;
+  }
+  .chart-axes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .75rem;
+    margin: 0;
+  }
+  .chart-axes div {
+    border: 1px solid var(--color-border);
+    border-radius: .55rem;
+    padding: .65rem .75rem;
+  }
+  .chart-axes dt { color: var(--color-muted); font-size: .85rem; }
+  .chart-axes dd { margin: .15rem 0 0; font-weight: 750; }
+  .chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .7rem 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .chart-legend li { display: inline-flex; align-items: center; gap: .45rem; }
+  .chart-series-key {
+    display: inline-grid;
+    min-width: 1.35rem;
+    min-height: 1.35rem;
+    place-items: center;
+    border: 1px solid var(--color-ink);
+    border-radius: 50%;
+    font-size: .78rem;
+    font-weight: 850;
+  }
+  .chart-swatch {
+    width: 1.35rem;
+    height: 1rem;
+    border: 1px solid #172033;
+    border-radius: .2rem;
+    background-color: var(--chart-color);
+  }
+  .chart-swatch-diagonal {
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0 4px,
+      rgb(255 255 255 / 75%) 4px 6px
+    );
+  }
+  .chart-swatch-dots {
+    background-image: radial-gradient(white 1.5px, transparent 1.5px);
+    background-size: 7px 7px;
+  }
+  .chart-swatch-crosshatch {
+    background-image:
+      linear-gradient(45deg, transparent 44%, rgb(255 255 255 / 70%) 45% 55%, transparent 56%),
+      linear-gradient(-45deg, transparent 44%, rgb(255 255 255 / 70%) 45% 55%, transparent 56%);
+    background-size: 9px 9px;
+  }
+  .chart-table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .chart-table-scroll:focus-visible,
+  .chart-visual:focus-visible {
+    outline: 3px solid #7b8cff;
+    outline-offset: 3px;
+  }
+  table {
+    width: 100%;
+    min-width: 36rem;
+    border-collapse: collapse;
+  }
+  caption {
+    margin-bottom: .45rem;
+    text-align: left;
+    font-weight: 800;
+  }
+  th, td {
+    border: 1px solid var(--color-border);
+    padding: .55rem .65rem;
+    text-align: right;
+  }
+  thead th, tbody th {
+    background: #f2f0e9;
+    color: var(--color-ink);
+    text-align: left;
+  }
+  .chart-interpretation { display: grid; gap: .65rem; }
+  .chart-interpretation p { margin: 0; }
+  @media (max-width: 32rem) {
+    .chart-axes { grid-template-columns: 1fr; }
+  }
+</style>
