@@ -69,7 +69,7 @@ test("accepts the canonical Russian Course through the public contract", async (
   assert.equal(result.exitCode, 0, result.output);
   assert.match(
     result.output,
-    /Validated 1 Course, 1 Module, 3 Lessons, 1 Module Checkpoint, and 1 Capstone Demonstration/,
+    /Validated 1 Course, 3 Modules, 6 Lessons, 3 Module Checkpoints, and 1 Capstone Demonstration/,
   );
 });
 

@@ -5,6 +5,12 @@ const courseTreePaths = [
   "./courses/markdown/modules/osnovy/",
   "./courses/markdown/lessons/vvedenie/",
   "./courses/markdown/modules/osnovy/checkpoint/",
+  "./courses/markdown/modules/struktura/",
+  "./courses/markdown/lessons/formatting/",
+  "./courses/markdown/modules/struktura/checkpoint/",
+  "./courses/markdown/modules/proverka/",
+  "./courses/markdown/lessons/review/",
+  "./courses/markdown/modules/proverka/checkpoint/",
   "./courses/markdown/capstone/",
 ];
 

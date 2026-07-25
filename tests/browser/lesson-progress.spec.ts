@@ -1,17 +1,26 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const courseOverview = "./courses/markdown/";
+const lessonSlugs = [
+  "vvedenie",
+  "source-render",
+  "formatting",
+  "links-code",
+  "portability",
+  "review",
+];
+const moduleSlugs = ["osnovy", "struktura", "proverka"];
 
-async function expectThreeProgressStates(page: Page, listName: string) {
-  const lessons = page.getByRole("list", { name: listName });
-  const completed = lessons
+async function expectThreeProgressStates(page: Page, navigationName: string) {
+  const navigation = page.getByRole("navigation", { name: navigationName });
+  const completed = navigation
     .getByRole("link", { name: /Знакомство с Markdown/ })
     .getByLabel("Статус урока: Завершён");
-  const started = lessons
-    .getByRole("link", { name: /Заголовки, выделение и списки/ })
+  const started = navigation
+    .getByRole("link", { name: /Как читать Markdown-исходник/ })
     .getByLabel("Статус урока: В процессе");
-  const notStarted = lessons
-    .getByRole("link", { name: /Ссылки и код/ })
+  const notStarted = navigation
+    .getByRole("link", { name: /Заголовки, выделение и списки/ })
     .getByLabel("Статус урока: Не начат");
 
   await expect(completed).toContainText("✓");
@@ -22,20 +31,21 @@ async function expectThreeProgressStates(page: Page, listName: string) {
 }
 
 async function completeEveryLesson(page: Page) {
-  await page.getByRole("link", { name: "Начать курс" }).click();
-  for (let index = 0; index < 3; index += 1) {
+  for (const lessonSlug of lessonSlugs) {
+    await page.goto(`./courses/markdown/lessons/${lessonSlug}/`);
     await page.getByRole("button", { name: "Завершить урок" }).click();
-    if (index < 2) await page.getByRole("link", { name: /Следующий урок/ }).click();
   }
 }
 
 async function completeCoreRoute(page: Page) {
   await completeEveryLesson(page);
-  await page.getByRole("link", { name: /Перейти к проверке Модуля/ }).click();
-  await page.getByRole("button", {
-    name: "Завершить проверку Модуля",
-  }).click();
-  await page.getByRole("link", { name: /Перейти к итоговой работе/ }).click();
+  for (const moduleSlug of moduleSlugs) {
+    await page.goto(`./courses/markdown/modules/${moduleSlug}/checkpoint/`);
+    await page.getByRole("button", {
+      name: "Завершить проверку Модуля",
+    }).click();
+  }
+  await page.goto("./courses/markdown/capstone/");
   await page.getByRole("button", {
     name: "Завершить итоговую работу",
   }).click();
@@ -101,7 +111,10 @@ test("Lesson Progress persists, resumes the latest incomplete Lesson, and remain
   await page.getByRole("link", { name: /Следующий урок/ }).click();
   await page.getByRole("link", { name: "О курсе", exact: true }).click();
   const continueAction = page.getByRole("link", { name: "Продолжить курс" });
-  await expect(continueAction).toHaveAttribute("href", /\/lessons\/formatting\/$/);
+  await expect(continueAction).toHaveAttribute(
+    "href",
+    /\/lessons\/source-render\/$/,
+  );
 });
 
 test("Lesson Completion records the current Content Revision", async ({ page }) => {
@@ -116,7 +129,7 @@ test("Lesson Completion records the current Content Revision", async ({ page }) 
       .completedRevision;
   });
 
-  expect(completedRevision).toBe(1);
+  expect(completedRevision).toBe(2);
 });
 
 test("a higher Content Revision preserves completion and announces the update", async ({
@@ -125,7 +138,7 @@ test("a higher Content Revision preserves completion and announces the update", 
   await restoreLessonCompletion(page, "formatting", 1);
 
   const lesson = page
-    .getByRole("list", { name: "Уроки курса" })
+    .getByRole("navigation", { name: "Маршрут курса" })
     .getByRole("link", { name: /Заголовки, выделение и списки/ });
   await expect(
     lesson.getByLabel("Статус урока: Завершён"),
@@ -181,7 +194,7 @@ test("an updated Lesson offers a revisit without revoking completion", async ({
     return progress.courses.markdown.destinations["lesson:formatting"]
       .completedRevision;
   });
-  expect(completedRevision).toBe(2);
+  expect(completedRevision).toBe(3);
 });
 
 test("legacy Lesson Completion preserves its original Content Revision", async ({
@@ -190,7 +203,7 @@ test("legacy Lesson Completion preserves its original Content Revision", async (
   await restoreLessonCompletion(page, "formatting");
 
   const lesson = page
-    .getByRole("list", { name: "Уроки курса" })
+    .getByRole("navigation", { name: "Маршрут курса" })
     .getByRole("link", { name: /Заголовки, выделение и списки/ });
   await expect(
     lesson.getByLabel("Статус урока: Завершён"),
@@ -219,7 +232,7 @@ test("Course Overview refreshes Lesson Progress after browser back navigation", 
 
   await page.goBack();
 
-  const lessons = page.getByRole("list", { name: "Уроки курса" });
+  const lessons = page.getByRole("navigation", { name: "Маршрут курса" });
   await expect(
     lessons.getByRole("link", { name: /Знакомство с Markdown/ }),
   ).toContainText("В процессе");
@@ -247,7 +260,9 @@ test("restored Lesson refreshes progress from browser-local storage", async ({
     window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }));
   });
 
-  const lessons = page.getByRole("list", { name: "Уроки в навигации курса" });
+  const lessons = page.getByRole("navigation", {
+    name: "Навигация по курсу",
+  });
   await expect(
     lessons.getByRole("link", { name: /Заголовки, выделение и списки/ }),
   ).toContainText("В процессе");
@@ -264,9 +279,11 @@ test("Lesson navigation refreshes progress after browser back navigation", async
 
   await page.goBack();
 
-  const lessons = page.getByRole("list", { name: "Уроки в навигации курса" });
+  const lessons = page.getByRole("navigation", {
+    name: "Навигация по курсу",
+  });
   await expect(
-    lessons.getByRole("link", { name: /Заголовки, выделение и списки/ }),
+    lessons.getByRole("link", { name: /Как читать Markdown-исходник/ }),
   ).toContainText("В процессе");
 });
 
@@ -274,7 +291,7 @@ test("Course navigation stays consistent across pages in the same browser", asyn
   page,
   context,
 }) => {
-  const lessons = page.getByRole("list", { name: "Уроки курса" });
+  const lessons = page.getByRole("navigation", { name: "Маршрут курса" });
   const firstLesson = lessons.getByRole("link", {
     name: /Знакомство с Markdown/,
   });
@@ -309,10 +326,10 @@ test("every Lesson has consistent accessible status on both navigation surfaces"
   await page.getByRole("button", { name: "Завершить урок" }).click();
   await page.getByRole("link", { name: /Следующий урок/ }).click();
 
-  await expectThreeProgressStates(page, "Уроки в навигации курса");
+  await expectThreeProgressStates(page, "Навигация по курсу");
 
   await page.getByRole("link", { name: "О курсе", exact: true }).click();
-  await expectThreeProgressStates(page, "Уроки курса");
+  await expectThreeProgressStates(page, "Маршрут курса");
 });
 
 test("Lesson Progress survives title, order, and content edits at stable slugs", async ({
@@ -325,7 +342,7 @@ test("Lesson Progress survives title, order, and content edits at stable slugs",
     const response = await route.fetch();
     const editedLesson = (await response.text())
       .replaceAll("Знакомство с Markdown", "Обновлённое введение")
-      .replace("Урок 1 из 3", "Урок 2 из 3")
+      .replace("Урок 1 из 2", "Урок 2 из 2")
       .replace(
         "Markdown — это лёгкий язык разметки.",
         "Обновлённое содержание урока.",
@@ -337,7 +354,7 @@ test("Lesson Progress survives title, order, and content edits at stable slugs",
   await expect(
     page.getByRole("heading", { level: 1, name: "Обновлённое введение" }),
   ).toBeVisible();
-  await expect(page.getByText("Урок 2 из 3", { exact: true })).toBeVisible();
+  await expect(page.getByText("Урок 2 из 2", { exact: true })).toBeVisible();
   await expect(page.getByText("Обновлённое содержание урока.")).toBeVisible();
   await expect(
     page.locator("header").getByLabel("Статус урока: Завершён"),
@@ -384,7 +401,7 @@ test("continue action falls back to the first incomplete Lesson", async ({ page 
   await page.getByRole("link", { name: "О курсе", exact: true }).click();
   await expect(page.getByRole("link", { name: "Продолжить курс" })).toHaveAttribute(
     "href",
-    /\/lessons\/formatting\/$/,
+    /\/lessons\/source-render\/$/,
   );
 });
 
@@ -393,7 +410,7 @@ test("completing the latest Lesson resumes the previously visited incomplete Les
 }) => {
   await page.getByRole("link", { name: "Начать курс" }).click();
   await page.getByRole("link", { name: /Следующий урок/ }).click();
-  await page.getByRole("link", { name: /Следующий урок/ }).click();
+  await page.goto("./courses/markdown/lessons/links-code/");
   await page.locator('a[href$="/lessons/vvedenie/"]').first().click();
   await page.getByRole("button", { name: "Завершить урок" }).click();
   await page.getByRole("link", { name: "О курсе", exact: true }).click();
@@ -407,6 +424,13 @@ test("Course Completion requires explicit completion of every core destination",
   page,
 }) => {
   await completeEveryLesson(page);
+  for (const moduleSlug of moduleSlugs.slice(0, -1)) {
+    await page.goto(`./courses/markdown/modules/${moduleSlug}/checkpoint/`);
+    await page.getByRole("button", {
+      name: "Завершить проверку Модуля",
+    }).click();
+  }
+  await page.goto("./courses/markdown/lessons/review/");
   const checkpointSequenceLink = page.getByRole("link", {
     name: /Перейти к проверке Модуля/,
   });
@@ -483,7 +507,7 @@ test("Course resumes the most recently visited incomplete core destination", asy
   await page.getByRole("link", { name: "О курсе", exact: true }).click();
   await expect(page.getByRole("link", { name: "Продолжить курс" })).toHaveAttribute(
     "href",
-    /\/modules\/osnovy\/checkpoint\/$/,
+    /\/modules\/struktura\/checkpoint\/$/,
   );
 
   await page.getByRole("link", {
@@ -512,7 +536,7 @@ test("core destination progress stays consistent across browser tabs", async ({
 
   const checkpointPage = await context.newPage();
   await checkpointPage.goto(
-    "./courses/markdown/modules/osnovy/checkpoint/",
+    "./courses/markdown/modules/struktura/checkpoint/",
   );
   await expect(
     checkpointLink.getByLabel("Статус проверки Модуля: В процессе"),
@@ -625,6 +649,6 @@ test("Lesson-only v1 progress migrates to the core route", async ({ page }) => {
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Продолжить курс" })).toHaveAttribute(
     "href",
-    /\/lessons\/formatting\/$/,
+    /\/lessons\/source-render\/$/,
   );
 });

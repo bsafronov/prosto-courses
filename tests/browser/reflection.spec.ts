@@ -41,9 +41,13 @@ test("Reflection keeps a private draft across reloads without affecting completi
   await expect(
     page.locator("[data-knowledge-check] input:checked"),
   ).toHaveCount(0);
-  await expect(
-    page.locator("[data-knowledge-check] [data-feedback]"),
-  ).toBeHidden();
+  const checkFeedback = page.locator(
+    "[data-knowledge-check] [data-feedback]",
+  );
+  await expect(checkFeedback).toHaveCount(2);
+  for (let index = 0; index < 2; index += 1) {
+    await expect(checkFeedback.nth(index)).toBeHidden();
+  }
   expect(
     await page.evaluate((reflectionText) => {
       const progress = localStorage.getItem("prosto-courses:progress:v1") ?? "";

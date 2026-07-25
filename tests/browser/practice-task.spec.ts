@@ -80,15 +80,15 @@ test("open Practice Task uses observable Self-Assessment without a score", async
 }) => {
   await page.goto("./courses/markdown/capstone/");
   const task = page.getByRole("region", {
-    name: "Проверь итоговую инструкцию",
+    name: "Создай и проверь рабочую инструкцию",
   });
   const rubric = task.getByRole("group", { name: "Самопроверка" });
 
-  await expect(rubric.getByText("Назначение понятно")).toBeHidden();
+  await expect(rubric.getByText("Разметка выражает смысл")).toBeHidden();
   await rubric.getByText("Открыть критерии самопроверки").press("Enter");
-  await expect(rubric.getByText("Назначение понятно")).toBeVisible();
+  await expect(rubric.getByText("Разметка выражает смысл")).toBeVisible();
   await expect(rubric).toContainText(
-    "Читатель может своими словами объяснить, зачем документ существует",
+    "Автор может объяснить роль заголовков, списков, ссылок и кода",
   );
   await expect(rubric).not.toContainText(/балл|оценк|score|points/i);
   await expect(page.locator("[data-completion-toggle]")).toHaveAttribute(

@@ -1,15 +1,14 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const lessonSequence = [
+const firstModuleLessons = [
   "1Знакомство с Markdown",
-  "2Заголовки, выделение и списки",
-  "3Ссылки и код",
+  "2Как читать Markdown-исходник",
 ];
 
 async function expectLessonSequence(
   page: Page,
   label: string,
-  sequence = lessonSequence,
+  sequence = firstModuleLessons,
 ) {
   await expect(
     page.getByRole("list", { name: label }).getByRole("link"),
@@ -30,17 +29,16 @@ test("learner traverses the complete Course tree from Catalog to Capstone", asyn
     .getByRole("link", { name: "Основы Markdown", exact: true })
     .click();
 
-  await page.getByRole("link", { name: "Понятный Markdown-документ" }).click();
+  await page.getByRole("link", { name: "От исходника к структуре" }).click();
   await expect(page).toHaveURL(/\/courses\/markdown\/modules\/osnovy\/$/);
   await expect(
-    page.getByRole("heading", { level: 1, name: "Понятный Markdown-документ" }),
+    page.getByRole("heading", { level: 1, name: "От исходника к структуре" }),
   ).toBeVisible();
 
   await page.getByRole("link", { name: /Знакомство с Markdown/ }).first().click();
   await expect(page).toHaveURL(/\/courses\/markdown\/lessons\/vvedenie\/$/);
 
-  await page.getByRole("link", { name: /Следующий урок: Заголовки/ }).click();
-  await page.getByRole("link", { name: /Следующий урок: Ссылки и код/ }).click();
+  await page.getByRole("link", { name: /Следующий урок: Как читать/ }).click();
   await page.getByRole("link", { name: /Перейти к проверке Модуля/ }).click();
   await expect(page).toHaveURL(
     /\/courses\/markdown\/modules\/osnovy\/checkpoint\/$/,
@@ -48,10 +46,20 @@ test("learner traverses the complete Course tree from Catalog to Capstone", asyn
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "Собери Markdown-памятку",
+      name: "Объясни путь от исходника к документу",
     }),
   ).toBeVisible();
 
+  await page.getByRole("link", { name: /Перейти к следующему Модулю/ }).click();
+  await page.getByRole("link", { name: "Начать Модуль" }).click();
+  await page.getByRole("link", { name: /Следующий урок: Ссылки и код/ }).click();
+  await page.getByRole("link", { name: /Перейти к проверке Модуля/ }).click();
+  await page.getByRole("link", { name: /Перейти к следующему Модулю/ }).click();
+  await page.getByRole("link", { name: "Начать Модуль" }).click();
+  await page
+    .getByRole("link", { name: /Следующий урок: Проверка инструкции/ })
+    .click();
+  await page.getByRole("link", { name: /Перейти к проверке Модуля/ }).click();
   await page.getByRole("link", { name: /Перейти к итоговой работе/ }).click();
   await expect(page).toHaveURL(/\/courses\/markdown\/capstone\/$/);
   await expect(
@@ -68,9 +76,10 @@ test("learner traverses the complete Course tree from Catalog to Capstone", asyn
       .getByRole("list", { name: "Критерии итоговой работы" })
       .getByRole("listitem"),
   ).toContainText([
-    "Назначение Markdown объяснено",
-    "Инструкция разделена заголовками",
-    "Ссылки и фрагменты кода записаны однозначно",
+    "Выбор разметки объяснён",
+    "Инструкция ведёт конкретного читателя",
+    "Ссылки и команды записаны однозначно",
+    "Целевая среда названа",
   ]);
 });
 
@@ -91,7 +100,7 @@ test("learner reads the first Lesson from the Course Catalog", async (
     new URL(testInfo.project.use.baseURL!).pathname,
   );
   const card = page.getByRole("article", { name: "Основы Markdown" });
-  await expect(card).toContainText("Научись оформлять");
+  await expect(card).toContainText("Научись создавать, проверять и улучшать");
 
   await card.getByRole("link", { name: "Основы Markdown", exact: true }).click();
   await expect(page).toHaveURL(/\/courses\/markdown\/$/);
@@ -99,14 +108,21 @@ test("learner reads the first Lesson from the Course Catalog", async (
   await expect(
     page.getByRole("heading", { level: 1, name: "Основы Markdown" }),
   ).toBeVisible();
-  await expect(page.getByText("Научись оформлять понятные документы")).toBeVisible();
+  await expect(
+    page.getByText(/Научись создавать, проверять и улучшать рабочие инструкции/),
+  ).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 2, name: "Чему ты научишься" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("listitem").filter({ hasText: "Создавать заголовки" }),
+    page.getByRole("listitem").filter({
+      hasText: "Проектировать понятную структуру инструкции",
+    }),
   ).toBeVisible();
-  await expectLessonSequence(page, "Уроки курса");
+  await expectLessonSequence(
+    page,
+    "Уроки курса: От исходника к структуре",
+  );
 
   await page.getByRole("link", { name: "Начать курс" }).click();
   await expect(page).toHaveURL(/\/courses\/markdown\/lessons\/vvedenie\/$/);
@@ -121,7 +137,7 @@ test("learner reads the first Lesson from the Course Catalog", async (
     new URL(testInfo.project.use.baseURL!).pathname,
   );
   await page.getByRole("link", { name: /Следующий урок/ }).click();
-  await expect(page).toHaveURL(/\/courses\/markdown\/lessons\/formatting\/$/);
+  await expect(page).toHaveURL(/\/courses\/markdown\/lessons\/source-render\/$/);
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(
     page.getByRole("navigation", { name: "Навигация по курсу" }),
@@ -155,24 +171,30 @@ test("fresh authoring fixture follows the Catalog-to-Lesson path", async ({
   ).toBeVisible();
 });
 
-test("learner follows the complete Lesson sequence", async ({
+test("learner follows the complete first-Module Lesson sequence", async ({
   page,
 }) => {
   await page.goto("./courses/markdown/lessons/vvedenie/");
 
-  await expectLessonSequence(page, "Уроки в навигации курса");
-  await expect(page.getByText("Урок 1 из 3", { exact: true })).toBeVisible();
+  await expectLessonSequence(
+    page,
+    "Уроки в навигации курса: От исходника к структуре",
+  );
+  await expect(page.getByText("Урок 1 из 2", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("link", { name: /Знакомство с Markdown/ }),
   ).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("link", { name: /Предыдущий урок/ })).toHaveCount(0);
 
-  await page.getByRole("link", { name: /Следующий урок: Заголовки/ }).click();
+  await page.getByRole("link", { name: /Следующий урок: Как читать/ }).click();
 
-  await expectLessonSequence(page, "Уроки в навигации курса");
-  await expect(page.getByText("Урок 2 из 3", { exact: true })).toBeVisible();
+  await expectLessonSequence(
+    page,
+    "Уроки в навигации курса: От исходника к структуре",
+  );
+  await expect(page.getByText("Урок 2 из 2", { exact: true })).toBeVisible();
   await expect(
-    page.getByRole("link", { name: /Заголовки, выделение и списки/ }),
+    page.getByRole("link", { name: /Как читать Markdown-исходник/ }),
   ).toHaveAttribute("aria-current", "page");
   await expect(
     page.getByRole("link", { name: /Предыдущий урок: Знакомство/ }),
@@ -191,13 +213,6 @@ test("learner follows the complete Lesson sequence", async ({
   await navigationToggle.click();
   await expect(courseNavigation).toBeVisible();
 
-  await page.getByRole("link", { name: /Следующий урок: Ссылки и код/ }).click();
-
-  await expectLessonSequence(page, "Уроки в навигации курса");
-  await expect(page.getByText("Урок 3 из 3", { exact: true })).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: /Ссылки и код/ }),
-  ).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("link", { name: /Следующий урок/ })).toHaveCount(0);
   await expect(
     page.getByRole("link", { name: /Перейти к проверке Модуля/ }),

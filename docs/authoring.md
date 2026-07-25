@@ -1,7 +1,5 @@
 # Course authoring contract
 
-> **Implementation status:** this is the accepted target contract for a breaking platform revision. The current content loader, routes, components, and validator do not implement it yet. Do not publish newly authored Courses until the platform migration is complete.
-
 An Authoring Agent creates or changes versioned Course source through this provider-independent contract. It does not import layouts, navigation, progress controls, styles, scripts, or application components. The platform owns presentation and learner-state behavior.
 
 All learner-facing content is Russian. Use the domain language from `CONTEXT.md` consistently.

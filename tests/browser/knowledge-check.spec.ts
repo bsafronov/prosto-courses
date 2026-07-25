@@ -438,15 +438,119 @@ test("Knowledge Check answers and feedback are cleared without persisting answer
   );
 });
 
-test("Russian example Course includes Knowledge Checks in multiple Lessons", async ({
+test("canonical Russian Course uses each response pattern its capabilities need", async ({
   page,
 }) => {
-  await expect(page.locator("[data-knowledge-check]")).toHaveCount(1);
+  await expect(page.locator('[data-knowledge-check][data-type="single"]')).toHaveCount(1);
+
+  await page.goto("./courses/markdown/lessons/source-render/");
+  await expect(
+    page.locator('[data-knowledge-check][data-type="matching"]'),
+  ).toHaveCount(1);
 
   await page.goto("./courses/markdown/lessons/formatting/");
 
-  await expect(page.locator("[data-knowledge-check]")).toHaveCount(1);
+  await expect(page.locator("[data-knowledge-check]")).toHaveCount(2);
+  await expect(
+    page.locator('[data-knowledge-check][data-type="ordering"]'),
+  ).toHaveCount(1);
   await expect(
     page.getByText("Какая запись создаёт заголовок второго уровня?"),
   ).toBeVisible();
+
+  await page.goto("./courses/markdown/lessons/links-code/");
+  await expect(
+    page.locator('[data-knowledge-check][data-type="multiple"]'),
+  ).toHaveCount(1);
+
+  await page.goto("./courses/markdown/lessons/portability/");
+  await expect(
+    page.locator('[data-knowledge-check][data-type="exact"]'),
+  ).toHaveCount(1);
+  await expect(
+    page.locator('[data-knowledge-check][data-type="ordering"]'),
+  ).toHaveCount(1);
+
+  await page.goto("./courses/markdown/lessons/review/");
+  await expect(
+    page.locator('[data-knowledge-check][data-type="single"]'),
+  ).toHaveCount(1);
+});
+
+test("canonical matching focus plus keyboard ordering and exact response paths work", async ({
+  page,
+}) => {
+  await page.goto("./courses/markdown/lessons/source-render/");
+  const matching = page.locator(
+    '[data-knowledge-check][data-type="matching"]',
+  );
+  for (const [left, right] of [
+    ["## Проверка", "Блок-заголовок"],
+    ["- Запусти тесты", "Пункт маркированного списка"],
+    ["`pnpm test`", "Код внутри строки"],
+  ]) {
+    const select = matching.getByRole("combobox", {
+      name: `Соответствие для «${left}»`,
+    });
+    const option = await select.locator("option").evaluateAll(
+      (options, target) =>
+        options
+          .map((candidate, index) => ({
+            index,
+            label: (candidate as HTMLOptionElement).label,
+            value: (candidate as HTMLOptionElement).value,
+          }))
+          .find((candidate) => candidate.label === target),
+      right,
+    );
+    expect(option?.index).toBeGreaterThan(0);
+    await select.focus();
+    await expect(select).toBeFocused();
+    await select.selectOption(option!.value);
+    await expect(select).toHaveValue(option!.value);
+    await select.press("Tab");
+  }
+  await matching
+    .getByRole("button", { name: "Проверить ответ" })
+    .press("Enter");
+  await expect(matching.locator("[data-feedback]")).toContainText("Верно!");
+
+  await page.goto("./courses/markdown/lessons/formatting/");
+  const ordering = page.locator(
+    '[data-knowledge-check][data-type="ordering"]',
+  );
+  const orderedTexts = [
+    "Сформулировать результат читателя",
+    "Сгруппировать связанные действия",
+    "Назначить группам уровни заголовков",
+    "Прочитать только заголовки и проверить логику",
+  ];
+  for (const [desiredIndex, itemText] of orderedTexts.entries()) {
+    const row = ordering
+      .locator("[data-ordering-item]")
+      .filter({ hasText: itemText });
+    let currentIndex = await row.evaluate((item) =>
+      [...(item.parentElement?.children ?? [])].indexOf(item),
+    );
+    while (currentIndex > desiredIndex) {
+      await row
+        .getByRole("button", {
+          name: `Переместить «${itemText}» выше`,
+        })
+        .press("Enter");
+      currentIndex -= 1;
+    }
+  }
+  await ordering
+    .getByRole("button", { name: "Проверить ответ" })
+    .press("Enter");
+  await expect(ordering.locator("[data-feedback]")).toContainText("Верно!");
+
+  await page.goto("./courses/markdown/lessons/portability/");
+  const exact = page.locator('[data-knowledge-check][data-type="exact"]');
+  const answer = exact.getByRole("textbox", { name: "Ответ" });
+  await answer.focus();
+  await page.keyboard.type("  commonmark  ");
+  await page.keyboard.press("Enter");
+  await expect(exact.locator("[data-feedback]")).toContainText("Верно!");
 });

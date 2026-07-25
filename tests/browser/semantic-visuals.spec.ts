@@ -33,7 +33,7 @@ test("Diagram renders Mermaid with an equivalent visible interpretation", async 
   await expect(diagram).toBeVisible();
   await expect(
     diagram.getByRole("img", {
-      name: "Исходный Markdown проходит через преобразователь и становится HTML-страницей.",
+      name: "Содержание и знаки Markdown образуют исходник, который преобразователь превращает в структурированный документ.",
     }),
   ).toHaveAttribute("aria-busy", "false");
   await expect(diagram).toContainText("Читай схему слева направо");
@@ -52,6 +52,52 @@ test("Diagram renders Mermaid with an equivalent visible interpretation", async 
     await page.keyboard.press("Tab");
   }
   await expect(firstCheckOption).toBeFocused();
+});
+
+test("canonical Chart exposes review evidence, table fallback, and provenance", async ({
+  page,
+}) => {
+  await page.goto("./courses/markdown/lessons/review/");
+
+  const chart = page.getByRole("figure", {
+    name: "Проблемы учебной инструкции по этапам проверки",
+  });
+  await expect(
+    chart.getByRole("img", {
+      name: "Число найденных проблем структуры и точности уменьшается от черновика к самопроверке и проверке коллегой.",
+    }),
+  ).toBeVisible();
+  await expect(
+    chart.getByRole("definition").filter({ hasText: "Этап (этап)" }),
+  ).toBeVisible();
+  await expect(
+    chart
+      .getByRole("definition")
+      .filter({ hasText: "Число найденных проблем (проблема)" }),
+  ).toBeVisible();
+
+  const table = chart.getByRole("table", {
+    name: "Данные: Проблемы учебной инструкции по этапам проверки",
+  });
+  await expect(table.getByRole("columnheader")).toHaveText([
+    "Этап (этап)",
+    "Структура (проблема)",
+    "Точность (проблема)",
+  ]);
+  await expect(
+    table.getByRole("row", { name: "Проверка коллегой 1 1" }),
+  ).toBeVisible();
+  await expect(chart).toContainText(
+    "После самопроверки остаются четыре проблемы",
+  );
+  await expect(
+    chart.getByRole("link", {
+      name: "Смоделированный журнал проверки в исходнике этого Урока",
+    }),
+  ).toHaveAttribute(
+    "href",
+    "https://github.com/bsafronov/prosto-courses/blob/main/src/content/courses/markdown/modules/proverka/lessons/review.mdx",
+  );
 });
 
 test("Chart exposes its visual, axes, legend, exact data, and provenance", async ({
@@ -117,15 +163,15 @@ test("Chart exposes its visual, axes, legend, exact data, and provenance", async
   );
 });
 
-test("Chart overflow regions are keyboard reachable", async ({ page }) => {
-  await page.goto("./courses/accessible-images/lessons/describe-purpose/");
+test("canonical Chart overflow regions are keyboard reachable", async ({ page }) => {
+  await page.goto("./courses/markdown/lessons/review/");
 
   const chart = page.getByRole("figure", {
-    name: "Average published and reviewed lessons per editor",
+    name: "Проблемы учебной инструкции по этапам проверки",
   });
   const visual = chart.getByRole("img");
   const tableRegion = chart.getByRole("region", {
-    name: "Таблица данных: Average published and reviewed lessons per editor",
+    name: "Таблица данных: Проблемы учебной инструкции по этапам проверки",
   });
 
   for (let step = 0; step < 40; step += 1) {
@@ -178,6 +224,20 @@ test("semantic visuals remain usable at a narrow width and reduced motion", asyn
     }),
   ).toBeVisible();
 
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390);
+
+  await page.goto("./courses/markdown/lessons/review/");
+  const canonicalChart = page.getByRole("figure", {
+    name: "Проблемы учебной инструкции по этапам проверки",
+  });
+  await expect(canonicalChart.getByRole("img")).toBeVisible();
+  await expect(
+    canonicalChart.getByRole("region", {
+      name: "Таблица данных: Проблемы учебной инструкции по этапам проверки",
+    }),
+  ).toBeVisible();
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(390);
