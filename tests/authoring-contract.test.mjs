@@ -648,6 +648,132 @@ test("accepts every Callout meaning and an accessible Diagram", async () => {
   );
 });
 
+test("rejects a Reflection without a prompt", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Reflection outcomes={["identify-image-purpose"]} />\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /describe-purpose\.mdx: Reflection 1 requires a non-empty prompt/i,
+      );
+    },
+  );
+});
+
+test("rejects a Reflection without Learning Outcome references", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Reflection prompt="What changed in your mental model?" />\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /describe-purpose\.mdx: Reflection 1 must support at least one Course Learning Outcome/i,
+      );
+    },
+  );
+});
+
+test("rejects answer-bearing Reflection props", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Reflection prompt="What changed in your mental model?" outcomes={["identify-image-purpose"]} answer="Decorative images need empty alt text" />\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /describe-purpose\.mdx: Reflection 1 does not allow authored props: answer/i,
+      );
+    },
+  );
+});
+
+test("rejects malformed Reflection guidance", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Reflection prompt="What changed in your mental model?" outcomes={["identify-image-purpose"]} guidance={["Name the assumption", "   "]} />\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /describe-purpose\.mdx: Reflection 1 guidance must be a non-empty array of non-empty strings/i,
+      );
+    },
+  );
+});
+
+test("rejects nested Reflection content", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Reflection prompt="What changed in your mental model?" outcomes={["identify-image-purpose"]}>A suggested answer.</Reflection>\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /describe-purpose\.mdx: Reflection 1 must be a self-closing component with static props/i,
+      );
+    },
+  );
+});
+
+test("rejects duplicate Reflection prompts", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Reflection prompt="What changed?" prompt="What will you do next?" outcomes={["identify-image-purpose"]} />\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /describe-purpose\.mdx: Reflection 1 must declare prompt exactly once/i,
+      );
+    },
+  );
+});
+
+test("accepts a Reflection with aligned guidance", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Reflection prompt="What changed in your mental model?" outcomes={["identify-image-purpose"]} guidance={["Name your initial assumption", "Describe the evidence that changed it"]} />\n`,
+    },
+    (result) => assert.equal(result.exitCode, 0, result.output),
+  );
+});
+
+test("rejects duplicate and unknown Reflection Outcome references", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<Reflection prompt="What changed in your mental model?" outcomes={["identify-image-purpose", "identify-image-purpose", "missing-outcome"]} />\n`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Reflection 1 has duplicate Learning Outcome ID identify-image-purpose/i,
+      );
+      assert.match(
+        result.output,
+        /Reflection 1 references unknown Course Learning Outcome ID missing-outcome/i,
+      );
+    },
+  );
+});
+
 test("rejects a Course Learning Outcome that no Lesson teaches", async () => {
   const result = await validateFixture("untaught-outcome");
   assert.notEqual(result.exitCode, 0);

@@ -1,0 +1,237 @@
+---
+interface Props {
+  prompt: string;
+  outcomes: string[];
+  guidance?: string[];
+}
+
+function hashIdentity(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+const { prompt, guidance = [] } = Astro.props;
+const reflectionId = `reflection-${hashIdentity(prompt)}`;
+const promptId = `${reflectionId}-prompt`;
+const noteId = `${reflectionId}-note`;
+const privacyId = `${reflectionId}-privacy`;
+---
+
+<section
+  class="reflection"
+  data-reflection
+  data-reflection-id={reflectionId}
+  aria-labelledby={promptId}
+>
+  <p class="eyebrow">Осмысли опыт</p>
+  <h2 id={promptId}>{prompt}</h2>
+  {
+    guidance.length > 0 && (
+      <div class="guidance">
+        <p>Если полезно, опирайся на вопросы:</p>
+        <ul>
+          {guidance.map((item) => (
+            <li>{item}</li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
+  <label for={noteId}>Твоя заметка</label>
+  <textarea
+    id={noteId}
+    data-reflection-note
+    aria-describedby={privacyId}
+    rows="7"
+  ></textarea>
+  <p id={privacyId} class="privacy">
+    Текст остаётся только в этом браузере и никуда не отправляется.
+  </p>
+  <div class="actions">
+    <button type="button" data-reflection-copy disabled>Копировать</button>
+    <button type="button" data-reflection-export disabled>Экспортировать</button>
+    <button type="button" data-reflection-delete disabled>Удалить навсегда</button>
+  </div>
+  <p
+    class="status"
+    data-reflection-status
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+  ></p>
+</section>
+
+<script>
+  const storagePrefix = "prosto-courses:reflection:v1";
+
+  function initialiseReflection(reflection: HTMLElement) {
+    if (reflection.dataset.ready) return;
+    reflection.dataset.ready = "true";
+
+    const note =
+      reflection.querySelector<HTMLTextAreaElement>("[data-reflection-note]");
+    const copy = reflection.querySelector<HTMLButtonElement>(
+      "[data-reflection-copy]",
+    );
+    const exportNote = reflection.querySelector<HTMLButtonElement>(
+      "[data-reflection-export]",
+    );
+    const deleteNote = reflection.querySelector<HTMLButtonElement>(
+      "[data-reflection-delete]",
+    );
+    const status = reflection.querySelector<HTMLElement>(
+      "[data-reflection-status]",
+    );
+    const prompt = reflection.querySelector("h2")?.textContent?.trim() ?? "";
+    const reflectionId = reflection.dataset.reflectionId;
+    if (
+      !note ||
+      !copy ||
+      !exportNote ||
+      !deleteNote ||
+      !status ||
+      !reflectionId
+    ) {
+      return;
+    }
+
+    const storageKey = `${storagePrefix}:${window.location.pathname}:${reflectionId}`;
+    const announce = (message: string) => {
+      status.textContent = message;
+    };
+    const refreshActions = () => {
+      const isEmpty = note.value.length === 0;
+      copy.disabled = isEmpty;
+      exportNote.disabled = isEmpty;
+      deleteNote.disabled = isEmpty;
+    };
+
+    try {
+      const draft = localStorage.getItem(storageKey);
+      if (draft !== null) {
+        note.value = draft;
+        announce("Черновик восстановлен из этого браузера.");
+      }
+    } catch {
+      announce("Браузер не разрешил восстановить локальный черновик.");
+    }
+    refreshActions();
+
+    note.addEventListener("input", () => {
+      refreshActions();
+      try {
+        if (note.value.length > 0) {
+          localStorage.setItem(storageKey, note.value);
+          announce("Черновик сохранён в этом браузере.");
+        } else {
+          localStorage.removeItem(storageKey);
+          announce("Пустой черновик удалён из этого браузера.");
+        }
+      } catch {
+        announce("Браузер не разрешил сохранить локальный черновик.");
+      }
+    });
+
+    copy.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(note.value);
+        announce("Заметка скопирована.");
+      } catch {
+        announce("Не удалось скопировать заметку.");
+      }
+    });
+
+    exportNote.addEventListener("click", () => {
+      const blob = new Blob([`${prompt}\n\n${note.value}\n`], {
+        type: "text/plain;charset=utf-8",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `reflection-${new Date().toISOString().slice(0, 10)}.txt`;
+      link.click();
+      URL.revokeObjectURL(url);
+      announce("Файл с заметкой скачан.");
+    });
+
+    deleteNote.addEventListener("click", () => {
+      try {
+        localStorage.removeItem(storageKey);
+        note.value = "";
+        refreshActions();
+        announce("Заметка навсегда удалена из этого браузера.");
+        note.focus();
+      } catch {
+        announce("Браузер не разрешил удалить локальный черновик.");
+      }
+    });
+  }
+
+  document
+    .querySelectorAll<HTMLElement>("[data-reflection]")
+    .forEach(initialiseReflection);
+</script>
+
+<style>
+  .reflection {
+    min-width: 0;
+    margin: 2rem 0;
+    border: 1px solid #b9c2ef;
+    border-radius: var(--radius);
+    padding: 1.2rem;
+    background: #f4f5ff;
+  }
+  .eyebrow {
+    margin: 0 0 .3rem;
+    color: var(--color-brand);
+    font-size: .75rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  h2 { margin: 0 0 1rem; font-size: 1.2rem; }
+  .guidance {
+    margin-bottom: 1rem;
+    color: var(--color-muted);
+  }
+  .guidance p { margin-bottom: .35rem; font-weight: 700; }
+  .guidance ul { margin-top: 0; }
+  label { display: block; margin-bottom: .4rem; font-weight: 800; }
+  textarea {
+    box-sizing: border-box;
+    width: 100%;
+    resize: vertical;
+    border: 1px solid var(--color-border);
+    border-radius: .55rem;
+    padding: .75rem;
+    background: white;
+    color: var(--color-ink);
+    font: inherit;
+    line-height: 1.55;
+  }
+  textarea:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--color-brand) 40%, transparent);
+    outline-offset: 2px;
+  }
+  .privacy {
+    margin: .55rem 0 1rem;
+    color: var(--color-muted);
+    font-size: .9rem;
+  }
+  .actions { display: flex; flex-wrap: wrap; gap: .65rem; }
+  .actions button:last-child {
+    border-color: #a12828;
+    color: #8a2020;
+    background: white;
+  }
+  .actions button:disabled { cursor: not-allowed; opacity: .55; }
+  .status { min-height: 1.5em; margin: .75rem 0 0; font-weight: 700; }
+  @media (max-width: 34rem) {
+    .actions { display: grid; }
+    .actions button { width: 100%; }
+  }
+</style>

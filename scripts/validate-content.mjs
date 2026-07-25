@@ -241,6 +241,7 @@ function componentAttributes(source) {
     cursor += name.length;
     while (/\s/.test(source[cursor] ?? "")) cursor += 1;
 
+    let expression;
     let value;
     if (source[cursor] === "=") {
       cursor += 1;
@@ -259,7 +260,9 @@ function componentAttributes(source) {
         value = source.slice(valueStart, cursor);
         cursor += 1;
       } else if (source[cursor] === "{") {
+        const expressionStart = cursor;
         cursor = afterBracedExpression(source, cursor);
+        expression = source.slice(expressionStart + 1, cursor - 1);
       } else {
         while (cursor < source.length && !/\s|\//.test(source[cursor])) {
           cursor += 1;
@@ -267,16 +270,43 @@ function componentAttributes(source) {
       }
     }
 
-    attributes.push({ name, value });
+    attributes.push({ expression, name, value });
   }
 
   return attributes;
 }
 
-function stringAttribute(source, name) {
+function componentAttribute(source, name) {
   return componentAttributes(source).find(
     (attribute) => attribute.name === name,
-  )?.value;
+  );
+}
+
+function stringAttribute(source, name) {
+  return componentAttribute(source, name)?.value;
+}
+
+function stringArrayAttribute(source, name) {
+  const attribute = componentAttribute(source, name);
+  if (!attribute) return { present: false };
+  if (typeof attribute.expression !== "string") {
+    return { present: true };
+  }
+
+  try {
+    const value = JSON.parse(
+      attribute.expression.replace(/,\s*(?=])/g, ""),
+    );
+    if (
+      !Array.isArray(value) ||
+      value.some((item) => typeof item !== "string")
+    ) {
+      return { present: true };
+    }
+    return { present: true, value };
+  } catch {
+    return { present: true };
+  }
 }
 
 function attributeNames(source) {
@@ -441,6 +471,69 @@ function validateKnowledgeChecks(body, file) {
     }
     if (answer && options.filter((option) => option === answer).length !== 1) {
       report(file, `${label} answer must match exactly one option`);
+    }
+  }
+}
+
+function validateReflections(body, file, alignment) {
+  const allowedProps = new Set(["prompt", "outcomes", "guidance"]);
+  const reflections = openingComponentTags(withoutFencedCode(body)).filter(
+    (tag) => tag.name === "Reflection",
+  );
+
+  for (const [index, reflection] of reflections.entries()) {
+    const label = `Reflection ${index + 1}`;
+    if (!reflection.selfClosing) {
+      report(
+        file,
+        `${label} must be a self-closing component with static props`,
+      );
+    }
+    const propNames = attributeNames(reflection.source);
+    if (propNames.filter((name) => name === "prompt").length > 1) {
+      report(file, `${label} must declare prompt exactly once`);
+    }
+    const authoredProps = propNames.filter(
+      (name) => !allowedProps.has(name),
+    );
+    if (authoredProps.length > 0) {
+      report(
+        file,
+        `${label} does not allow authored props: ${authoredProps.join(", ")}`,
+      );
+    }
+    if (!stringAttribute(reflection.source, "prompt")?.trim()) {
+      report(file, `${label} requires a non-empty prompt`);
+    }
+    const guidance = stringArrayAttribute(reflection.source, "guidance");
+    if (
+      guidance.present &&
+      (!guidance.value?.length ||
+        guidance.value.some((item) => item.trim() === ""))
+    ) {
+      report(
+        file,
+        `${label} guidance must be a non-empty array of non-empty strings`,
+      );
+    }
+    const outcomes = stringArrayAttribute(reflection.source, "outcomes");
+    if (outcomes.present && !outcomes.value) {
+      report(
+        file,
+        `${label} outcomes must be a static array of Learning Outcome IDs`,
+      );
+    }
+    if (alignment) {
+      alignment.registerOutcomeReferences({
+        file,
+        label,
+        outcomeIds: outcomes.value,
+      });
+    } else if (!outcomes.value?.length) {
+      report(
+        file,
+        `${label} must support at least one Course Learning Outcome`,
+      );
     }
   }
 }
@@ -711,13 +804,20 @@ function validateSharedMetadata(data, file) {
   }
 }
 
-async function validateLearnerSource(source, file, owner, declaredPacks) {
+async function validateLearnerSource(
+  source,
+  file,
+  owner,
+  declaredPacks,
+  alignment,
+) {
   if (!source) return;
   requiredString(source.data, "title", file, owner);
   validateSharedMetadata(source.data, file);
   validateAuthoringBoundary(source.content, file);
   validateSemanticComponents(source.content, file, declaredPacks);
   validateKnowledgeChecks(source.content, file);
+  validateReflections(source.content, file, alignment);
   validateCallouts(source.content, file);
   await validateDiagrams(source.content, file);
 }
@@ -933,7 +1033,13 @@ async function validateModule(
 
   const moduleFile = path.join(moduleDir, "index.mdx");
   const moduleSource = await readRequiredMdx(moduleFile, "Module");
-  await validateLearnerSource(moduleSource, moduleFile, "Module", declaredPacks);
+  await validateLearnerSource(
+    moduleSource,
+    moduleFile,
+    "Module",
+    declaredPacks,
+    alignment,
+  );
   if (moduleSource)
     validateMetadata(moduleSchema, moduleSource.data, moduleFile, "Module");
   if (moduleSource) {
@@ -951,6 +1057,7 @@ async function validateModule(
     checkpointFile,
     "Module Checkpoint",
     declaredPacks,
+    alignment,
   );
   if (checkpoint) {
     validateMetadata(
@@ -993,7 +1100,13 @@ async function validateModule(
     }
 
     const lesson = await readMdx(lessonFile);
-    await validateLearnerSource(lesson, lessonFile, "Lesson", declaredPacks);
+    await validateLearnerSource(
+      lesson,
+      lessonFile,
+      "Lesson",
+      declaredPacks,
+      alignment,
+    );
     if (lesson) {
       validateMetadata(lessonSchema, lesson.data, lessonFile, "Lesson");
       if (lesson.data.freshness) {
@@ -1041,12 +1154,18 @@ async function validateCourse(courseEntry) {
     overview?.data.capabilityPacks,
     overviewFile,
   );
-  await validateLearnerSource(overview, overviewFile, "Course", declaredPacks);
   const alignment = createOutcomeAlignment({
     courseOutcomes: overview?.data.outcomes,
     courseFile: overviewFile,
     report,
   });
+  await validateLearnerSource(
+    overview,
+    overviewFile,
+    "Course",
+    declaredPacks,
+    alignment,
+  );
   if (overview) {
     validateMetadata(courseSchema, overview.data, overviewFile, "Course");
     validateFreshnessDeadline(
@@ -1067,6 +1186,7 @@ async function validateCourse(courseEntry) {
     capstoneFile,
     "Capstone Demonstration",
     declaredPacks,
+    alignment,
   );
   if (capstone) {
     validateMetadata(

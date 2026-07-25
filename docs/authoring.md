@@ -570,6 +570,17 @@ The Authoring Agent selects meaning, never a color. The platform supplies consis
 
 `prompt` and `outcomes` are required. `guidance` is optional and must support reflection without supplying a correct answer.
 
+- Use one self-closing `Reflection` with explicit static props. Only `prompt`,
+  `outcomes`, and `guidance` are allowed; answer, solution, rubric, score, and
+  evaluation props are invalid.
+- `outcomes` must contain at least one unique ID owned by the Course.
+- When present, `guidance` is a non-empty array of non-empty process cues or
+  questions. It can help the learner notice evidence or structure their
+  thinking, but it must not state a correct response. If a response can be
+  checked deterministically, use a Knowledge Check instead.
+- The platform stores the learner's note separately from progress and Knowledge
+  Check state. It never submits or evaluates the note.
+
 ### Capability Packs
 
 Versioned Capability Packs extend the base catalog for bounded needs such as:
