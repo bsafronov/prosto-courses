@@ -2,7 +2,7 @@
 
 Версия: 2
 
-Статус: полный кандидат на согласование; явное одобрение Course Owner не зафиксировано
+Статус: одобрен Course Owner
 
 Дата фиксации: 2026-07-25
 
@@ -112,7 +112,7 @@ Capstone: самостоятельная инструкция на 350–700 с�
 
 Интервалы растут: immediate Lesson checks → end-of-Module integration → changed-context Module 3 → independent Capstone.
 
-## Reference Lesson calibration candidate
+## Reference Lesson calibration record
 
 Reference Lesson: `modules/struktura/lessons/formatting.mdx`
 
@@ -120,11 +120,11 @@ Calibration date: 2026-07-25
 
 Decision basis: canonical implementation scope in issue #23
 
-Approval evidence: issue #23 не содержит явного одобрения Reference Lesson от
-Course Owner; запись ниже фиксирует результат Authoring Agent self-review, а не
-formal approval.
+Approval evidence: Course Owner явно одобрил Blueprint и Reference Lesson
+2026-07-25 сообщением «Одобряю» после передачи реализации issue #23 в commit
+`58e7b48832aa4cbeaafe3d32169072816eff8534`.
 
-Proposed calibration:
+Accepted calibration:
 
 - depth: объясняет не только синтаксис, но и выбор между иерархией и визуальным эффектом;
 - pacing: 10 минут study + 10 минут practice;
@@ -135,9 +135,8 @@ Proposed calibration:
 - feedback: неправильные варианты соответствуют вероятным misconceptions;
 - scaffolding: объяснение → ordering → guided rewrite → personal Reflection.
 
-Эта калибровка использована как implementation baseline для остальных Lessons:
-одна primary capability, полная Learning Cycle, interaction only where thinking
-changes. До явного одобрения Course Owner она остаётся кандидатом.
+Эта калибровка применяется к остальным Lessons: одна primary capability, полная
+Learning Cycle, interaction only where thinking changes.
 
 ## Coverage audit
 

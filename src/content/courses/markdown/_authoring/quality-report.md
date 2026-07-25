@@ -2,7 +2,7 @@
 
 Версия: 2
 
-Статус: завершённый Authoring Agent self-review; одобрение Course Owner не зафиксировано
+Статус: Authoring Agent self-review завершён; Course Owner approval зафиксирован
 
 Дата: 2026-07-25
 
@@ -121,7 +121,6 @@ for an optional revisit.
 ## Remaining limitations
 
 - independent subject-matter expert review was not performed; this report is Authoring Agent self-review, not expert approval;
-- Course Owner approval of the Brief, Blueprint and Reference Lesson was not present in issue #23 at review time and remains an external publication gate;
 - external specifications and GitHub.com may change after `verifiedAt`;
 - the Course covers a bounded CommonMark/GFM working subset, not every parser edge case;
 - keyboard and responsive QA use the repository browser target and do not replace manual assistive-technology testing across all platforms.
