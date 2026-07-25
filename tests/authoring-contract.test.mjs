@@ -1545,7 +1545,7 @@ test("rejects legacy display-string choice Knowledge Checks", async () => {
       assert.notEqual(result.exitCode, 0);
       assert.match(
         result.output,
-        /Knowledge Check 1 type must be single or multiple/i,
+        /Knowledge Check 1 type must be one of single, multiple, matching, ordering, exact, or numeric/i,
       );
       assert.match(
         result.output,
@@ -1643,6 +1643,335 @@ test("rejects duplicate and unknown multiple-choice answer IDs", async () => {
       assert.match(
         result.output,
         /Knowledge Check 1 multiple answer references unknown option ID missing-option/i,
+      );
+    },
+  );
+});
+
+test("accepts matching Knowledge Checks with stable pairs and feedback", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}
+<KnowledgeCheck
+  type="matching"
+  prompt="Match each accessibility input to its purpose."
+  outcomes={["identify-image-purpose"]}
+  pairs={[
+    {
+      id: "surrounding-context",
+      left: "Surrounding context",
+      right: "Identifies the information the image contributes",
+      feedback: "Context determines the image's purpose.",
+    },
+    {
+      id: "alternative-text",
+      left: "Alternative text",
+      right: "Communicates that information without the image",
+      feedback: "Alternative text provides an equivalent route to the information.",
+    },
+  ]}
+  explanation="Useful alternative text follows from the image's purpose in context."
+/>
+`,
+    },
+    (result) => assert.equal(result.exitCode, 0, result.output),
+  );
+});
+
+test("rejects duplicate IDs and malformed matching pairs", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}
+<KnowledgeCheck
+  type="matching"
+  prompt="Match each accessibility input to its purpose."
+  outcomes={["identify-image-purpose"]}
+  pairs={[
+    {
+      id: "context",
+      left: "Surrounding context",
+      right: "",
+      feedback: "Context determines the image's purpose.",
+    },
+    {
+      id: "context",
+      left: "Alternative text",
+      feedback: "",
+    },
+  ]}
+  explanation="Useful alternative text follows from the image's purpose in context."
+/>
+`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Knowledge Check \d+ pair 1 requires a non-empty right value/i,
+      );
+      assert.match(
+        result.output,
+        /Knowledge Check \d+ pair 2 id context must be unique/i,
+      );
+      assert.match(
+        result.output,
+        /Knowledge Check \d+ pair 2 requires non-empty response-specific feedback/i,
+      );
+    },
+  );
+});
+
+test("accepts ordering Knowledge Checks whose items declare the correct order", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}
+<KnowledgeCheck
+  type="ordering"
+  prompt="Put the description workflow in order."
+  outcomes={["identify-image-purpose"]}
+  items={[
+    { id: "inspect-context", text: "Inspect the surrounding context" },
+    { id: "identify-purpose", text: "Identify the image's purpose" },
+    { id: "write-equivalent", text: "Write an equivalent description" },
+  ]}
+  explanation="Context and purpose come before wording."
+/>
+`,
+    },
+    (result) => assert.equal(result.exitCode, 0, result.output),
+  );
+});
+
+test("rejects malformed and duplicate ordering items", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}
+<KnowledgeCheck
+  type="ordering"
+  prompt="Put the description workflow in order."
+  outcomes={["identify-image-purpose"]}
+  items={[
+    { id: "step", text: "Inspect the surrounding context", position: 1 },
+    { id: "step", text: "   " },
+  ]}
+  explanation="Context and purpose come before wording."
+/>
+`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Knowledge Check \d+ item 1 does not allow authored fields: position/i,
+      );
+      assert.match(
+        result.output,
+        /Knowledge Check \d+ item 2 id step must be unique/i,
+      );
+      assert.match(
+        result.output,
+        /Knowledge Check \d+ item 2 requires non-empty learner-facing text/i,
+      );
+    },
+  );
+});
+
+test("rejects ambiguous matching values and ordering text", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}
+<KnowledgeCheck
+  type="matching"
+  prompt="Match each input."
+  outcomes={["identify-image-purpose"]}
+  pairs={[
+    { id: "first", left: "Context", right: "Purpose", feedback: "First." },
+    { id: "second", left: "Context ", right: "Purpose ", feedback: "Second." },
+  ]}
+  explanation="Each side must identify one unambiguous pair."
+/>
+<KnowledgeCheck
+  type="ordering"
+  prompt="Put the steps in order."
+  outcomes={["identify-image-purpose"]}
+  items={[
+    { id: "first-step", text: "Inspect context" },
+    { id: "second-step", text: "Inspect context " },
+  ]}
+  explanation="Each position must have one distinguishable item."
+/>
+`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Knowledge Check \d+ pair 2 left value must be unique/i,
+      );
+      assert.match(
+        result.output,
+        /Knowledge Check \d+ pair 2 right value must be unique/i,
+      );
+      assert.match(
+        result.output,
+        /Knowledge Check \d+ item 2 learner-facing text must be unique/i,
+      );
+    },
+  );
+});
+
+test("accepts exact Knowledge Checks with explicit trimming and case normalization", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}
+<KnowledgeCheck
+  type="exact"
+  prompt="Name the text alternative attribute."
+  outcomes={["identify-image-purpose"]}
+  acceptedAnswers={["alt", "alt attribute"]}
+  normalization={{ trim: true, case: "insensitive" }}
+  explanation="HTML images use the alt attribute for their text alternative."
+/>
+`,
+    },
+    (result) => assert.equal(result.exitCode, 0, result.output),
+  );
+});
+
+test("rejects invalid or ambiguous exact-answer normalization", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}
+<KnowledgeCheck
+  type="exact"
+  prompt="Name the text alternative attribute."
+  outcomes={["identify-image-purpose"]}
+  acceptedAnswers={["ALT", " alt "]}
+  normalization={{ trim: true, case: "fold", locale: "en" }}
+  explanation="HTML images use the alt attribute for their text alternative."
+/>
+`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Knowledge Check \d+ normalization does not allow authored fields: locale/i,
+      );
+      assert.match(
+        result.output,
+        /Knowledge Check \d+ normalization case must be sensitive or insensitive/i,
+      );
+    },
+  );
+
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}
+<KnowledgeCheck
+  type="exact"
+  prompt="Name the text alternative attribute."
+  outcomes={["identify-image-purpose"]}
+  acceptedAnswers={["ALT", " alt "]}
+  normalization={{ trim: true, case: "insensitive" }}
+  explanation="HTML images use the alt attribute for their text alternative."
+/>
+`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Knowledge Check \d+ acceptedAnswers become ambiguous after normalization/i,
+      );
+    },
+  );
+});
+
+test("accepts numeric Knowledge Checks with explicit tolerance and unit", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}
+<KnowledgeCheck
+  type="numeric"
+  prompt="How many characters are in the alt attribute name?"
+  outcomes={["identify-image-purpose"]}
+  answer={3}
+  tolerance={0}
+  unit="characters"
+  explanation="The attribute name is written as three characters: alt."
+/>
+`,
+    },
+    (result) => assert.equal(result.exitCode, 0, result.output),
+  );
+});
+
+test("rejects invalid numeric answers, tolerance, and units", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}
+<KnowledgeCheck
+  type="numeric"
+  prompt="How many characters are in the alt attribute name?"
+  outcomes={["identify-image-purpose"]}
+  answer="3"
+  tolerance={-1}
+  unit={3}
+  explanation="The attribute name is written as three characters: alt."
+/>
+`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Knowledge Check \d+ numeric answer must be a finite number/i,
+      );
+      assert.match(
+        result.output,
+        /Knowledge Check \d+ tolerance must be a finite non-negative number/i,
+      );
+      assert.match(
+        result.output,
+        /Knowledge Check \d+ unit must be a non-empty static string when declared/i,
+      );
+    },
+  );
+});
+
+test("rejects response props from another Knowledge Check type", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}
+<KnowledgeCheck
+  type="exact"
+  prompt="Name the text alternative attribute."
+  outcomes={["identify-image-purpose"]}
+  acceptedAnswers={["alt"]}
+  normalization={{ trim: true, case: "insensitive" }}
+  options={[]}
+  answer="alt"
+  explanation="HTML images use the alt attribute."
+/>
+`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Knowledge Check \d+ does not allow authored props: options, answer/i,
       );
     },
   );

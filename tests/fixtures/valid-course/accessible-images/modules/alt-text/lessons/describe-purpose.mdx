@@ -66,3 +66,61 @@ illustrative, not evidence about a real publishing team.
   answer="purpose-in-context"
   explanation="The surrounding context determines which information a screen-reader user needs from the image."
 />
+
+<KnowledgeCheck
+  type="matching"
+  prompt="Match each accessibility input to its purpose."
+  outcomes={["identify-image-purpose"]}
+  pairs={[
+    {
+      id: "surrounding-context",
+      left: "Surrounding context",
+      right: "Identifies the information the image contributes",
+      feedback: "Context determines the image's purpose.",
+    },
+    {
+      id: "alternative-text",
+      left: "Alternative text",
+      right: "Communicates that information without the image",
+      feedback: "Alternative text provides an equivalent route to the information.",
+    },
+    {
+      id: "file-name",
+      left: "File name",
+      right: "Identifies the stored asset",
+      feedback: "A file name identifies the asset rather than its purpose.",
+    },
+  ]}
+  explanation="The image's context establishes its purpose; alternative text communicates that purpose without the image."
+/>
+
+<KnowledgeCheck
+  type="ordering"
+  prompt="Put the description workflow in order."
+  outcomes={["identify-image-purpose"]}
+  items={[
+    { id: "inspect-context", text: "Inspect the surrounding context" },
+    { id: "identify-purpose", text: "Identify the image's purpose" },
+    { id: "write-equivalent", text: "Write an equivalent description" },
+  ]}
+  explanation="Context and purpose come before wording."
+/>
+
+<KnowledgeCheck
+  type="exact"
+  prompt="Name the HTML attribute used for an image's text alternative."
+  outcomes={["identify-image-purpose"]}
+  acceptedAnswers={["alt", "alt attribute"]}
+  normalization={{ trim: true, case: "insensitive" }}
+  explanation="HTML images use the alt attribute for their text alternative."
+/>
+
+<KnowledgeCheck
+  type="numeric"
+  prompt="How many characters are in the alt attribute name?"
+  outcomes={["identify-image-purpose"]}
+  answer={3}
+  tolerance={0.25}
+  unit="characters"
+  explanation="The attribute name is written as three characters: alt."
+/>

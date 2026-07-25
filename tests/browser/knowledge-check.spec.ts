@@ -53,6 +53,7 @@ test("single-choice Knowledge Check announces response-specific feedback and all
     "aria-pressed",
     "false",
   );
+
 });
 
 test("multiple-choice Knowledge Check diagnoses every chosen response and supports keyboard revision", async ({
@@ -106,6 +107,265 @@ test("multiple-choice Knowledge Check diagnoses every chosen response and suppor
     "aria-pressed",
     "false",
   );
+
+  await page.reload();
+  await expect(
+    page.locator('[data-knowledge-check][data-type="multiple"] input:checked'),
+  ).toHaveCount(0);
+  await expect(
+    page.locator(
+      '[data-knowledge-check][data-type="multiple"] [data-feedback]',
+    ),
+  ).toBeHidden();
+});
+
+test("matching Knowledge Check shuffles opaque values and supports keyboard retries", async ({
+  page,
+}) => {
+  await page.goto("./courses/accessible-images/lessons/describe-purpose/");
+  const check = page.locator('[data-knowledge-check][data-type="matching"]');
+  const feedback = check.locator("[data-feedback]");
+  const context = check.getByRole("combobox", {
+    name: "Соответствие для «Surrounding context»",
+  });
+  const alternativeText = check.getByRole("combobox", {
+    name: "Соответствие для «Alternative text»",
+  });
+  const fileName = check.getByRole("combobox", {
+    name: "Соответствие для «File name»",
+  });
+
+  const presentedOptions = await context
+    .locator("option:not([value=''])")
+    .evaluateAll((options) =>
+      options.map((option) => ({
+        text: option.textContent,
+        value: (option as HTMLOptionElement).value,
+      })),
+    );
+  const optionValues = presentedOptions.map((option) => option.value);
+  expect(optionValues).not.toEqual([
+    "surrounding-context",
+    "alternative-text",
+    "file-name",
+  ]);
+  expect(presentedOptions.map((option) => option.text)).not.toEqual([
+    "Identifies the information the image contributes",
+    "Communicates that information without the image",
+    "Identifies the stored asset",
+  ]);
+  expect(new Set(presentedOptions.map((option) => option.text))).toEqual(
+    new Set([
+      "Identifies the information the image contributes",
+      "Communicates that information without the image",
+      "Identifies the stored asset",
+    ]),
+  );
+
+  async function chooseWithKeyboard(
+    select: typeof context,
+    label: string,
+  ) {
+    const optionIndex = await select.locator("option").evaluateAll(
+      (options, target) =>
+        options.findIndex(
+          (option) => (option as HTMLOptionElement).label === target,
+        ),
+      label,
+    );
+    expect(optionIndex).toBeGreaterThan(0);
+    await select.focus();
+    await page.keyboard.type(label);
+    await page.keyboard.press("Tab");
+    await expect(select).toHaveValue(
+      await select.locator("option").nth(optionIndex).getAttribute("value") ?? "",
+    );
+  }
+
+  await chooseWithKeyboard(
+    context,
+    "Communicates that information without the image",
+  );
+  await chooseWithKeyboard(
+    alternativeText,
+    "Identifies the information the image contributes",
+  );
+  await chooseWithKeyboard(fileName, "Identifies the stored asset");
+  await check.getByRole("button", { name: "Проверить ответ" }).press("Enter");
+  await expect(feedback).toContainText("Почти! Попробуй ещё раз.");
+  await expect(feedback).toContainText(
+    "Context determines the image's purpose.",
+  );
+
+  await chooseWithKeyboard(
+    context,
+    "Identifies the information the image contributes",
+  );
+  await chooseWithKeyboard(
+    alternativeText,
+    "Communicates that information without the image",
+  );
+  await check.getByRole("button", { name: "Проверить ответ" }).press("Enter");
+  await expect(feedback).toContainText("Верно!");
+  await expect(feedback).toContainText(
+    "The image's context establishes its purpose",
+  );
+  await expect(page.locator("[data-completion-toggle]")).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+
+  await page.reload();
+  await expect(
+    page.locator(
+      '[data-knowledge-check][data-type="matching"] select option:checked',
+    ),
+  ).toHaveText([
+    "Выбери соответствие",
+    "Выбери соответствие",
+    "Выбери соответствие",
+  ]);
+  await expect(
+    page.locator('[data-knowledge-check][data-type="matching"] [data-feedback]'),
+  ).toBeHidden();
+});
+
+test("ordering Knowledge Check announces keyboard moves and allows retries", async ({
+  page,
+}) => {
+  await page.goto("./courses/accessible-images/lessons/describe-purpose/");
+  const check = page.locator('[data-knowledge-check][data-type="ordering"]');
+  const list = check.locator("[data-ordering-list]");
+  const feedback = check.locator("[data-feedback]");
+  const authoredOrder = [
+    "Inspect the surrounding context",
+    "Identify the image's purpose",
+    "Write an equivalent description",
+  ];
+
+  const initialRows = await list.locator("[data-ordering-item]").evaluateAll(
+    (rows) =>
+      rows.map((row) => ({
+        key: (row as HTMLElement).dataset.orderKey,
+        text: row.querySelector("[data-ordering-text]")?.textContent,
+      })),
+  );
+  expect(initialRows.map((row) => row.text)).not.toEqual(authoredOrder);
+  expect(initialRows.map((row) => row.key)).not.toEqual([
+    "inspect-context",
+    "identify-purpose",
+    "write-equivalent",
+  ]);
+
+  await check.getByRole("button", { name: "Проверить ответ" }).press("Enter");
+  await expect(feedback).toContainText("Почти! Попробуй ещё раз.");
+
+  for (const [desiredIndex, text] of authoredOrder.entries()) {
+    const row = list
+      .locator("[data-ordering-item]")
+      .filter({ hasText: text });
+    let currentIndex = await row.evaluate((item) =>
+      [...(item.parentElement?.children ?? [])].indexOf(item),
+    );
+    while (currentIndex > desiredIndex) {
+      await row
+        .getByRole("button", { name: `Переместить «${text}» выше` })
+        .press("Enter");
+      currentIndex -= 1;
+    }
+  }
+  await expect(check.locator("[data-ordering-announcement]")).toContainText(
+    /позиция \d из 3/,
+  );
+  await expect(list.locator("[data-ordering-text]")).toHaveText(authoredOrder);
+
+  await check.getByRole("button", { name: "Проверить ответ" }).press("Enter");
+  await expect(feedback).toContainText("Верно!");
+  await expect(feedback).toContainText("Context and purpose come before wording.");
+  await expect(page.locator("[data-completion-toggle]")).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+
+  await page.reload();
+  await expect(
+    page.locator('[data-knowledge-check][data-type="ordering"] [data-feedback]'),
+  ).toBeHidden();
+});
+
+test("exact Knowledge Check applies declared normalization and clears on reload", async ({
+  page,
+}) => {
+  await page.goto("./courses/accessible-images/lessons/describe-purpose/");
+  const check = page.locator('[data-knowledge-check][data-type="exact"]');
+  const answer = check.getByRole("textbox", { name: "Ответ" });
+  const feedback = check.locator("[data-feedback]");
+
+  await answer.focus();
+  await page.keyboard.type("title");
+  await page.keyboard.press("Enter");
+  await expect(feedback).toContainText("Почти! Попробуй ещё раз.");
+
+  await answer.fill("");
+  await answer.focus();
+  await page.keyboard.type("  ALT  ");
+  await page.keyboard.press("Enter");
+  await expect(feedback).toContainText("Верно!");
+  await expect(feedback).toContainText(
+    "HTML images use the alt attribute for their text alternative.",
+  );
+  await expect(page.locator("[data-completion-toggle]")).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+
+  await page.reload();
+  const reloaded = page.locator(
+    '[data-knowledge-check][data-type="exact"]',
+  );
+  await expect(reloaded.getByRole("textbox", { name: "Ответ" })).toHaveValue("");
+  await expect(reloaded.locator("[data-feedback]")).toBeHidden();
+});
+
+test("numeric Knowledge Check applies tolerance, exposes its unit, and allows retry", async ({
+  page,
+}) => {
+  await page.goto("./courses/accessible-images/lessons/describe-purpose/");
+  const check = page.locator('[data-knowledge-check][data-type="numeric"]');
+  const answer = check.getByRole("spinbutton", {
+    name: "Ответ, единица: characters",
+  });
+  const feedback = check.locator("[data-feedback]");
+  await expect(check.getByText("characters", { exact: true })).toBeVisible();
+
+  await answer.focus();
+  await page.keyboard.type("4");
+  await page.keyboard.press("Enter");
+  await expect(feedback).toContainText("Почти! Попробуй ещё раз.");
+
+  await answer.fill("");
+  await answer.focus();
+  await page.keyboard.type("3.2");
+  await page.keyboard.press("Enter");
+  await expect(feedback).toContainText("Верно!");
+  await expect(feedback).toContainText(
+    "The attribute name is written as three characters: alt.",
+  );
+  await expect(page.locator("[data-completion-toggle]")).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+
+  await page.reload();
+  const reloaded = page.locator(
+    '[data-knowledge-check][data-type="numeric"]',
+  );
+  await expect(
+    reloaded.getByRole("spinbutton", {
+      name: "Ответ, единица: characters",
+    }),
+  ).toHaveValue("");
+  await expect(reloaded.locator("[data-feedback]")).toBeHidden();
 });
 
 test("Knowledge Check answers and feedback are cleared without persisting answer history", async ({

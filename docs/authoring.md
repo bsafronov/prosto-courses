@@ -409,12 +409,14 @@ Response-specific props are:
 
 - `single`: `options` is an array of `{ id, text, feedback }`; `answer` is one option ID.
 - `multiple`: `options` has the same shape; `answer` is a non-empty array of unique option IDs.
-- `matching`: `pairs` is an array of `{ id, left, right, feedback }`; the platform shuffles the right-hand values.
-- `ordering`: `items` is an array of `{ id, text }` in the correct order; the platform shuffles them for the learner.
-- `exact`: `acceptedAnswers` is a non-empty array of strings and `normalization` explicitly declares trimming and case handling.
-- `numeric`: `answer` is a number, `tolerance` is a non-negative number, and `unit` is required when the quantity has one.
+- `matching`: `pairs` is an array of `{ id, left, right, feedback }`; IDs, left values, and right values are unique, and the platform shuffles the presented right-hand values.
+- `ordering`: `items` is an array of unique `{ id, text }` objects in the correct order; the platform shuffles them for the learner.
+- `exact`: `acceptedAnswers` is a non-empty array of strings and `normalization` is exactly `{ trim: boolean, case: "sensitive" | "insensitive" }`. Accepted answers must remain non-empty and distinct after that normalization.
+- `numeric`: `answer` is a finite number, `tolerance` is a finite non-negative number measured in the same unit, and `unit` is a non-empty string whenever the quantity is not unitless.
 
 IDs are unique and never derived from learner-facing display text. Option-specific feedback diagnoses why that response is or is not appropriate. Do not expose correct ordering or matching through IDs or initial presentation.
+
+Matching uses labelled native selection controls. Ordering exposes labelled move-up and move-down buttons and announces each new position. Exact and numeric fields have explicit labels; a numeric unit is both visible and included in the field's accessible name.
 
 Example:
 

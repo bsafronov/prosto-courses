@@ -316,6 +316,19 @@ function positiveIntegerAttribute(source, name) {
   return Number.isSafeInteger(value) && value > 0 ? value : undefined;
 }
 
+function numberAttribute(source, name) {
+  const expression = componentAttribute(source, name)?.expression?.trim();
+  if (typeof expression !== "string") return;
+  try {
+    const value = JSON.parse(expression);
+    return typeof value === "number" && Number.isFinite(value)
+      ? value
+      : undefined;
+  } catch {
+    return;
+  }
+}
+
 function objectArrayAttribute(source, name) {
   const attribute = componentAttribute(source, name);
   if (!attribute) return { present: false };
@@ -558,13 +571,28 @@ function openingComponentTags(source) {
 }
 
 function validateKnowledgeChecks(body, file, alignment) {
+  const sharedProps = new Set(["explanation", "outcomes", "prompt", "type"]);
+  const responseProps = {
+    single: ["answer", "options"],
+    multiple: ["answer", "options"],
+    matching: ["pairs"],
+    ordering: ["items"],
+    exact: ["acceptedAnswers", "normalization"],
+    numeric: ["answer", "tolerance", "unit"],
+  };
   const allowedProps = new Set([
+    "acceptedAnswers",
     "answer",
     "explanation",
+    "items",
+    "normalization",
     "options",
     "outcomes",
+    "pairs",
     "prompt",
+    "tolerance",
     "type",
+    "unit",
   ]);
   const checks = openingComponentTags(withoutFencedCode(body)).filter(
     (tag) => tag.name === "KnowledgeCheck",
@@ -580,12 +608,22 @@ function validateKnowledgeChecks(body, file, alignment) {
     }
 
     const propNames = attributeNames(check.source);
+    const type = stringAttribute(check.source, "type");
     for (const prop of allowedProps) {
       if (propNames.filter((name) => name === prop).length > 1) {
         report(file, `${label} must not declare ${prop} more than once`);
       }
     }
-    const authoredProps = propNames.filter((name) => !allowedProps.has(name));
+    const permittedProps =
+      Object.hasOwn(responseProps, type)
+        ? new Set([
+            ...sharedProps,
+            ...responseProps[type],
+          ])
+        : allowedProps;
+    const authoredProps = propNames.filter(
+      (name) => !permittedProps.has(name),
+    );
     if (authoredProps.length > 0) {
       report(
         file,
@@ -593,11 +631,22 @@ function validateKnowledgeChecks(body, file, alignment) {
       );
     }
 
-    const type = stringAttribute(check.source, "type");
     const prompt = stringAttribute(check.source, "prompt");
     const explanation = stringAttribute(check.source, "explanation");
-    if (!["single", "multiple"].includes(type)) {
-      report(file, `${label} type must be single or multiple`);
+    if (
+      ![
+        "single",
+        "multiple",
+        "matching",
+        "ordering",
+        "exact",
+        "numeric",
+      ].includes(type)
+    ) {
+      report(
+        file,
+        `${label} type must be one of single, multiple, matching, ordering, exact, or numeric`,
+      );
     }
     if (!prompt?.trim()) report(file, `${label} requires a non-empty prompt`);
     if (!explanation?.trim()) {
@@ -622,6 +671,227 @@ function validateKnowledgeChecks(body, file, alignment) {
         file,
         `${label} must support at least one Course Learning Outcome`,
       );
+    }
+
+    if (type === "matching") {
+      const pairs = objectArrayAttribute(check.source, "pairs");
+      if (
+        !Array.isArray(pairs.value) ||
+        pairs.value.length < 2 ||
+        pairs.value.some(
+          (pair) =>
+            typeof pair !== "object" ||
+            pair === null ||
+            Array.isArray(pair),
+        )
+      ) {
+        report(
+          file,
+          `${label} pairs must be a static array of at least two pair objects`,
+        );
+        continue;
+      }
+
+      const pairIds = new Set();
+      const pairValues = {
+        left: new Set(),
+        right: new Set(),
+      };
+      for (const [pairIndex, pair] of pairs.value.entries()) {
+        const pairLabel = `${label} pair ${pairIndex + 1}`;
+        const authoredFields = Object.keys(pair ?? {}).filter(
+          (field) => !["feedback", "id", "left", "right"].includes(field),
+        );
+        if (authoredFields.length > 0) {
+          report(
+            file,
+            `${pairLabel} does not allow authored fields: ${authoredFields.join(", ")}`,
+          );
+        }
+        if (typeof pair?.id !== "string" || !slugPattern.test(pair.id)) {
+          report(
+            file,
+            `${pairLabel} id must use a stable lowercase-hyphen form`,
+          );
+        } else if (pairIds.has(pair.id)) {
+          report(file, `${pairLabel} id ${pair.id} must be unique`);
+        } else {
+          pairIds.add(pair.id);
+        }
+        for (const field of ["left", "right"]) {
+          if (typeof pair?.[field] !== "string" || !pair[field].trim()) {
+            report(file, `${pairLabel} requires a non-empty ${field} value`);
+          } else {
+            const value = pair[field].trim();
+            if (pairValues[field].has(value)) {
+              report(file, `${pairLabel} ${field} value must be unique`);
+            } else {
+              pairValues[field].add(value);
+            }
+          }
+        }
+        if (typeof pair?.feedback !== "string" || !pair.feedback.trim()) {
+          report(
+            file,
+            `${pairLabel} requires non-empty response-specific feedback`,
+          );
+        }
+      }
+      continue;
+    }
+
+    if (type === "ordering") {
+      const items = objectArrayAttribute(check.source, "items");
+      if (
+        !Array.isArray(items.value) ||
+        items.value.length < 2 ||
+        items.value.some(
+          (item) =>
+            typeof item !== "object" ||
+            item === null ||
+            Array.isArray(item),
+        )
+      ) {
+        report(
+          file,
+          `${label} items must be a static array of at least two item objects in correct order`,
+        );
+        continue;
+      }
+
+      const itemIds = new Set();
+      const itemTexts = new Set();
+      for (const [itemIndex, item] of items.value.entries()) {
+        const itemLabel = `${label} item ${itemIndex + 1}`;
+        const authoredFields = Object.keys(item ?? {}).filter(
+          (field) => !["id", "text"].includes(field),
+        );
+        if (authoredFields.length > 0) {
+          report(
+            file,
+            `${itemLabel} does not allow authored fields: ${authoredFields.join(", ")}`,
+          );
+        }
+        if (typeof item?.id !== "string" || !slugPattern.test(item.id)) {
+          report(
+            file,
+            `${itemLabel} id must use a stable lowercase-hyphen form`,
+          );
+        } else if (itemIds.has(item.id)) {
+          report(file, `${itemLabel} id ${item.id} must be unique`);
+        } else {
+          itemIds.add(item.id);
+        }
+        if (typeof item?.text !== "string" || !item.text.trim()) {
+          report(file, `${itemLabel} requires non-empty learner-facing text`);
+        } else if (itemTexts.has(item.text.trim())) {
+          report(file, `${itemLabel} learner-facing text must be unique`);
+        } else {
+          itemTexts.add(item.text.trim());
+        }
+      }
+      continue;
+    }
+
+    if (type === "exact") {
+      const acceptedAnswers = stringArrayAttribute(
+        check.source,
+        "acceptedAnswers",
+      );
+      if (
+        !acceptedAnswers.value?.length ||
+        acceptedAnswers.value.some((answer) => answer.length === 0)
+      ) {
+        report(
+          file,
+          `${label} acceptedAnswers must be a non-empty static array of non-empty strings`,
+        );
+      }
+
+      const normalization = objectArrayAttribute(
+        check.source,
+        "normalization",
+      ).value;
+      if (
+        typeof normalization !== "object" ||
+        normalization === null ||
+        Array.isArray(normalization)
+      ) {
+        report(
+          file,
+          `${label} normalization must explicitly declare trim and case`,
+        );
+        continue;
+      }
+      const authoredFields = Object.keys(normalization).filter(
+        (field) => !["case", "trim"].includes(field),
+      );
+      if (authoredFields.length > 0) {
+        report(
+          file,
+          `${label} normalization does not allow authored fields: ${authoredFields.join(", ")}`,
+        );
+      }
+      if (typeof normalization.trim !== "boolean") {
+        report(file, `${label} normalization trim must be true or false`);
+      }
+      if (!["sensitive", "insensitive"].includes(normalization.case)) {
+        report(
+          file,
+          `${label} normalization case must be sensitive or insensitive`,
+        );
+      }
+
+      if (
+        acceptedAnswers.value?.length &&
+        typeof normalization.trim === "boolean" &&
+        ["sensitive", "insensitive"].includes(normalization.case)
+      ) {
+        const normalized = acceptedAnswers.value.map((answer) => {
+          const trimmed = normalization.trim ? answer.trim() : answer;
+          return normalization.case === "insensitive"
+            ? trimmed.toLowerCase()
+            : trimmed;
+        });
+        if (new Set(normalized).size !== normalized.length) {
+          report(
+            file,
+            `${label} acceptedAnswers become ambiguous after normalization`,
+          );
+        }
+        if (normalized.some((answer) => answer.length === 0)) {
+          report(
+            file,
+            `${label} acceptedAnswers must remain non-empty after normalization`,
+          );
+        }
+      }
+      continue;
+    }
+
+    if (type === "numeric") {
+      const answer = numberAttribute(check.source, "answer");
+      if (answer === undefined) {
+        report(file, `${label} numeric answer must be a finite number`);
+      }
+      const tolerance = numberAttribute(check.source, "tolerance");
+      if (tolerance === undefined || tolerance < 0) {
+        report(
+          file,
+          `${label} tolerance must be a finite non-negative number`,
+        );
+      }
+      const unit = componentAttribute(check.source, "unit");
+      if (
+        unit &&
+        (typeof unit.value !== "string" || unit.value.trim() === "")
+      ) {
+        report(
+          file,
+          `${label} unit must be a non-empty static string when declared`,
+        );
+      }
+      continue;
     }
 
     const options = objectArrayAttribute(check.source, "options");
