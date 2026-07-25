@@ -43,8 +43,26 @@ illustrative, not evidence about a real publishing team.
 />
 
 <KnowledgeCheck
+  type="single"
   prompt="What should determine an image description?"
-  options={["Its file name", "Its purpose in context", "Its pixel dimensions"]}
-  answer="Its purpose in context"
+  outcomes={["identify-image-purpose"]}
+  options={[
+    {
+      id: "file-name",
+      text: "Its file name",
+      feedback: "A file name identifies the asset, but it does not explain the image's purpose in this context.",
+    },
+    {
+      id: "purpose-in-context",
+      text: "Its purpose in context",
+      feedback: "The purpose identifies the information a screen-reader user needs from this image.",
+    },
+    {
+      id: "pixel-dimensions",
+      text: "Its pixel dimensions",
+      feedback: "Pixel dimensions describe the file, not the meaning the image contributes.",
+    },
+  ]}
+  answer="purpose-in-context"
   explanation="The surrounding context determines which information a screen-reader user needs from the image."
 />

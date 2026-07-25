@@ -13,3 +13,28 @@ time:
 ## Remove redundant phrasing
 
 Screen readers already announce an image. Begin with its meaning instead of phrases such as “image of.”
+
+<KnowledgeCheck
+  type="multiple"
+  prompt="Which revisions remove redundant wording without removing meaning?"
+  outcomes={["write-concise-alt-text"]}
+  options={[
+    {
+      id: "remove-image-of",
+      text: "Remove “image of” from “Image of a warning sign”",
+      feedback: "Screen readers already announce the image, so this phrase repeats information.",
+    },
+    {
+      id: "keep-warning",
+      text: "Keep the words “warning sign”",
+      feedback: "Those words communicate the image's meaning and should remain.",
+    },
+    {
+      id: "remove-warning",
+      text: "Remove the word “warning”",
+      feedback: "Removing “warning” would discard the sign's purpose rather than remove redundancy.",
+    },
+  ]}
+  answer={["remove-image-of", "keep-warning"]}
+  explanation="Concise alternative text removes wording already supplied by the interface while preserving the image's purpose."
+/>

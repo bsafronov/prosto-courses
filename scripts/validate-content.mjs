@@ -557,64 +557,165 @@ function openingComponentTags(source) {
   return tags;
 }
 
-function validateKnowledgeChecks(body, file) {
-  body = withoutFencedCode(body);
-  const openingTags = [...body.matchAll(/<KnowledgeCheck\b([\s\S]*?)\/>/g)];
-  const mentions = [...body.matchAll(/<KnowledgeCheck\b/g)];
+function validateKnowledgeChecks(body, file, alignment) {
+  const allowedProps = new Set([
+    "answer",
+    "explanation",
+    "options",
+    "outcomes",
+    "prompt",
+    "type",
+  ]);
+  const checks = openingComponentTags(withoutFencedCode(body)).filter(
+    (tag) => tag.name === "KnowledgeCheck",
+  );
 
-  if (openingTags.length !== mentions.length) {
-    report(
-      file,
-      "Knowledge Check must be a self-closing component with static props",
-    );
-  }
-
-  for (const [index, match] of openingTags.entries()) {
-    const source = match[1];
+  for (const [index, check] of checks.entries()) {
     const label = `Knowledge Check ${index + 1}`;
-    const prompt = stringAttribute(source, "prompt");
-    const answer = stringAttribute(source, "answer");
-    const explanation = stringAttribute(source, "explanation");
-    const optionsMatch = source.match(
-      /\boptions\s*=\s*\{\s*(\[[\s\S]*?\])\s*\}/,
-    );
+    if (!check.selfClosing) {
+      report(
+        file,
+        `${label} must be a self-closing component with static props`,
+      );
+    }
 
+    const propNames = attributeNames(check.source);
+    for (const prop of allowedProps) {
+      if (propNames.filter((name) => name === prop).length > 1) {
+        report(file, `${label} must not declare ${prop} more than once`);
+      }
+    }
+    const authoredProps = propNames.filter((name) => !allowedProps.has(name));
+    if (authoredProps.length > 0) {
+      report(
+        file,
+        `${label} does not allow authored props: ${authoredProps.join(", ")}`,
+      );
+    }
+
+    const type = stringAttribute(check.source, "type");
+    const prompt = stringAttribute(check.source, "prompt");
+    const explanation = stringAttribute(check.source, "explanation");
+    if (!["single", "multiple"].includes(type)) {
+      report(file, `${label} type must be single or multiple`);
+    }
     if (!prompt?.trim()) report(file, `${label} requires a non-empty prompt`);
-    if (!answer?.trim()) report(file, `${label} requires a non-empty answer`);
     if (!explanation?.trim()) {
       report(file, `${label} requires a non-empty explanation`);
     }
-    if (!optionsMatch) {
-      report(file, `${label} requires an options array of strings`);
-      continue;
+
+    const outcomes = stringArrayAttribute(check.source, "outcomes");
+    if (outcomes.present && !outcomes.value) {
+      report(
+        file,
+        `${label} outcomes must be a static array of Learning Outcome IDs`,
+      );
+    }
+    if (alignment) {
+      alignment.registerOutcomeReferences({
+        file,
+        label,
+        outcomeIds: outcomes.value,
+      });
+    } else if (!outcomes.value?.length) {
+      report(
+        file,
+        `${label} must support at least one Course Learning Outcome`,
+      );
     }
 
-    let options;
-    try {
-      options = JSON.parse(optionsMatch[1]);
-    } catch {
-      report(file, `${label} options must be a JSON array of strings`);
-      continue;
-    }
-
+    const options = objectArrayAttribute(check.source, "options");
     if (
-      !Array.isArray(options) ||
-      options.length < 2 ||
-      options.some(
-        (option) => typeof option !== "string" || option.trim() === "",
+      !Array.isArray(options.value) ||
+      options.value.length < 2 ||
+      options.value.some(
+        (option) =>
+          typeof option !== "object" ||
+          option === null ||
+          Array.isArray(option),
       )
     ) {
-      report(file, `${label} requires at least two non-empty string options`);
+      report(
+        file,
+        `${label} options must be a static array of at least two option objects`,
+      );
       continue;
     }
 
-    if (
-      new Set(options.map((option) => option.trim())).size !== options.length
-    ) {
-      report(file, `${label} requires unique options`);
+    const optionIds = new Set();
+    for (const [optionIndex, option] of options.value.entries()) {
+      const optionLabel = `${label} option ${optionIndex + 1}`;
+      const authoredFields = Object.keys(option ?? {}).filter(
+        (field) => !["feedback", "id", "text"].includes(field),
+      );
+      if (authoredFields.length > 0) {
+        report(
+          file,
+          `${optionLabel} does not allow authored fields: ${authoredFields.join(", ")}`,
+        );
+      }
+      if (
+        typeof option?.id !== "string" ||
+        !slugPattern.test(option.id)
+      ) {
+        report(
+          file,
+          `${optionLabel} id must use a stable lowercase-hyphen form`,
+        );
+      } else if (optionIds.has(option.id)) {
+        report(file, `${optionLabel} id ${option.id} must be unique`);
+      } else {
+        optionIds.add(option.id);
+      }
+      if (typeof option?.text !== "string" || !option.text.trim()) {
+        report(file, `${optionLabel} requires non-empty learner-facing text`);
+      }
+      if (
+        typeof option?.feedback !== "string" ||
+        !option.feedback.trim()
+      ) {
+        report(
+          file,
+          `${optionLabel} requires non-empty response-specific feedback`,
+        );
+      }
     }
-    if (answer && options.filter((option) => option === answer).length !== 1) {
-      report(file, `${label} answer must match exactly one option`);
+
+    if (type === "single") {
+      const answer = stringAttribute(check.source, "answer");
+      if (!answer?.trim()) {
+        report(file, `${label} single answer must be one option ID`);
+      } else if (!optionIds.has(answer)) {
+        report(
+          file,
+          `${label} single answer must reference exactly one option ID`,
+        );
+      }
+    } else if (type === "multiple") {
+      const answer = stringArrayAttribute(check.source, "answer");
+      if (!answer.value?.length) {
+        report(
+          file,
+          `${label} multiple answer must be a non-empty static array of option IDs`,
+        );
+        continue;
+      }
+      const answerIds = new Set();
+      for (const answerId of answer.value) {
+        if (answerIds.has(answerId)) {
+          report(
+            file,
+            `${label} multiple answer must contain unique option IDs`,
+          );
+        }
+        answerIds.add(answerId);
+        if (!optionIds.has(answerId)) {
+          report(
+            file,
+            `${label} multiple answer references unknown option ID ${answerId}`,
+          );
+        }
+      }
     }
   }
 }
@@ -1300,7 +1401,7 @@ async function validateLearnerSource(
   validateSharedMetadata(source.data, file);
   validateAuthoringBoundary(source.content, file);
   validateSemanticComponents(source.content, file, declaredPacks);
-  validateKnowledgeChecks(source.content, file);
+  validateKnowledgeChecks(source.content, file, alignment);
   validateReflections(source.content, file, alignment);
   validatePracticeTasks(source.content, file, owner, alignment);
   validateCallouts(source.content, file);

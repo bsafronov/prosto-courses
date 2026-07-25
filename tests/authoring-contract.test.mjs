@@ -1513,6 +1513,148 @@ test("rejects malformed promise, capability, outcome, and workload metadata", as
   );
 });
 
+test("rejects legacy display-string choice Knowledge Checks", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        source
+          .replace('  type="single"\n', "")
+          .replace('  outcomes={["identify-image-purpose"]}\n', "")
+          .replace(
+            /  options=\{\[[\s\S]*?\]\}\n  answer="purpose-in-context"/,
+            '  options={["Its file name", "Its purpose in context"]}\n  answer="Its purpose in context"',
+          ),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Knowledge Check 1 type must be single or multiple/i,
+      );
+      assert.match(
+        result.output,
+        /Knowledge Check 1 must support at least one Course Learning Outcome/i,
+      );
+      assert.match(
+        result.output,
+        /Knowledge Check 1 options must be a static array of at least two option objects/i,
+      );
+    },
+  );
+});
+
+test("rejects malformed and duplicate Knowledge Check option IDs", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        source
+          .replace('id: "file-name"', 'id: "Its file name"')
+          .replace('id: "pixel-dimensions"', 'id: "purpose-in-context"'),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Knowledge Check 1 option 1 id must use a stable lowercase-hyphen form/i,
+      );
+      assert.match(
+        result.output,
+        /Knowledge Check 1 option 3 id purpose-in-context must be unique/i,
+      );
+    },
+  );
+});
+
+test("requires learner-facing text and response-specific feedback for every choice", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        source
+          .replace('text: "Its file name"', 'text: "   "')
+          .replace(
+            'feedback: "Pixel dimensions describe the file, not the meaning the image contributes."',
+            'feedback: "   "',
+          ),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Knowledge Check 1 option 1 requires non-empty learner-facing text/i,
+      );
+      assert.match(
+        result.output,
+        /Knowledge Check 1 option 3 requires non-empty response-specific feedback/i,
+      );
+    },
+  );
+});
+
+test("rejects single-choice answers that do not reference one option ID", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        source.replace(
+          'answer="purpose-in-context"',
+          'answer="Its purpose in context"',
+        ),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Knowledge Check 1 single answer must reference exactly one option ID/i,
+      );
+    },
+  );
+});
+
+test("rejects duplicate and unknown multiple-choice answer IDs", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/edit-for-clarity.mdx": (source) =>
+        source.replace(
+          'answer={["remove-image-of", "keep-warning"]}',
+          'answer={["remove-image-of", "remove-image-of", "missing-option"]}',
+        ),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Knowledge Check 1 multiple answer must contain unique option IDs/i,
+      );
+      assert.match(
+        result.output,
+        /Knowledge Check 1 multiple answer references unknown option ID missing-option/i,
+      );
+    },
+  );
+});
+
+test("rejects duplicate and unknown Knowledge Check Outcome references", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        source.replace(
+          'outcomes={["identify-image-purpose"]}',
+          'outcomes={["identify-image-purpose", "identify-image-purpose", "missing-outcome"]}',
+        ),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Knowledge Check 1 has duplicate Learning Outcome ID identify-image-purpose/i,
+      );
+      assert.match(
+        result.output,
+        /Knowledge Check 1 references unknown Course Learning Outcome ID missing-outcome/i,
+      );
+    },
+  );
+});
+
 const fencedExamples = [
   ["fenced-import-example", "import"],
   ["fenced-knowledge-check-example", "Knowledge Check"],
@@ -1549,11 +1691,6 @@ const invalidFixtures = [
   ["missing-order", "requires an order"],
   ["non-integer-order", "must be an integer"],
   ["non-positive-order", "must be positive"],
-  ["duplicate-options", "unique options"],
-  ["whitespace-duplicate-options", "unique options"],
-  ["missing-answer", "answer"],
-  ["ambiguous-answer", "exactly one option"],
-  ["missing-explanation", "explanation"],
   ["presentation-import", "must not import presentation"],
   ["layout-selection", "must not select a layout"],
   ["invalid-language", "does not allow a language field"],
