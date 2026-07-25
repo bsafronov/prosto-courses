@@ -24,6 +24,7 @@ interface ControllerState {
   readiness: Readiness;
   updateReady: boolean;
   installed: boolean;
+  installPending: boolean;
   installPrompt?: BeforeInstallPromptEvent;
   instructionsOpen: boolean;
   releaseBytes?: number;
@@ -48,20 +49,26 @@ export interface PwaController {
 const nav = navigator as NavigatorCapabilities;
 
 function installationInstructions() {
-  const agent = navigator.userAgent;
+  const userAgent = navigator.userAgent;
+  const isChromium = /Chrome|Chromium|CriOS|Edg/.test(userAgent);
+  const isSafari =
+    /Safari/.test(userAgent) &&
+    !/Chrome|Chromium|CriOS|FxiOS|Edg/.test(userAgent);
   const iPadDesktopMode =
-    /Macintosh/.test(agent) && navigator.maxTouchPoints > 1;
-  if (/iPad|iPhone|iPod/.test(agent) || iPadDesktopMode) {
+    /Macintosh/.test(userAgent) && navigator.maxTouchPoints > 1;
+  const isIos = /iPad|iPhone|iPod/.test(userAgent) || iPadDesktopMode;
+  if (isSafari && isIos) {
     return "Safari: «Поделиться» → «На экран Домой».";
   }
-  if (
-    /Macintosh/.test(agent) &&
-    /Safari/.test(agent) &&
-    !/Chrome|Chromium|Edg/.test(agent)
-  ) {
+  if (isIos) {
+    return "«Поделиться» → «На экран Домой».";
+  }
+  if (isSafari && /Macintosh/.test(userAgent)) {
     return "Safari: «Файл» → «Добавить в Dock».";
   }
-  return "Открой меню браузера и выбери «Установить приложение».";
+  if (isChromium) {
+    return "Открой меню браузера и выбери «Установить приложение».";
+  }
 }
 
 function installedDisplayMode() {
@@ -88,6 +95,7 @@ function createController(config: {
     readiness: "preparing",
     updateReady: false,
     installed: installedDisplayMode(),
+    installPending: false,
     instructionsOpen: false,
   };
   const listeners = new Set<(view: ViewState) => void>();
@@ -146,6 +154,14 @@ function createController(config: {
         actionDisabled: !state.online,
       };
     }
+    if (!state.installed && state.installPending) {
+      return {
+        ...result,
+        action: "install",
+        actionText: "Установить",
+        actionDisabled: true,
+      };
+    }
     if (!state.installed && state.installPrompt) {
       return {
         ...result,
@@ -154,10 +170,11 @@ function createController(config: {
         actionDisabled: !state.online,
       };
     }
-    if (!state.installed) {
+    const instructions = installationInstructions();
+    if (!state.installed && instructions) {
       return {
         ...result,
-        detail: state.instructionsOpen ? installationInstructions() : undefined,
+        detail: state.instructionsOpen ? instructions : undefined,
         action: "instructions",
         actionText: "Как установить",
       };
@@ -258,12 +275,14 @@ function createController(config: {
 
       window.addEventListener("beforeinstallprompt", (event) => {
         event.preventDefault();
+        state.installPending = false;
         state.installPrompt = event as BeforeInstallPromptEvent;
         state.instructionsOpen = false;
         emit();
       });
       window.addEventListener("appinstalled", () => {
         state.installed = true;
+        state.installPending = false;
         state.installPrompt = undefined;
         emit();
       });
@@ -310,9 +329,9 @@ function createController(config: {
         const prompt = state.installPrompt;
         await prompt.prompt();
         const choice = await prompt.userChoice;
+        state.installPrompt = undefined;
         if (choice.outcome === "accepted") {
-          state.installed = true;
-          state.installPrompt = undefined;
+          state.installPending = true;
         }
         emit();
         return;

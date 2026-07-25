@@ -84,20 +84,146 @@ test("the deployable release exposes install identity under the configured base 
     ]),
   );
 
+  const inspectImage = (imageUrl: string) =>
+    page.evaluate(async (url) => {
+      const image = new Image();
+      image.src = url;
+      await image.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      const context = canvas.getContext("2d")!;
+      context.drawImage(image, 0, 0);
+      const pixels = context.getImageData(
+        0,
+        0,
+        canvas.width,
+        canvas.height,
+      ).data;
+      const centre = canvas.width / 2;
+      const safeRadius = canvas.width * 0.4;
+      let brandPixels = 0;
+      let whiteOutsideSafeCircle = 0;
+      let whitePixels = 0;
+      for (let y = 0; y < canvas.height; y += 1) {
+        for (let x = 0; x < canvas.width; x += 1) {
+          const offset = (y * canvas.width + x) * 4;
+          const isWhite =
+            pixels[offset] > 240 &&
+            pixels[offset + 1] > 240 &&
+            pixels[offset + 2] > 240 &&
+            pixels[offset + 3] > 240;
+          const isBrand =
+            Math.abs(pixels[offset] - 0x33) <= 2 &&
+            Math.abs(pixels[offset + 1] - 0x47) <= 2 &&
+            Math.abs(pixels[offset + 2] - 0xa8) <= 2 &&
+            pixels[offset + 3] > 240;
+          if (isBrand) brandPixels += 1;
+          if (!isWhite) continue;
+          whitePixels += 1;
+          if (Math.hypot(x - centre, y - centre) > safeRadius) {
+            whiteOutsideSafeCircle += 1;
+          }
+        }
+      }
+      return {
+        brandPixels,
+        height: image.naturalHeight,
+        whiteOutsideSafeCircle,
+        whitePixels,
+        width: image.naturalWidth,
+      };
+    }, imageUrl);
+
   for (const icon of manifest.icons) {
     const response = await page.request.get(icon.src);
     expect(response.ok()).toBe(true);
     expect(response.headers()["content-type"]).toContain(icon.type);
+    const expectedSize = Number(icon.sizes.split("x")[0]);
+    const identity = await inspectImage(icon.src);
+    expect(identity).toMatchObject({ height: expectedSize, width: expectedSize });
+    expect(identity.brandPixels).toBeGreaterThan(expectedSize ** 2 * 0.25);
+    expect(identity.whitePixels).toBeGreaterThan(expectedSize ** 2 * 0.01);
+    if (icon.purpose === "maskable") {
+      expect(identity.whiteOutsideSafeCircle).toBe(0);
+    }
   }
 
-  await expect(page.locator('link[rel="icon"][type="image/svg+xml"]')).toHaveAttribute(
-    "href",
-    "/prosto-courses/favicon.svg",
+  const svgIcon = page.locator('link[rel="icon"][type="image/svg+xml"]');
+  await expect(svgIcon).toHaveAttribute(
+    "href", "/prosto-courses/favicon.svg",
   );
-  await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute(
-    "href",
-    "/prosto-courses/apple-touch-icon-180x180.png",
+  await expect(svgIcon).toHaveAttribute("sizes", "any");
+  const appleIcon = page.locator('link[rel="apple-touch-icon"]');
+  await expect(appleIcon).toHaveAttribute(
+    "href", "/prosto-courses/apple-touch-icon-180x180.png",
   );
+  await expect(appleIcon).toHaveAttribute("sizes", "180x180");
+  const linkedAssets = [
+    {
+      size: 512,
+      type: "image/svg+xml",
+      url: await svgIcon.getAttribute("href"),
+    },
+    {
+      size: 48,
+      type: "image/x-icon",
+      url: await page
+        .locator('link[rel="icon"][sizes="48x48"]')
+        .getAttribute("href"),
+    },
+    {
+      size: 180,
+      type: "image/png",
+      url: await appleIcon.getAttribute("href"),
+    },
+  ];
+  for (const asset of linkedAssets) {
+    expect(asset.url).toBeTruthy();
+    const response = await page.request.get(asset.url!);
+    expect(response.ok()).toBe(true);
+    expect(response.headers()["content-type"]).toContain(asset.type);
+    const identity = await inspectImage(asset.url!);
+    expect(identity).toMatchObject({
+      height: asset.size,
+      width: asset.size,
+    });
+    expect(identity.brandPixels).toBeGreaterThan(asset.size ** 2 * 0.25);
+    expect(identity.whitePixels).toBeGreaterThan(asset.size ** 2 * 0.01);
+  }
+});
+
+test("the deployable release exposes root-scoped install identity", async ({
+  page,
+}) => {
+  await page.goto("http://127.0.0.1:4323/");
+
+  const manifestUrl = await page
+    .locator('link[rel="manifest"]')
+    .getAttribute("href");
+  expect(manifestUrl).toBe("/manifest.webmanifest");
+
+  const manifestResponse = await page.request.get(
+    new URL(manifestUrl!, page.url()).href,
+  );
+  expect(manifestResponse.ok()).toBe(true);
+  expect(manifestResponse.headers()["content-type"]).toContain(
+    "application/manifest+json",
+  );
+  await expect(manifestResponse.json()).resolves.toMatchObject({
+    name: "Prosto.Courses",
+    short_name: "Курсы",
+    lang: "ru",
+    display: "standalone",
+    start_url: "/",
+    scope: "/",
+    theme_color: "#3347a8",
+    icons: expect.arrayContaining([
+      expect.objectContaining({ src: "/pwa-192x192.png" }),
+      expect.objectContaining({ src: "/pwa-512x512.png" }),
+      expect.objectContaining({ src: "/maskable-icon-512x512.png" }),
+    ]),
+  });
 });
 
 test("the header reports complete Offline Availability and recovers unknown routes offline", async ({
@@ -438,7 +564,7 @@ test("a Catalog Update survives a failed attempt, waits for consent, and preserv
   ).toBe(3);
 });
 
-test("the quiet install action uses a native prompt and disappears after acceptance", async ({
+test("the quiet install action is keyboard-operable and follows installation lifecycle", async ({
   page,
 }) => {
   await page.goto("./");
@@ -455,7 +581,7 @@ test("the quiet install action uses a native prompt and disappears after accepta
         },
       },
       userChoice: {
-        value: Promise.resolve({ outcome: "accepted" }),
+        value: Promise.resolve({ outcome: "dismissed" }),
       },
     });
     window.dispatchEvent(event);
@@ -464,9 +590,14 @@ test("the quiet install action uses a native prompt and disappears after accepta
 
   expect(defaultPrevented).toBe(true);
   const control = page.getByRole("group", { name: "Офлайн-доступ" });
-  const install = control.getByRole("button", { name: "Установить" });
+  const install = control.getByRole("button", {
+    name: "Установить",
+    exact: true,
+  });
   await expect(install).toBeVisible();
-  await install.click();
+  await install.focus();
+  await expect(install).toBeFocused();
+  await page.keyboard.press("Enter");
   expect(
     await page.evaluate(
       () =>
@@ -474,6 +605,42 @@ test("the quiet install action uses a native prompt and disappears after accepta
           .installPromptCalls,
     ),
   ).toBe(1);
+  await expect(install).toBeHidden();
+  await expect(
+    control.getByRole("button", { name: "Как установить" }),
+  ).toBeVisible();
+
+  await page.evaluate(() => window.dispatchEvent(new Event("appinstalled")));
+  await expect(
+    control.getByRole("button", { name: "Как установить" }),
+  ).toBeHidden();
+});
+
+test("accepted native prompt waits for installation confirmation", async ({
+  page,
+}) => {
+  await page.goto("./");
+  await page.evaluate(() => {
+    const event = new Event("beforeinstallprompt", { cancelable: true });
+    Object.defineProperties(event, {
+      prompt: { value: async () => undefined },
+      userChoice: {
+        value: Promise.resolve({ outcome: "accepted" }),
+      },
+    });
+    window.dispatchEvent(event);
+  });
+
+  const control = page.getByRole("group", { name: "Офлайн-доступ" });
+  const install = control.getByRole("button", {
+    name: "Установить",
+    exact: true,
+  });
+  await install.click();
+  await expect(install).toBeVisible();
+  await expect(install).toBeDisabled();
+
+  await page.evaluate(() => window.dispatchEvent(new Event("appinstalled")));
   await expect(install).toBeHidden();
 });
 
@@ -512,6 +679,36 @@ test("iPad desktop-mode Safari receives add-to-home-screen guidance", async ({
   );
 });
 
+test("Chrome on iPhone receives add-to-home-screen guidance", async ({
+  context,
+  page,
+}) => {
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      value:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 CriOS/128.0.0.0 Mobile/15E148 Safari/604.1",
+    });
+    const addEventListener = EventTarget.prototype.addEventListener;
+    EventTarget.prototype.addEventListener = function (
+      type,
+      listener,
+      options,
+    ) {
+      if (this === window && type === "beforeinstallprompt") return;
+      return addEventListener.call(this, type, listener, options);
+    };
+  });
+  await page.goto("./");
+
+  const control = page.getByRole("group", { name: "Офлайн-доступ" });
+  await control.getByRole("button", { name: "Как установить" }).click();
+  await expect(control).toContainText(
+    "«Поделиться» → «На экран Домой».",
+  );
+  await expect(control).not.toContainText("Установить приложение");
+});
+
 test("standalone launch hides installation actions", async ({
   context,
   page,
@@ -527,10 +724,42 @@ test("standalone launch hides installation actions", async ({
   const control = page.getByRole("group", { name: "Офлайн-доступ" });
   await expect(control).toBeVisible();
   await expect(
-    control.getByRole("button", { name: "Установить" }),
+    control.getByRole("button", { name: "Установить", exact: true }),
   ).toHaveCount(0);
   await expect(
-    control.getByRole("button", { name: "Как установить" }),
+    control.getByRole("button", { name: "Как установить", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("a browser without an agreed installation surface gets no install action", async ({
+  context,
+  page,
+}) => {
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, "userAgent", {
+      configurable: true,
+      value:
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:128.0) Gecko/20100101 Firefox/128.0",
+    });
+    const addEventListener = EventTarget.prototype.addEventListener;
+    EventTarget.prototype.addEventListener = function (
+      type,
+      listener,
+      options,
+    ) {
+      if (this === window && type === "beforeinstallprompt") return;
+      return addEventListener.call(this, type, listener, options);
+    };
+  });
+  await page.goto("./");
+
+  const control = page.getByRole("group", { name: "Офлайн-доступ" });
+  await expect(control).toBeVisible();
+  await expect(
+    control.getByRole("button", { name: "Установить", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    control.getByRole("button", { name: "Как установить", exact: true }),
   ).toHaveCount(0);
 });
 

@@ -17,9 +17,18 @@ const {
     <meta name="viewport" content="width=device-width" />
     <meta name="description" content={description} />
     <meta name="theme-color" content="#3347a8" />
-    <link rel="icon" href={sitePath("favicon.svg")} type="image/svg+xml" />
+    <link
+      rel="icon"
+      href={sitePath("favicon.svg")}
+      type="image/svg+xml"
+      sizes="any"
+    />
     <link rel="icon" href={sitePath("favicon.ico")} sizes="48x48" />
-    <link rel="apple-touch-icon" href={sitePath("apple-touch-icon-180x180.png")} />
+    <link
+      rel="apple-touch-icon"
+      href={sitePath("apple-touch-icon-180x180.png")}
+      sizes="180x180"
+    />
     {pwaInfo && <Fragment set:html={pwaInfo.webManifest.linkTag} />}
     <title>{title}</title>
   </head>

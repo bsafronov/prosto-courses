@@ -24,8 +24,10 @@ const firstContentRoot = path.join(temporaryRoot, "courses-v1");
 const secondContentRoot = path.join(temporaryRoot, "courses-v2");
 const firstOutputRoot = path.join(temporaryRoot, "dist-v1");
 const secondOutputRoot = path.join(temporaryRoot, "dist-v2");
+const rootOutputRoot = path.join(temporaryRoot, "dist-root");
 const firstCacheRoot = path.join(temporaryRoot, "cache-v1");
 const secondCacheRoot = path.join(temporaryRoot, "cache-v2");
+const rootCacheRoot = path.join(temporaryRoot, "cache-root");
 
 const copyCourseDirectories = async (sourceRoot, targetRoot) => {
   await mkdir(targetRoot, { recursive: true });
@@ -78,7 +80,7 @@ if (secondLessonSource === firstLessonSource) {
 
 await writeFile(changedLessonPath, secondLessonSource);
 
-const runBuild = (contentRoot, outputRoot, cacheRoot) =>
+const runBuild = ({ basePath, cacheRoot, contentRoot, outputRoot }) =>
   new Promise((resolve, reject) => {
     const child = spawn("pnpm", ["build"], {
       cwd: projectRoot,
@@ -88,6 +90,7 @@ const runBuild = (contentRoot, outputRoot, cacheRoot) =>
         ASTRO_OUT_DIR: outputRoot,
         CONTENT_VALIDATION_DATE: "2026-10-23",
         COURSE_CONTENT_ROOT: contentRoot,
+        ...(basePath ? { SITE_BASE_PATH: basePath } : {}),
       },
       stdio: "inherit",
     });
@@ -109,8 +112,22 @@ const runBuild = (contentRoot, outputRoot, cacheRoot) =>
     });
   });
 
-await runBuild(firstContentRoot, firstOutputRoot, firstCacheRoot);
-await runBuild(secondContentRoot, secondOutputRoot, secondCacheRoot);
+await runBuild({
+  cacheRoot: firstCacheRoot,
+  contentRoot: firstContentRoot,
+  outputRoot: firstOutputRoot,
+});
+await runBuild({
+  cacheRoot: secondCacheRoot,
+  contentRoot: secondContentRoot,
+  outputRoot: secondOutputRoot,
+});
+await runBuild({
+  basePath: "/",
+  cacheRoot: rootCacheRoot,
+  contentRoot: firstContentRoot,
+  outputRoot: rootOutputRoot,
+});
 
 const basePrefix = siteBasePath === "/" ? "" : siteBasePath;
 const baseScope = `${basePrefix}/`;
@@ -189,20 +206,31 @@ const sendJson = (response, status, body) => {
   response.end(JSON.stringify(body));
 };
 
-const serveStaticFile = async (request, response, requestPath) => {
-  if (requestPath === basePrefix) {
-    response.writeHead(308, { Location: baseScope });
+const serveStaticFile = async (
+  request,
+  response,
+  requestPath,
+  {
+    injectPrecacheFaults = true,
+    outputRoot = activeOutputRoot,
+    prefix = basePrefix,
+    scope = baseScope,
+  } = {},
+) => {
+  if (requestPath === prefix) {
+    response.writeHead(308, { Location: scope });
     response.end();
     return;
   }
 
-  if (!requestPath.startsWith(baseScope)) {
+  if (!requestPath.startsWith(scope)) {
     response.writeHead(404);
     response.end("Not found");
     return;
   }
 
   if (
+    injectPrecacheFaults &&
     holdRequiredPrecacheRequest &&
     requestPath === requiredPrecachePath
   ) {
@@ -212,6 +240,7 @@ const serveStaticFile = async (request, response, requestPath) => {
   }
 
   if (
+    injectPrecacheFaults &&
     failRequiredPrecacheRequest &&
     requestPath === requiredPrecachePath
   ) {
@@ -221,12 +250,12 @@ const serveStaticFile = async (request, response, requestPath) => {
     return;
   }
 
-  const relativePath = requestPath.slice(baseScope.length);
-  let filePath = path.resolve(activeOutputRoot, relativePath || "index.html");
+  const relativePath = requestPath.slice(scope.length);
+  let filePath = path.resolve(outputRoot, relativePath || "index.html");
 
   if (
-    filePath !== activeOutputRoot &&
-    !filePath.startsWith(`${activeOutputRoot}${path.sep}`)
+    filePath !== outputRoot &&
+    !filePath.startsWith(`${outputRoot}${path.sep}`)
   ) {
     response.writeHead(403);
     response.end("Forbidden");
@@ -247,8 +276,8 @@ const serveStaticFile = async (request, response, requestPath) => {
         "application/octet-stream",
     };
 
-    if (requestPath === `${baseScope}sw.js`) {
-      headers["Service-Worker-Allowed"] = baseScope;
+    if (requestPath === `${scope}sw.js`) {
+      headers["Service-Worker-Allowed"] = scope;
     }
 
     response.writeHead(200, headers);
@@ -325,12 +354,42 @@ const server = createServer(async (request, response) => {
   }
 });
 
+const rootServer = createServer(async (request, response) => {
+  try {
+    const url = new URL(request.url ?? "/", "http://127.0.0.1");
+    let requestPath;
+    try {
+      requestPath = decodeURIComponent(url.pathname);
+    } catch {
+      response.writeHead(400);
+      response.end("Bad request");
+      return;
+    }
+
+    await serveStaticFile(request, response, requestPath, {
+      injectPrecacheFaults: false,
+      outputRoot: rootOutputRoot,
+      prefix: "",
+      scope: "/",
+    });
+  } catch (error) {
+    console.error(error);
+    response.writeHead(500);
+    response.end("Internal server error");
+  }
+});
+
 await new Promise((resolve, reject) => {
   server.once("error", reject);
   server.listen(4322, "127.0.0.1", resolve);
 });
+await new Promise((resolve, reject) => {
+  rootServer.once("error", reject);
+  rootServer.listen(4323, "127.0.0.1", resolve);
+});
 
 console.log(`Production fixture server listening at http://127.0.0.1:4322${baseScope}`);
+console.log("Root production fixture server listening at http://127.0.0.1:4323/");
 
 let shuttingDown = false;
 const shutdown = async () => {
@@ -340,6 +399,7 @@ const shutdown = async () => {
 
   shuttingDown = true;
   await new Promise((resolve) => server.close(resolve));
+  await new Promise((resolve) => rootServer.close(resolve));
   await rm(temporaryRoot, { force: true, recursive: true });
 };
 
