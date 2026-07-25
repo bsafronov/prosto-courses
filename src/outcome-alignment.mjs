@@ -3,6 +3,7 @@ export const outcomeEvidence = Object.freeze({
   capstoneCriterion: "capstone-criterion",
   lessonInstruction: "lesson-instruction",
   moduleCheckpoint: "module-checkpoint",
+  practiceTask: "practice-task",
 });
 
 export function createOutcomeAlignment({ courseOutcomes, courseFile, report }) {

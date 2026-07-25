@@ -470,36 +470,48 @@ Use the same `PracticeTask` model inside Lessons, Module Checkpoints, and `capst
   Организация купила оборудование за 120 000 ₽ и сразу оплатила его
   с расчётного счёта. Покажи состояние до и после операции.
 
-  <TaskSolution>
-    Оборудование увеличилось на 120 000 ₽, а денежные средства уменьшились
-    на ту же сумму. Общая величина активов не изменилась.
-  </TaskSolution>
+  <TaskSolution
+    reasoning="Оборудование увеличилось на 120 000 ₽, а денежные средства уменьшились на ту же сумму. Общая величина активов не изменилась."
+    alternatives={["Начать с проверки источника оплаты, а затем назвать две изменившиеся статьи активов."]}
+    likelyErrors={["Ошибочно увеличить общую сумму активов, не учтя уменьшение денежных средств."]}
+  />
 </PracticeTask>
 ```
 
 Rules:
 
+- `title`, `level`, positive integer `estimatedMinutes`, `goal`, `outcomes`,
+  `criteria`, and meaningful learner prompt content are required.
+- `constraints` and `hints` are optional non-empty arrays of non-empty strings.
+  `criteria` is always a non-empty array of observable completion criteria.
 - `level` is `core`, `challenge`, or `stretch` relative to the Learner Profile.
+- `outcomes` contains unique IDs owned by the Course. Across the Course, Practice
+  Tasks must practice every Learning Outcome.
 - Give the learner a genuine opportunity to act before revealing help.
 - Reveal hints progressively from general to specific.
-- A convergent task uses one deliberately revealed `TaskSolution` with reasoning, alternatives, and likely errors.
+- A convergent task uses one deliberately revealed, self-closing `TaskSolution`.
+  Its non-empty `reasoning` explains the governing idea; `alternatives` and
+  `likelyErrors` are non-empty arrays.
 - An open task uses one nested `TaskRubric` with observable evidence instead of an objective score:
 
   ```mdx
   <TaskRubric
     criteria={[
       {
-        criterion: "Причина расхождения установлена",
-        evidence:
-          "Объяснение связывает конкретную операцию с двумя затронутыми счетами",
+        "criterion": "Причина расхождения установлена",
+        "evidence": "Объяснение связывает конкретную операцию с двумя затронутыми счетами",
       },
     ]}
   />
   ```
 
 - Every `PracticeTask` contains exactly one `TaskSolution` or `TaskRubric`, never both.
-- Do not require timers or a correct answer before the learner may see help.
-- `Hint`, `TaskSolution`, and `TaskRubric` content cannot appear outside a `PracticeTask`.
+- A rubric criterion contains only non-empty `criterion` and `evidence` fields.
+  Objective score, points, rating, and grade fields are invalid.
+- The learner may reveal either feedback type directly. Do not require a timer,
+  a correct answer, or opening every hint first.
+- `PracticeTask` may appear only in a Lesson, Module Checkpoint, or Capstone
+  Demonstration. `TaskSolution` and `TaskRubric` cannot appear outside one.
 
 ### Module Checkpoints and Capstone Demonstration
 

@@ -9,6 +9,19 @@ criteria:
 time: 25
 ---
 
-Подготовь в Markdown инструкцию для реальной повторяющейся задачи. Читатель должен понять назначение документа, быстро найти шаги и перейти к дополнительному источнику.
+<PracticeTask
+  title="Document a Knowledge Check"
+  level="core"
+  estimatedMinutes={10}
+  goal="Show a Knowledge Check as inert documentation"
+  outcomes={["show-check"]}
+  criteria={["The example remains readable without becoming an interaction"]}
+>
+  Add a Knowledge Check example to a Markdown guide.
 
-Перед завершением просмотри исходный текст: структура, ссылки и фрагменты кода должны быть однозначны даже без визуального редактора.
+  <TaskSolution
+    reasoning="A fenced code block distinguishes documentation from a live Semantic Course Component."
+    alternatives={["Describe the component in prose when exact syntax is unnecessary."]}
+    likelyErrors={["Leaving the example outside a fence so the validator treats it as live MDX."]}
+  />
+</PracticeTask>

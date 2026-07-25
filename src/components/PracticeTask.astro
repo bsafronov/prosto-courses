@@ -1,0 +1,165 @@
+---
+interface Props {
+  title: string;
+  level: "core" | "challenge" | "stretch";
+  estimatedMinutes: number;
+  goal: string;
+  outcomes: string[];
+  constraints?: string[];
+  criteria: string[];
+  hints?: string[];
+}
+
+const levelLabels = {
+  core: "Основная практика",
+  challenge: "Практика с вызовом",
+  stretch: "Дополнительная практика",
+} satisfies Record<Props["level"], string>;
+
+const {
+  title,
+  level,
+  estimatedMinutes,
+  goal,
+  constraints = [],
+  criteria,
+  hints = [],
+} = Astro.props;
+const taskId = `practice-task-${Math.random().toString(36).slice(2)}`;
+const titleId = `${taskId}-title`;
+---
+
+<section
+  class="practice-task"
+  data-practice-task
+  role="region"
+  aria-labelledby={titleId}
+>
+  <header>
+    <p class="eyebrow">{levelLabels[level]} · {estimatedMinutes} мин</p>
+    <h2 id={titleId}>{title}</h2>
+    <p class="goal"><strong>Цель:</strong> {goal}</p>
+  </header>
+  {
+    constraints.length > 0 && (
+      <section class="task-list" aria-label="Ограничения">
+        <h3>Ограничения</h3>
+        <ul>
+          {constraints.map((constraint) => <li>{constraint}</li>)}
+        </ul>
+      </section>
+    )
+  }
+  <section class="task-list" aria-label="Критерии готовности">
+    <h3>Критерии готовности</h3>
+    <ul>
+      {criteria.map((criterion) => <li>{criterion}</li>)}
+    </ul>
+  </section>
+  <div class="prompt" data-task-prompt>
+    <h3>Задание</h3>
+    <slot />
+  </div>
+  {
+    hints.length > 0 && (
+      <section class="support" aria-label="Подсказки">
+        <h3>Подсказки</h3>
+        <p>Открывай их по одной — от общего направления к конкретному шагу.</p>
+        <ol aria-label="Открытые подсказки" aria-live="polite">
+          {hints.map((hint) => <li data-task-hint hidden>{hint}</li>)}
+        </ol>
+        <button
+          type="button"
+          data-task-hint-reveal
+          data-hint-count={hints.length}
+        >
+          Показать подсказку 1 из {hints.length}
+        </button>
+      </section>
+    )
+  }
+  <div data-task-feedback-destination></div>
+</section>
+
+<script>
+  function initialisePracticeTask(task: HTMLElement) {
+    if (task.dataset.ready) return;
+    task.dataset.ready = "true";
+
+    const prompt = task.querySelector<HTMLElement>("[data-task-prompt]");
+    const feedbackDestination = task.querySelector<HTMLElement>(
+      "[data-task-feedback-destination]",
+    );
+    const feedback = prompt?.querySelector<HTMLElement>(
+      "[data-task-feedback]",
+    );
+    if (feedback && feedbackDestination) {
+      feedbackDestination.append(feedback);
+    }
+
+    const reveal = task.querySelector<HTMLButtonElement>(
+      "[data-task-hint-reveal]",
+    );
+    const hints = [
+      ...task.querySelectorAll<HTMLElement>("[data-task-hint]"),
+    ];
+    if (!reveal || hints.length === 0) return;
+
+    let revealed = 0;
+    reveal.addEventListener("click", () => {
+      hints[revealed]?.removeAttribute("hidden");
+      revealed += 1;
+      if (revealed === hints.length) {
+        reveal.textContent = "Все подсказки открыты";
+        reveal.disabled = true;
+      } else {
+        reveal.textContent =
+          `Показать подсказку ${revealed + 1} из ${hints.length}`;
+      }
+    });
+  }
+
+  document
+    .querySelectorAll<HTMLElement>("[data-practice-task]")
+    .forEach(initialisePracticeTask);
+</script>
+
+<style>
+  .practice-task {
+    min-width: 0;
+    margin: 2rem 0;
+    border: 1px solid #b9c2ef;
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    background: #f7f7ff;
+  }
+  header { padding-bottom: 1rem; border-bottom: 1px solid #d7dbf5; }
+  .eyebrow {
+    margin: 0 0 .3rem;
+    color: var(--color-brand);
+    font-size: .75rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  h2 { margin: 0; font-size: 1.35rem; }
+  h3 { margin: 0 0 .45rem; font-size: 1rem; }
+  .goal { margin: .65rem 0 0; color: var(--color-muted); }
+  .task-list, .prompt, .support { margin-top: 1.1rem; }
+  .task-list ul, .support ol { margin: .4rem 0 0; padding-left: 1.35rem; }
+  .prompt {
+    border-radius: .65rem;
+    padding: 1rem;
+    background: white;
+  }
+  .prompt :global(p:first-of-type) { margin-top: 0; }
+  .prompt :global(p:last-of-type) { margin-bottom: 0; }
+  .support {
+    border-top: 1px solid #d7dbf5;
+    padding-top: 1rem;
+  }
+  .support p { margin: 0 0 .7rem; color: var(--color-muted); font-size: .92rem; }
+  .support li { margin: .35rem 0; }
+  .support button { margin-top: .75rem; }
+  .support button:disabled { cursor: not-allowed; opacity: .65; }
+</style>

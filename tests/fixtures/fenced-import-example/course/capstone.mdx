@@ -9,6 +9,19 @@ criteria:
 time: 25
 ---
 
-Подготовь в Markdown инструкцию для реальной повторяющейся задачи. Читатель должен понять назначение документа, быстро найти шаги и перейти к дополнительному источнику.
+<PracticeTask
+  title="Document an import"
+  level="core"
+  estimatedMinutes={10}
+  goal="Show an import statement as inert documentation"
+  outcomes={["show-import"]}
+  criteria={["The import remains readable without executing"]}
+>
+  Add an import example to a short Markdown guide.
 
-Перед завершением просмотри исходный текст: структура, ссылки и фрагменты кода должны быть однозначны даже без визуального редактора.
+  <TaskSolution
+    reasoning="A fenced code block preserves the import as documentation."
+    alternatives={["Use inline code when the import is the only expression."]}
+    likelyErrors={["Writing a live MDX import outside a code fence."]}
+  />
+</PracticeTask>

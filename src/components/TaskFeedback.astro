@@ -1,0 +1,40 @@
+---
+interface Props {
+  label: string;
+  summary: string;
+}
+
+const { label, summary } = Astro.props;
+---
+
+<details
+  class="task-feedback"
+  data-task-feedback
+  role="group"
+  aria-label={label}
+>
+  <summary>{summary}</summary>
+  <div class="feedback-content">
+    <slot />
+  </div>
+</details>
+
+<style>
+  .task-feedback {
+    margin-top: 1rem;
+    border-top: 1px solid #d7dbf5;
+    padding-top: 1rem;
+  }
+  summary {
+    width: fit-content;
+    cursor: pointer;
+    color: var(--color-brand);
+    font-weight: 800;
+  }
+  .feedback-content {
+    margin-top: .85rem;
+    border-radius: .65rem;
+    padding: 1rem;
+    background: #eef8f1;
+  }
+</style>

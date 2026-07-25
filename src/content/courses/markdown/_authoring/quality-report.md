@@ -2,4 +2,4 @@
 
 Версия: 1
 
-Минимальная миграция проверяет полный Course tree, порядок Lessons, публичные маршруты, сборку и Outcome Alignment от Lessons до Module Checkpoint и критериев Capstone Demonstration. Полная проверка компонентов выполняется последующими этапами платформы.
+Публичный валидатор проверяет полный Course tree, порядок Lessons, Practice Task contract и Outcome Alignment от Lessons и Practice Tasks до Module Checkpoint и критериев Capstone Demonstration. Браузерные проверки покрывают публичные маршруты, сборку, последовательное открытие подсказок с клавиатуры, намеренное открытие решения и Self-Assessment, а также независимое управление Course Completion.

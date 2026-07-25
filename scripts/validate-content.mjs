@@ -309,6 +309,30 @@ function stringArrayAttribute(source, name) {
   }
 }
 
+function positiveIntegerAttribute(source, name) {
+  const expression = componentAttribute(source, name)?.expression?.trim();
+  if (!/^\d+$/.test(expression ?? "")) return;
+  const value = Number(expression);
+  return Number.isSafeInteger(value) && value > 0 ? value : undefined;
+}
+
+function objectArrayAttribute(source, name) {
+  const attribute = componentAttribute(source, name);
+  if (!attribute) return { present: false };
+  if (typeof attribute.expression !== "string") return { present: true };
+
+  try {
+    const value = JSON.parse(
+      attribute.expression
+        .replace(/([{,]\s*)([A-Za-z][A-Za-z0-9]*)\s*:/g, '$1"$2":')
+        .replace(/,\s*(?=[}\]])/g, ""),
+    );
+    return { present: true, value };
+  } catch {
+    return { present: true };
+  }
+}
+
 function attributeNames(source) {
   return componentAttributes(source).map((attribute) => attribute.name);
 }
@@ -536,6 +560,315 @@ function validateReflections(body, file, alignment) {
       );
     }
   }
+}
+
+function pairedPracticeTasks(source, file) {
+  const openings = openingComponentTags(source).filter(
+    (tag) => tag.name === "PracticeTask",
+  );
+  const openingsByStart = new Map(openings.map((opening) => [opening.start, opening]));
+  const tasks = [];
+  const stack = [];
+
+  for (const marker of source.matchAll(/<\/?PracticeTask\b/g)) {
+    if (marker[0].startsWith("</")) {
+      const opening = stack.pop();
+      if (!opening) {
+        report(file, "Practice Task has a closing tag without an opening tag");
+        continue;
+      }
+      tasks.push({
+        closeStart: marker.index,
+        end: marker.index + marker[0].length,
+        inner: source.slice(opening.end, marker.index),
+        opening,
+      });
+      continue;
+    }
+
+    const opening = openingsByStart.get(marker.index);
+    if (!opening) continue;
+    if (opening.selfClosing) {
+      tasks.push({
+        closeStart: opening.end,
+        end: opening.end,
+        inner: "",
+        opening,
+      });
+      report(
+        file,
+        "Practice Task must wrap a learner prompt and exactly one feedback component",
+      );
+    } else {
+      if (stack.length > 0) {
+        report(file, "Practice Tasks cannot be nested");
+      }
+      stack.push(opening);
+    }
+  }
+
+  for (const opening of stack) {
+    tasks.push({
+      closeStart: source.length,
+      end: source.length,
+      inner: source.slice(opening.end),
+      opening,
+    });
+    report(file, "Practice Task requires a closing tag");
+  }
+
+  return tasks.sort((left, right) => left.opening.start - right.opening.start);
+}
+
+function meaningfulPracticePrompt(source) {
+  return source
+    .replace(
+      /<(TaskSolution|TaskRubric)\b[\s\S]*?<\/\1\s*>/g,
+      "",
+    )
+    .replace(/<(?:TaskSolution|TaskRubric)\b[\s\S]*?\/>/g, "")
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/[*_~`#>-]/g, "")
+    .trim();
+}
+
+function validateStructuredFeedback(
+  component,
+  file,
+  index,
+  name,
+  allowedProps,
+  structure,
+) {
+  const label = `${name} ${index + 1}`;
+  if (!component.selfClosing) {
+    report(
+      file,
+      `${label} must be a self-closing component with ${structure}`,
+    );
+  }
+  const authoredProps = attributeNames(component.source).filter(
+    (prop) => !allowedProps.includes(prop),
+  );
+  if (authoredProps.length > 0) {
+    report(
+      file,
+      `${label} does not allow authored props: ${authoredProps.join(", ")}`,
+    );
+  }
+  return label;
+}
+
+function validateTaskSolution(solution, file, index) {
+  const label = validateStructuredFeedback(
+    solution,
+    file,
+    index,
+    "Task Solution",
+    ["reasoning", "alternatives", "likelyErrors"],
+    "structured feedback",
+  );
+  if (!stringAttribute(solution.source, "reasoning")?.trim()) {
+    report(file, `${label} requires non-empty reasoning`);
+  }
+  for (const field of ["alternatives", "likelyErrors"]) {
+    const values = stringArrayAttribute(solution.source, field);
+    if (
+      !values.value?.length ||
+      values.value.some((item) => item.trim() === "")
+    ) {
+      report(
+        file,
+        `${label} ${field} must be a non-empty array of non-empty strings`,
+      );
+    }
+  }
+}
+
+function validateTaskRubric(rubric, file, index) {
+  const label = validateStructuredFeedback(
+    rubric,
+    file,
+    index,
+    "Task Rubric",
+    ["criteria"],
+    "structured criteria",
+  );
+
+  const criteria = objectArrayAttribute(rubric.source, "criteria");
+  const scoreFields = new Set(["score", "points", "rating", "grade"]);
+  const hasScoreField =
+    Array.isArray(criteria.value) &&
+    criteria.value.some(
+      (criterion) =>
+        criterion &&
+        typeof criterion === "object" &&
+        Object.keys(criterion).some((field) => scoreFields.has(field)),
+    );
+  if (hasScoreField) {
+    report(file, `${label} must not use objective score fields`);
+  }
+  if (
+    !Array.isArray(criteria.value) ||
+    criteria.value.length === 0 ||
+    criteria.value.some(
+      (criterion) =>
+        !criterion ||
+        typeof criterion !== "object" ||
+        Array.isArray(criterion) ||
+        Object.keys(criterion).some(
+          (field) =>
+            !["criterion", "evidence"].includes(field) &&
+            !scoreFields.has(field),
+        ) ||
+        typeof criterion.criterion !== "string" ||
+        criterion.criterion.trim() === "" ||
+        typeof criterion.evidence !== "string" ||
+        criterion.evidence.trim() === "",
+    )
+  ) {
+    report(
+      file,
+      `${label} criteria must contain only non-empty criterion and observable evidence`,
+    );
+  }
+}
+
+function validatePracticeTasks(body, file, owner, alignment) {
+  const source = withoutFencedCode(body).replace(
+    /\{\/\*[\s\S]*?\*\/\}/g,
+    "",
+  );
+  const tasks = pairedPracticeTasks(source, file);
+  const feedback = openingComponentTags(source).filter(
+    (tag) => tag.name === "TaskSolution" || tag.name === "TaskRubric",
+  );
+  const allowedProps = new Set([
+    "title",
+    "level",
+    "estimatedMinutes",
+    "goal",
+    "outcomes",
+    "constraints",
+    "criteria",
+    "hints",
+  ]);
+  const allowedOwners = new Set([
+    "Lesson",
+    "Module Checkpoint",
+    "Capstone Demonstration",
+  ]);
+
+  for (const [index, task] of tasks.entries()) {
+    const label = `Practice Task ${index + 1}`;
+    if (!allowedOwners.has(owner)) {
+      report(
+        file,
+        `${label} may appear only in a Lesson, Module Checkpoint, or Capstone Demonstration`,
+      );
+    }
+    const props = attributeNames(task.opening.source);
+    const authoredProps = props.filter((name) => !allowedProps.has(name));
+    if (authoredProps.length > 0) {
+      report(
+        file,
+        `${label} does not allow authored props: ${authoredProps.join(", ")}`,
+      );
+    }
+    if (!stringAttribute(task.opening.source, "title")?.trim()) {
+      report(file, `${label} requires a non-empty title`);
+    }
+    if (
+      !["core", "challenge", "stretch"].includes(
+        stringAttribute(task.opening.source, "level"),
+      )
+    ) {
+      report(file, `${label} level must be core, challenge, or stretch`);
+    }
+    if (!positiveIntegerAttribute(task.opening.source, "estimatedMinutes")) {
+      report(file, `${label} estimatedMinutes must be a positive integer`);
+    }
+    if (!stringAttribute(task.opening.source, "goal")?.trim()) {
+      report(file, `${label} requires a non-empty goal`);
+    }
+    for (const field of ["constraints", "hints"]) {
+      const values = stringArrayAttribute(task.opening.source, field);
+      if (
+        values.present &&
+        (!values.value?.length ||
+          values.value.some((item) => item.trim() === ""))
+      ) {
+        report(
+          file,
+          `${label} ${field} must be a non-empty array of non-empty strings`,
+        );
+      }
+    }
+    const criteria = stringArrayAttribute(task.opening.source, "criteria");
+    if (
+      !criteria.value?.length ||
+      criteria.value.some((item) => item.trim() === "")
+    ) {
+      report(
+        file,
+        `${label} criteria must be a non-empty array of non-empty strings`,
+      );
+    }
+    const outcomes = stringArrayAttribute(task.opening.source, "outcomes");
+    if (outcomes.present && !outcomes.value) {
+      report(
+        file,
+        `${label} outcomes must be a static array of Learning Outcome IDs`,
+      );
+    }
+    alignment.registerOutcomeReferences({
+      evidenceKind: outcomeEvidence.practiceTask,
+      file,
+      label,
+      outcomeIds: outcomes.value,
+    });
+    if (!meaningfulPracticePrompt(task.inner)) {
+      report(file, `${label} requires a meaningful learner prompt`);
+    }
+
+    const nestedFeedback = feedback.filter(
+      (component) =>
+        component.start >= task.opening.end &&
+        component.start < task.closeStart,
+    );
+    if (nestedFeedback.length !== 1) {
+      report(
+        file,
+        `${label} must contain exactly one TaskSolution or TaskRubric`,
+      );
+    }
+  }
+
+  const nestedFeedback = new Set(
+    feedback.filter((component) =>
+      tasks.some(
+        (task) =>
+          component.start >= task.opening.end &&
+          component.start < task.closeStart,
+      ),
+    ),
+  );
+  for (const component of feedback) {
+    if (!nestedFeedback.has(component)) {
+      report(
+        file,
+        `${component.name} must be nested directly inside a Practice Task`,
+      );
+    }
+  }
+
+  feedback
+    .filter((component) => component.name === "TaskSolution")
+    .forEach((solution, index) => validateTaskSolution(solution, file, index));
+  feedback
+    .filter((component) => component.name === "TaskRubric")
+    .forEach((rubric, index) => validateTaskRubric(rubric, file, index));
 }
 
 function validateCallouts(body, file) {
@@ -818,6 +1151,7 @@ async function validateLearnerSource(
   validateSemanticComponents(source.content, file, declaredPacks);
   validateKnowledgeChecks(source.content, file);
   validateReflections(source.content, file, alignment);
+  validatePracticeTasks(source.content, file, owner, alignment);
   validateCallouts(source.content, file);
   await validateDiagrams(source.content, file);
 }
@@ -1265,6 +1599,12 @@ async function validateCourse(courseEntry) {
     file: overviewFile,
     describeMissing: (outcomeId) =>
       `Learning Outcome ${outcomeId} is not taught by any Lesson`,
+  });
+  alignment.requireEveryOutcome({
+    evidenceKind: outcomeEvidence.practiceTask,
+    file: overviewFile,
+    describeMissing: (outcomeId) =>
+      `Learning Outcome ${outcomeId} is not practiced by any Practice Task`,
   });
   alignment.requireMatchingEvidence({
     evidenceKind: outcomeEvidence.moduleCheckpoint,

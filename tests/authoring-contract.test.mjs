@@ -648,6 +648,282 @@ test("accepts every Callout meaning and an accessible Diagram", async () => {
   );
 });
 
+const solutionPracticeTask = `
+<PracticeTask
+  title="Draft useful alternative text"
+  level="core"
+  estimatedMinutes={8}
+  goal="Connect the image purpose to a concise description"
+  outcomes={["identify-image-purpose"]}
+  constraints={["Use one sentence"]}
+  criteria={["The description communicates the image purpose"]}
+  hints={[
+    "Start with the surrounding paragraph.",
+    "Name the information the image adds.",
+  ]}
+>
+  Draft alternative text for a chart that compares two publishing options.
+
+  <TaskSolution
+    reasoning="The description should state the comparison the chart contributes."
+    alternatives={["Name the main difference before secondary details."]}
+    likelyErrors={["Listing visual properties without explaining the comparison."]}
+  />
+</PracticeTask>
+`;
+
+const rubricPracticeTask = `
+<PracticeTask
+  title="Review an image description"
+  level="challenge"
+  estimatedMinutes={10}
+  goal="Judge whether alternative text preserves meaning without redundancy"
+  outcomes={["write-concise-alt-text"]}
+  criteria={["The review identifies useful meaning and removable wording"]}
+>
+  Review a proposed image description and explain what you would retain or remove.
+
+  <TaskRubric
+    criteria={[
+      {
+        "criterion": "Useful meaning is preserved",
+        "evidence": "The review identifies the information a screen-reader user needs",
+      },
+      {
+        "criterion": "Redundancy is removed",
+        "evidence": "The revision omits phrases already announced by assistive technology",
+      },
+    ]}
+  />
+</PracticeTask>
+`;
+
+test("accepts valid solution and Self-Assessment Practice Tasks", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n${solutionPracticeTask}`,
+      "modules/alt-text/lessons/edit-for-clarity.mdx": (source) =>
+        `${source}\n${rubricPracticeTask}`,
+    },
+    (result) => assert.equal(result.exitCode, 0, result.output),
+  );
+});
+
+test("requires the complete Practice Task contract and a learner prompt", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n<PracticeTask><TaskSolution /></PracticeTask>\n${rubricPracticeTask}`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      for (const expected of [
+        /Practice Task 1 requires a non-empty title/i,
+        /Practice Task 1 level must be core, challenge, or stretch/i,
+        /Practice Task 1 estimatedMinutes must be a positive integer/i,
+        /Practice Task 1 requires a non-empty goal/i,
+        /Practice Task 1 must support at least one Course Learning Outcome/i,
+        /Practice Task 1 criteria must be a non-empty array of non-empty strings/i,
+        /Practice Task 1 requires a meaningful learner prompt/i,
+      ]) {
+        assert.match(result.output, expected);
+      }
+    },
+  );
+});
+
+test("rejects invalid Practice Task values and presentation controls", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n${solutionPracticeTask
+          .replace('level="core"', 'level="expert"')
+          .replace("estimatedMinutes={8}", "estimatedMinutes={0}")
+          .replace(
+            'constraints={["Use one sentence"]}',
+            'constraints={["Use one sentence", "   "]}',
+          )
+          .replace('criteria={["The description communicates the image purpose"]}', "criteria={[]}")
+          .replace('title="Draft useful alternative text"', 'title="Draft useful alternative text" timer score={10}')}
+${rubricPracticeTask}`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Practice Task 1 does not allow authored props: timer, score/i,
+      );
+      assert.match(
+        result.output,
+        /Practice Task 1 level must be core, challenge, or stretch/i,
+      );
+      assert.match(
+        result.output,
+        /Practice Task 1 estimatedMinutes must be a positive integer/i,
+      );
+      assert.match(
+        result.output,
+        /Practice Task 1 constraints must be a non-empty array of non-empty strings/i,
+      );
+      assert.match(
+        result.output,
+        /Practice Task 1 criteria must be a non-empty array of non-empty strings/i,
+      );
+    },
+  );
+});
+
+test("rejects malformed Practice Task feedback nesting", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}
+<TaskSolution reasoning="Outside" alternatives={["Another route"]} likelyErrors={["A likely error"]} />
+<PracticeTask title="No feedback" level="core" estimatedMinutes={5} goal="Try" outcomes={["identify-image-purpose"]} criteria={["Evidence"]}>
+  Attempt the work without feedback.
+</PracticeTask>
+<PracticeTask title="Two feedback types" level="core" estimatedMinutes={5} goal="Try" outcomes={["identify-image-purpose"]} criteria={["Evidence"]}>
+  Attempt the work.
+  <TaskSolution reasoning="Reasoning" alternatives={["Another route"]} likelyErrors={["A likely error"]} />
+  <TaskRubric criteria={[{"criterion":"Evidence","evidence":"Observable work"}]} />
+</PracticeTask>
+<PracticeTask title="Commented feedback" level="core" estimatedMinutes={5} goal="Try" outcomes={["identify-image-purpose"]} criteria={["Evidence"]}>
+  Attempt the work.
+  {/* <TaskSolution reasoning="Not rendered" alternatives={["Not rendered"]} likelyErrors={["Not rendered"]} /> */}
+</PracticeTask>
+${rubricPracticeTask}`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /TaskSolution must be nested directly inside a Practice Task/i,
+      );
+      assert.match(
+        result.output,
+        /Practice Task 1 must contain exactly one TaskSolution or TaskRubric/i,
+      );
+      assert.match(
+        result.output,
+        /Practice Task 2 must contain exactly one TaskSolution or TaskRubric/i,
+      );
+      assert.match(
+        result.output,
+        /Practice Task 3 must contain exactly one TaskSolution or TaskRubric/i,
+      );
+    },
+  );
+});
+
+test("requires reasoned Task Solutions with alternatives and likely errors", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n${solutionPracticeTask
+          .replace(
+            'reasoning="The description should state the comparison the chart contributes."',
+            'reasoning="   "',
+          )
+          .replace(
+            'alternatives={["Name the main difference before secondary details."]}',
+            "alternatives={[]}",
+          )
+          .replace(
+            'likelyErrors={["Listing visual properties without explaining the comparison."]}',
+            'likelyErrors={["   "]} score={10}',
+          )}
+${rubricPracticeTask}`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Task Solution 1 requires non-empty reasoning/i,
+      );
+      assert.match(
+        result.output,
+        /Task Solution 1 alternatives must be a non-empty array of non-empty strings/i,
+      );
+      assert.match(
+        result.output,
+        /Task Solution 1 likelyErrors must be a non-empty array of non-empty strings/i,
+      );
+      assert.match(
+        result.output,
+        /Task Solution 1 does not allow authored props: score/i,
+      );
+    },
+  );
+});
+
+test("requires observable, unscored Task Rubric evidence", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n${solutionPracticeTask}
+${rubricPracticeTask.replace(
+  '"evidence": "The review identifies the information a screen-reader user needs",',
+  '"evidence": "   ", "score": 10,',
+)}`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Task Rubric 1 criteria must contain only non-empty criterion and observable evidence/i,
+      );
+      assert.match(
+        result.output,
+        /Task Rubric 1 must not use objective score fields/i,
+      );
+    },
+  );
+});
+
+test("rejects duplicate and unknown Practice Task Outcome references", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        `${source}\n${solutionPracticeTask.replace(
+          'outcomes={["identify-image-purpose"]}',
+          'outcomes={["identify-image-purpose", "identify-image-purpose", "missing-outcome"]}',
+        )}
+${rubricPracticeTask}`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Practice Task 1 has duplicate Learning Outcome ID identify-image-purpose/i,
+      );
+      assert.match(
+        result.output,
+        /Practice Task 1 references unknown Course Learning Outcome ID missing-outcome/i,
+      );
+    },
+  );
+});
+
+test("requires every Course Learning Outcome to be practiced", async () => {
+  await withChangedValidCourse(
+    {
+      "capstone.mdx": (source) =>
+        source.replace(
+          'outcomes={["identify-image-purpose", "write-concise-alt-text"]}',
+          'outcomes={["identify-image-purpose"]}',
+        ),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Learning Outcome write-concise-alt-text is not practiced by any Practice Task/i,
+      );
+    },
+  );
+});
+
 test("rejects a Reflection without a prompt", async () => {
   await withChangedValidCourse(
     {

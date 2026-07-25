@@ -1,0 +1,30 @@
+---
+import TaskFeedback from "./TaskFeedback.astro";
+
+interface Props {
+  reasoning: string;
+  alternatives: string[];
+  likelyErrors: string[];
+}
+
+const { reasoning, alternatives, likelyErrors } = Astro.props;
+---
+
+<TaskFeedback
+  label="Разбор решения"
+  summary="Показать разбор решения"
+>
+  <h3>Ход рассуждения</h3>
+  <p>{reasoning}</p>
+  <h3>Другой подход</h3>
+  <ul>{alternatives.map((alternative) => <li>{alternative}</li>)}</ul>
+  <h3>Вероятные ошибки</h3>
+  <ul>{likelyErrors.map((error) => <li>{error}</li>)}</ul>
+</TaskFeedback>
+
+<style>
+  h3 { margin: 1rem 0 .4rem; font-size: 1rem; }
+  h3:first-child { margin-top: 0; }
+  p, ul { margin-top: .35rem; }
+  ul { padding-left: 1.35rem; }
+</style>

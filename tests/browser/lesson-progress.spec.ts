@@ -122,6 +122,9 @@ test("Lesson navigation refreshes progress after browser back navigation", async
 }) => {
   await page.getByRole("link", { name: "Начать курс" }).click();
   await page.getByRole("link", { name: /Следующий урок/ }).click();
+  await expect(
+    page.locator("header").getByLabel("Статус урока: В процессе"),
+  ).toBeVisible();
 
   await page.goBack();
 
@@ -350,6 +353,9 @@ test("Course resumes the most recently visited incomplete core destination", asy
   await page.getByRole("link", {
     name: /Итоговая работа: Понятная инструкция в Markdown/,
   }).click();
+  await expect(
+    page.locator("header").getByLabel("Статус итоговой работы: В процессе"),
+  ).toBeVisible();
   await page.goBack();
   await expect(page.getByRole("link", { name: "Продолжить курс" })).toHaveAttribute(
     "href",

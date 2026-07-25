@@ -13,4 +13,27 @@ criteria:
 time: 20
 ---
 
-Write and review alternative text for a small set of images used in one article.
+<PracticeTask
+  title="Review a set of image descriptions"
+  level="core"
+  estimatedMinutes={20}
+  goal="Publish concise descriptions that preserve each image's purpose"
+  outcomes={["identify-image-purpose", "write-concise-alt-text"]}
+  criteria={["Each description preserves useful meaning", "Redundant phrasing is removed"]}
+>
+  Write and review alternative text for a small set of images used in one
+  article.
+
+  <TaskRubric
+    criteria={[
+      {
+        "criterion": "Image purpose is preserved",
+        "evidence": "Each description communicates the information the image contributes in context",
+      },
+      {
+        "criterion": "Wording is concise",
+        "evidence": "Descriptions omit redundant phrases without dropping useful meaning",
+      },
+    ]}
+  />
+</PracticeTask>

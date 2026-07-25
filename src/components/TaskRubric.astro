@@ -1,0 +1,41 @@
+---
+import TaskFeedback from "./TaskFeedback.astro";
+
+interface Criterion {
+  criterion: string;
+  evidence: string;
+}
+
+interface Props {
+  criteria: Criterion[];
+}
+
+const { criteria } = Astro.props;
+---
+
+<TaskFeedback
+  label="Самопроверка"
+  summary="Открыть критерии самопроверки"
+>
+  <p>
+    Сопоставь свою работу с наблюдаемыми признаками и реши, что стоит
+    улучшить.
+  </p>
+  <dl>
+    {
+      criteria.map(({ criterion, evidence }) => (
+        <>
+          <dt>{criterion}</dt>
+          <dd>{evidence}</dd>
+        </>
+      ))
+    }
+  </dl>
+</TaskFeedback>
+
+<style>
+  p { margin-top: 0; color: var(--color-muted); }
+  dl { margin-bottom: 0; }
+  dt { margin-top: .85rem; font-weight: 800; }
+  dd { margin: .25rem 0 0; }
+</style>
