@@ -1,0 +1,47 @@
+---
+title: Выбери устойчивую стратегию обновления
+outcomes:
+  - keep-unchanged
+  - review-revision
+  - keep-moved
+  - replace-capability
+criteria:
+  - statement: Обычные правки сохраняют revision
+    outcomes:
+      - keep-unchanged
+  - statement: Материальные правки повышают revision
+    outcomes:
+      - review-revision
+  - statement: Перенос сохраняет Course-level slug
+    outcomes:
+      - keep-moved
+  - statement: Другая способность получает новый slug
+    outcomes:
+      - replace-capability
+time: 10
+---
+
+<PracticeTask
+  title="Разбери четыре изменения"
+  level="core"
+  estimatedMinutes={10}
+  goal="Выбрать правильную стратегию идентичности и Content Revision"
+  outcomes={["keep-unchanged", "review-revision", "keep-moved", "replace-capability"]}
+  criteria={["Для каждого изменения сохранён или заменён правильный идентификатор"]}
+>
+  Сопоставь каждое изменение с сохранением revision, её повышением, переносом
+  или новым slug.
+
+  <TaskRubric
+    criteria={[
+      {
+        criterion: "Идентичность не смешана с размещением",
+        evidence: "Перенос между Модулями не меняет Course-level slug",
+      },
+      {
+        criterion: "Материальность изменения учтена",
+        evidence: "Новая способность получает новый slug, а не только revision",
+      },
+    ]}
+  />
+</PracticeTask>

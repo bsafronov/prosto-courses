@@ -37,6 +37,7 @@ async function buildFixtureSite(environment) {
 await mkdir(contentRoot, { recursive: true });
 await copyCourses(path.join(projectRoot, "src/content/courses"));
 await copyCourses(path.join(projectRoot, "tests/fixtures/valid-course"));
+await copyCourses(path.join(projectRoot, "tests/fixtures/browser"));
 
 const environment = {
   ...process.env,

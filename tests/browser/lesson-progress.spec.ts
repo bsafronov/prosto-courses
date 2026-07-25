@@ -41,6 +41,37 @@ async function completeCoreRoute(page: Page) {
   }).click();
 }
 
+async function restoreLessonCompletion(
+  page: Page,
+  lessonSlug: string,
+  completedRevision?: number,
+) {
+  await page.evaluate(
+    ({ lessonSlug, completedRevision }) => {
+      localStorage.setItem(
+        "prosto-courses:progress:v1",
+        JSON.stringify({
+          courses: {
+            markdown: {
+              destinations: {
+                [`lesson:${lessonSlug}`]: {
+                  state: "completed",
+                  visitedAt: 1,
+                  ...(completedRevision === undefined
+                    ? {}
+                    : { completedRevision }),
+                },
+              },
+            },
+          },
+        }),
+      );
+    },
+    { lessonSlug, completedRevision },
+  );
+  await page.reload();
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto(courseOverview);
   await page.evaluate(() => localStorage.clear());
@@ -71,6 +102,111 @@ test("Lesson Progress persists, resumes the latest incomplete Lesson, and remain
   await page.getByRole("link", { name: "О курсе", exact: true }).click();
   const continueAction = page.getByRole("link", { name: "Продолжить курс" });
   await expect(continueAction).toHaveAttribute("href", /\/lessons\/formatting\/$/);
+});
+
+test("Lesson Completion records the current Content Revision", async ({ page }) => {
+  await page.getByRole("link", { name: "Начать курс" }).click();
+  await page.getByRole("button", { name: "Завершить урок" }).click();
+
+  const completedRevision = await page.evaluate(() => {
+    const progress = JSON.parse(
+      localStorage.getItem("prosto-courses:progress:v1")!,
+    );
+    return progress.courses.markdown.destinations["lesson:vvedenie"]
+      .completedRevision;
+  });
+
+  expect(completedRevision).toBe(1);
+});
+
+test("a higher Content Revision preserves completion and announces the update", async ({
+  page,
+}) => {
+  await restoreLessonCompletion(page, "formatting", 1);
+
+  const lesson = page
+    .getByRole("list", { name: "Уроки курса" })
+    .getByRole("link", { name: /Заголовки, выделение и списки/ });
+  await expect(
+    lesson.getByLabel("Статус урока: Завершён"),
+  ).toBeVisible();
+  await expect(
+    lesson.getByText("Обновлён после завершения", { exact: true }),
+  ).toBeVisible();
+});
+
+test("an updated Lesson offers a revisit without revoking completion", async ({
+  page,
+}) => {
+  await restoreLessonCompletion(page, "formatting", 1);
+
+  const revisit = page.getByRole("link", {
+    name: "Пересмотреть обновлённый урок: Заголовки, выделение и списки",
+  });
+  await expect(revisit).toHaveAttribute(
+    "href",
+    /\/lessons\/formatting\/$/,
+  );
+  await expect(
+    revisit.getByText("Пересмотреть", { exact: true }),
+  ).toBeVisible();
+  await revisit.click();
+
+  await expect(
+    page.getByText(
+      "Урок обновлён после твоего завершения. Завершение сохранено.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.locator("header").getByLabel("Статус урока: Завершён"),
+  ).toBeVisible();
+
+  await page
+    .getByRole("button", { name: "Завершить обновлённый урок" })
+    .click();
+
+  await expect(
+    page
+      .locator("header")
+      .getByText("Обновлён после завершения", { exact: true }),
+  ).toBeHidden();
+  await expect(
+    page.locator("header").getByLabel("Статус урока: Завершён"),
+  ).toBeVisible();
+  const completedRevision = await page.evaluate(() => {
+    const progress = JSON.parse(
+      localStorage.getItem("prosto-courses:progress:v1")!,
+    );
+    return progress.courses.markdown.destinations["lesson:formatting"]
+      .completedRevision;
+  });
+  expect(completedRevision).toBe(2);
+});
+
+test("legacy Lesson Completion preserves its original Content Revision", async ({
+  page,
+}) => {
+  await restoreLessonCompletion(page, "formatting");
+
+  const lesson = page
+    .getByRole("list", { name: "Уроки курса" })
+    .getByRole("link", { name: /Заголовки, выделение и списки/ });
+  await expect(
+    lesson.getByLabel("Статус урока: Завершён"),
+  ).toBeVisible();
+  await expect(
+    lesson.getByText("Обновлён после завершения", { exact: true }),
+  ).toBeVisible();
+
+  const completedRevision = await page.evaluate(() => {
+    const progress = JSON.parse(
+      localStorage.getItem("prosto-courses:progress:v1")!,
+    );
+    return progress.courses.markdown.destinations["lesson:formatting"]
+      .completedRevision;
+  });
+  expect(completedRevision).toBe(1);
 });
 
 test("Course Overview refreshes Lesson Progress after browser back navigation", async ({

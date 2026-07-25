@@ -101,7 +101,7 @@ const lessonTimeItems = [
           ? <SequenceDestinationLink
               destination={lessonDestinationLink(
                 course.id,
-                lessonSlug(previous),
+                previous,
               )}
             >
               ← Предыдущий урок: {previous.data.title}
@@ -111,7 +111,7 @@ const lessonTimeItems = [
           ? <SequenceDestinationLink
               destination={lessonDestinationLink(
                 course.id,
-                lessonSlug(next),
+                next,
               )}
               align="end"
             >

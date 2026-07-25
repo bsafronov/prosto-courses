@@ -10,9 +10,14 @@ export type CoreDestinationRef =
   | { id: string; kind: "lesson" }
   | { id: string; kind: "checkpoint" }
   | { id: "capstone:capstone"; kind: "capstone" };
-export type CoreDestinationLink = CoreDestinationRef & {
-  href: string;
-};
+export type CoreDestinationLink =
+  | (Extract<CoreDestinationRef, { kind: "lesson" }> & {
+      href: string;
+      revision: number;
+    })
+  | (Exclude<CoreDestinationRef, { kind: "lesson" }> & {
+      href: string;
+    });
 export type CoreRouteContext = {
   destinations: CoreDestinationLink[];
   current: CoreDestinationLink;
@@ -263,24 +268,31 @@ const coreDestination = <Kind extends CoreDestinationKind>(
   kind,
 });
 
-export const lessonDestination = (lessonSlug: string): CoreDestinationRef =>
+export const lessonDestination = (
+  lessonSlug: string,
+): Extract<CoreDestinationRef, { kind: "lesson" }> =>
   coreDestination("lesson", lessonSlug);
 
 export const checkpointDestination = (
   moduleSlug: string,
-): CoreDestinationRef => coreDestination("checkpoint", moduleSlug);
+): Extract<CoreDestinationRef, { kind: "checkpoint" }> =>
+  coreDestination("checkpoint", moduleSlug);
 
-export const capstoneDestination = (): CoreDestinationRef => ({
+export const capstoneDestination = (): Extract<
+  CoreDestinationRef,
+  { kind: "capstone" }
+> => ({
   id: "capstone:capstone",
   kind: "capstone",
 });
 
 export const lessonDestinationLink = (
   courseSlug: string,
-  slug: string,
+  lesson: LessonEntry,
 ): CoreDestinationLink => ({
-  ...lessonDestination(slug),
-  href: lessonPath(courseSlug, slug),
+  ...lessonDestination(lessonSlug(lesson)),
+  href: lessonPath(courseSlug, lessonSlug(lesson)),
+  revision: lesson.data.revision,
 });
 
 export const checkpointDestinationLink = (
@@ -307,7 +319,7 @@ export function getCoreDestinationLinks(
       const checkpointSlug = moduleSlug(courseModule.module);
       return [
         ...courseModule.lessons.map((lesson) =>
-          lessonDestinationLink(courseSlug, lessonSlug(lesson))),
+          lessonDestinationLink(courseSlug, lesson)),
         checkpointDestinationLink(courseSlug, checkpointSlug),
       ];
     }),

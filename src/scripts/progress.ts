@@ -2,6 +2,7 @@ import {
   completionControlCopy,
   courseActionCopy,
   courseStatusCopy,
+  lessonRevisionCopy,
   progressStatusAriaLabel,
   progressStatusCopy,
   reopenActionCopy,
@@ -12,6 +13,7 @@ import type { CoreDestinationLink } from "../lib/courses";
 type StoredDestination = {
   state: Exclude<ProgressState, "not-started">;
   visitedAt: number;
+  completedRevision?: number;
 };
 type StoredCourse = {
   destinations: Record<string, StoredDestination>;
@@ -20,6 +22,7 @@ type StoredCourse = {
 type StoredProgress = { courses: Record<string, StoredCourse> };
 
 const storageKey = "prosto-courses:progress:v1";
+const legacyCompletedRevision = 1;
 
 const emptyRecord = <Value>() =>
   Object.create(null) as Record<string, Value>;
@@ -36,7 +39,18 @@ function storedDestination(value: unknown): StoredDestination | undefined {
     !Number.isFinite(value.visitedAt) ||
     value.visitedAt < 0
   ) return;
-  return { state: value.state, visitedAt: value.visitedAt };
+  const completedRevision =
+    value.state === "completed" &&
+    typeof value.completedRevision === "number" &&
+    Number.isInteger(value.completedRevision) &&
+    value.completedRevision > 0
+      ? value.completedRevision
+      : undefined;
+  return {
+    state: value.state,
+    visitedAt: value.visitedAt,
+    ...(completedRevision ? { completedRevision } : {}),
+  };
 }
 
 function readProgress(): StoredProgress {
@@ -141,6 +155,59 @@ function paintStatus(
     });
 }
 
+function paintRevisionStatus(
+  root: ParentNode,
+  destination: CoreDestinationLink,
+  stored: StoredDestination | undefined,
+) {
+  if (destination.kind !== "lesson") return;
+  const revisedSinceCompletion = wasRevisedSinceCompletion(
+    destination,
+    stored,
+  );
+  root
+    .querySelectorAll<HTMLElement>(
+      `[data-revision-status][data-destination-id="${CSS.escape(destination.id)}"]`,
+    )
+    .forEach((status) => {
+      status.hidden = !revisedSinceCompletion;
+    });
+  root
+    .querySelectorAll<HTMLElement>(
+      `[data-revision-revisit][data-destination-id="${CSS.escape(destination.id)}"]`,
+    )
+    .forEach((action) => {
+      action.hidden = !revisedSinceCompletion;
+    });
+  root
+    .querySelectorAll<HTMLAnchorElement>(
+      `[data-lesson-link][data-destination-id="${CSS.escape(destination.id)}"]`,
+    )
+    .forEach((link) => {
+      const title = link.dataset.lessonTitle;
+      if (revisedSinceCompletion && title) {
+        link.setAttribute(
+          "aria-label",
+          `${lessonRevisionCopy.revisit}: ${title}`,
+        );
+      } else {
+        link.removeAttribute("aria-label");
+      }
+    });
+}
+
+function wasRevisedSinceCompletion(
+  destination: CoreDestinationLink,
+  stored: StoredDestination | undefined,
+) {
+  return (
+    destination.kind === "lesson" &&
+    stored?.state === "completed" &&
+    stored.completedRevision !== undefined &&
+    destination.revision > stored.completedRevision
+  );
+}
+
 function mostRecentlyVisitedIncomplete(
   course: StoredCourse,
   destinations: CoreDestinationLink[],
@@ -170,21 +237,46 @@ function coreDestinations(root: HTMLElement): CoreDestinationLink[] {
         (destination.kind === "lesson" ||
           destination.kind === "checkpoint" ||
           destination.kind === "capstone") &&
-        typeof destination.href === "string",
+        typeof destination.href === "string" &&
+        (destination.kind !== "lesson" ||
+          (typeof destination.revision === "number" &&
+            Number.isInteger(destination.revision) &&
+            destination.revision > 0)),
     );
   } catch {
     return [];
   }
 }
 
+function migrateLegacyCompletionRevisions(
+  course: StoredCourse,
+  destinations: CoreDestinationLink[],
+) {
+  let changed = false;
+  for (const destination of destinations) {
+    const stored = course.destinations[destination.id];
+    if (
+      destination.kind === "lesson" &&
+      stored?.state === "completed" &&
+      stored.completedRevision === undefined
+    ) {
+      stored.completedRevision = legacyCompletedRevision;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 function refresh(root: HTMLElement, course: StoredCourse) {
   const destinations = coreDestinations(root);
   for (const destination of destinations) {
+    const stored = course.destinations[destination.id];
     paintStatus(
       root,
       destination,
-      course.destinations[destination.id]?.state ?? "not-started",
+      stored?.state ?? "not-started",
     );
+    paintRevisionStatus(root, destination, stored);
   }
 
   const currentId = root.dataset.currentDestination;
@@ -192,13 +284,23 @@ function refresh(root: HTMLElement, course: StoredCourse) {
     (destination) => destination.id === currentId,
   );
   if (current) {
-    const state =
-      course.destinations[current.id]?.state ?? "not-started";
+    const stored = course.destinations[current.id];
+    const state = stored?.state ?? "not-started";
+    const revisedSinceCompletion = wasRevisedSinceCompletion(
+      current,
+      stored,
+    );
+    const revisionNotice = root.querySelector<HTMLElement>(
+      "[data-revision-notice]",
+    );
+    if (revisionNotice) revisionNotice.hidden = !revisedSinceCompletion;
     const toggle = root.querySelector<HTMLButtonElement>("[data-completion-toggle]");
     if (toggle) {
       const completed = state === "completed";
       toggle.setAttribute("aria-pressed", String(completed));
-      toggle.textContent = completed
+      toggle.textContent = revisedSinceCompletion
+        ? lessonRevisionCopy.complete
+        : completed
         ? reopenActionCopy
         : completionControlCopy[current.kind].complete;
     }
@@ -267,7 +369,12 @@ function initialiseProgress(root: HTMLElement) {
   function recordCurrentVisit() {
     progress = readProgress();
     course = ensureCourse(progress, courseSlug);
+    const migrated = migrateLegacyCompletionRevisions(
+      course,
+      destinations,
+    );
     if (!current || course.destinations[current.id]?.state === "completed") {
+      if (migrated) writeProgress(progress);
       refresh(root, course);
       return;
     }
@@ -285,6 +392,9 @@ function initialiseProgress(root: HTMLElement) {
   function refreshFromStorage() {
     progress = readProgress();
     course = ensureCourse(progress, courseSlug);
+    if (migrateLegacyCompletionRevisions(course, destinations)) {
+      writeProgress(progress);
+    }
     refresh(root, course);
   }
 
@@ -303,11 +413,20 @@ function initialiseProgress(root: HTMLElement) {
     course = ensureCourse(progress, courseSlug);
     const completed =
       course.destinations[current.id]?.state === "completed";
+    const revisedSinceCompletion = wasRevisedSinceCompletion(
+      current,
+      course.destinations[current.id],
+    );
+    const nextState =
+      completed && !revisedSinceCompletion ? "started" : "completed";
     course.destinations[current.id] = {
-      state: completed ? "started" : "completed",
+      state: nextState,
       visitedAt: nextVisitedAt(course),
+      ...(nextState === "completed" && current.kind === "lesson"
+        ? { completedRevision: current.revision }
+        : {}),
     };
-    course.lastIncomplete = completed
+    course.lastIncomplete = completed && !revisedSinceCompletion
       ? current.id
       : mostRecentlyVisitedIncomplete(course, destinations);
     writeProgress(progress);

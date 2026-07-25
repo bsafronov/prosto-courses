@@ -1,6 +1,9 @@
 ---
 import type { CoreDestinationKind } from "../lib/courses";
-import { completionControlCopy } from "../lib/ui-copy";
+import {
+  completionControlCopy,
+  lessonRevisionCopy,
+} from "../lib/ui-copy";
 
 interface Props {
   kind: CoreDestinationKind;
@@ -12,6 +15,17 @@ const headingId = `${kind}-completion-heading`;
 ---
 <section class="completion" aria-labelledby={headingId}>
   <h2 id={headingId}>{copy.heading}</h2>
+  {kind === "lesson" && (
+    <p
+      class="revision-notice"
+      data-revision-notice
+      role="status"
+      aria-live="polite"
+      hidden
+    >
+      {lessonRevisionCopy.notice}
+    </p>
+  )}
   <p>{copy.description}</p>
   <button type="button" data-completion-toggle aria-pressed="false">
     {copy.complete}
@@ -28,4 +42,5 @@ const headingId = `${kind}-completion-heading`;
   }
   .completion h2 { margin: 0; font-size: 1.25rem; }
   .completion p { color: var(--color-muted); }
+  .completion .revision-notice { border-left: .25rem solid var(--color-brand); padding-left: .8rem; color: var(--color-ink); font-weight: 700; }
 </style>

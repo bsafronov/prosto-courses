@@ -15,7 +15,6 @@ import {
   getCoreRouteContext,
   getCourseTree,
   lessonDestinationLink,
-  lessonSlug,
   modulePath,
   moduleSlug,
   type CourseModule,
@@ -91,7 +90,7 @@ const { Content } = await render(checkpoint);
         <SequenceDestinationLink
           destination={lessonDestinationLink(
             course.id,
-            lessonSlug(previousLesson),
+            previousLesson,
           )}
         >
           ← Последний урок: {previousLesson.data.title}

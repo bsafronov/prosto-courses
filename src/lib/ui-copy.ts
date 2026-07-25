@@ -59,3 +59,12 @@ export const completionControlCopy: Record<
 };
 
 export const reopenActionCopy = "Вернуть в работу";
+
+export const lessonRevisionCopy = {
+  status: "Обновлён после завершения",
+  revisit: "Пересмотреть обновлённый урок",
+  revisitLabel: "Пересмотреть",
+  notice:
+    "Урок обновлён после твоего завершения. Завершение сохранено.",
+  complete: "Завершить обновлённый урок",
+} as const;

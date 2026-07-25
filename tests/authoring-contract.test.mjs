@@ -1444,6 +1444,22 @@ test("rejects Lesson metadata that the strict collection cannot load", async () 
   assert.match(result.output, /revision/i);
 });
 
+test("rejects a non-positive Content Revision", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        source.replace("revision: 1", "revision: 0"),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /Lesson frontmatter revision.*(?:greater than|>)\s*0/i,
+      );
+    },
+  );
+});
+
 test("rejects authored counts, positions, links, and duration totals", async () => {
   await withChangedValidCourse(
     {

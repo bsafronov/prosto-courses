@@ -1,5 +1,6 @@
 ---
 import {
+  lessonRevisionCopy,
   progressStatusAriaLabel,
   progressStatusCopy,
 } from "../lib/ui-copy";
@@ -11,19 +12,34 @@ interface Props {
 const { destination } = Astro.props;
 const initialStatus = progressStatusCopy["not-started"];
 ---
-<span
-  class="status"
-  data-progress-status
-  data-destination-id={destination.id}
-  data-state="not-started"
-  aria-label={progressStatusAriaLabel(destination.kind, initialStatus.label)}
->
-  <span data-status-icon aria-hidden="true">{initialStatus.icon}</span>
-  <span data-status-label>{initialStatus.label}</span>
+<span class="status-stack">
+  <span
+    class="status"
+    data-progress-status
+    data-destination-id={destination.id}
+    data-state="not-started"
+    aria-label={progressStatusAriaLabel(destination.kind, initialStatus.label)}
+  >
+    <span data-status-icon aria-hidden="true">{initialStatus.icon}</span>
+    <span data-status-label>{initialStatus.label}</span>
+  </span>
+  {destination.kind === "lesson" && (
+    <span
+      class="revision-status"
+      data-revision-status
+      data-destination-id={destination.id}
+      aria-live="polite"
+      hidden
+    >
+      {lessonRevisionCopy.status}
+    </span>
+  )}
 </span>
 
 <style>
+  .status-stack { display: grid; justify-items: end; gap: .3rem; }
   .status { display: inline-flex; align-items: center; gap: .35rem; border-radius: 999px; padding: .18rem .55rem; color: var(--color-muted); font-size: .82rem; font-weight: 750; white-space: nowrap; }
   .status[data-state="started"] { color: var(--color-started-ink); background: var(--color-started); }
   .status[data-state="completed"] { color: var(--color-completed-ink); background: var(--color-completed); }
+  .revision-status { border: 1px solid currentColor; border-radius: 999px; padding: .12rem .5rem; color: var(--color-brand); font-size: .75rem; font-weight: 750; white-space: nowrap; }
 </style>
