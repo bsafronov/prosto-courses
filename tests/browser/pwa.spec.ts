@@ -515,8 +515,10 @@ test("preparing Offline Availability keeps focus stable through completion", asy
 });
 
 test("data saving defers preparation until the learner accepts the measured release", async ({
+  baseURL,
   context,
   page,
+  request,
 }) => {
   await context.addInitScript(() => {
     Object.defineProperty(navigator, "connection", {
@@ -538,6 +540,30 @@ test("data saving defers preparation until the learner accepts the measured rele
       async () => (await navigator.serviceWorker.getRegistrations()).length,
     ),
   ).toBe(0);
+
+  const { releaseUrls } = await getReleaseInventory(baseURL, request);
+  const releaseResponses = await Promise.all(
+    releaseUrls.map((url) =>
+      request.get(fixtureServerUrl(baseURL, url)),
+    ),
+  );
+  for (const response of releaseResponses) expect(response.ok()).toBe(true);
+  const totalBytes = (
+    await Promise.all(releaseResponses.map((response) => response.body()))
+  ).reduce((total, body) => total + body.byteLength, 0);
+  const metadataResponse = await request.get(
+    fixtureServerUrl(baseURL, "/prosto-courses/offline-release.json"),
+  );
+  expect(metadataResponse.ok()).toBe(true);
+  await expect(metadataResponse.json()).resolves.toEqual({
+    fileCount: releaseUrls.length,
+    totalBytes,
+  });
+  await expect(control).toContainText(
+    `Полный Каталог: ${new Intl.NumberFormat("ru-RU", {
+      maximumFractionDigits: 1,
+    }).format(totalBytes / 1024 / 1024)} МБ.`,
+  );
 
   await control.getByRole("button", { name: "Скачать" }).click();
   await expect(control.locator("[data-pwa-status]")).toHaveText(
@@ -563,11 +589,26 @@ test("failed initial preparation never claims readiness and can be retried", asy
     { timeout: 20_000 },
   );
   await expect(control).not.toContainText("Доступно офлайн");
+  await expect(
+    control.getByRole("button", { name: "Повторить" }),
+  ).toHaveAccessibleDescription("Не удалось сохранить полный Каталог.");
   const stateResponse = await request.get(
     fixtureServerUrl(baseURL, "/__test__/state"),
   );
   expect((await stateResponse.json()).failedPrecacheRequestCount).toBeGreaterThan(
     0,
+  );
+
+  await page
+    .getByRole("article", { name: "Основы Markdown" })
+    .getByRole("link", { name: "Основы Markdown", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Основы Markdown" }),
+  ).toBeVisible();
+  await expect(control.locator("[data-pwa-status]")).toHaveText(
+    "Офлайн не подготовлен",
+    { timeout: 20_000 },
   );
 
   const healthyRelease = await request.post(

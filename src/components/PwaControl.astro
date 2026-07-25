@@ -18,8 +18,19 @@ import { sitePath } from "../lib/courses";
     aria-live="polite"
     aria-atomic="true"
   ></span>
-  <span class="pwa-detail" data-pwa-detail hidden></span>
-  <button class="pwa-action" data-pwa-action type="button" hidden></button>
+  <span
+    class="pwa-detail"
+    data-pwa-detail
+    id="pwa-action-detail"
+    hidden
+  ></span>
+  <button
+    class="pwa-action"
+    data-pwa-action
+    type="button"
+    aria-describedby="pwa-action-detail"
+    hidden
+  ></button>
 </div>
 
 <script>
