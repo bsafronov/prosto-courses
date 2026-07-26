@@ -4,6 +4,7 @@ import {
   type APIRequestContext,
   type Page,
 } from "@playwright/test";
+import { siteBasePath, siteOrigin } from "../../site.config.mjs";
 
 test.use({ serviceWorkers: "allow" });
 
@@ -963,23 +964,61 @@ test("External References are marked, blocked offline, and restored online", asy
   request,
 }) => {
   const release = await getReleaseInventory(baseURL, request);
+  const platformScope =
+    siteBasePath === "/" ? "/" : `${siteBasePath}/`;
   let referenceCount = 0;
   for (const route of release.routes) {
     await page.goto(route);
-    const references = page.locator(
-      'main a[href^="http://"], main a[href^="https://"]',
-    );
+    const references = page.locator("main a[href]");
     const count = await references.count();
-    referenceCount += count;
     for (let index = 0; index < count; index += 1) {
       const reference = references.nth(index);
+      const href = await reference.getAttribute("href");
+      const url = new URL(href!, siteOrigin);
+      const isInternalPlatformLink =
+        url.origin === siteOrigin &&
+        (url.pathname === siteBasePath ||
+          url.pathname.startsWith(platformScope));
+      if (
+        !["http:", "https:"].includes(url.protocol) ||
+        isInternalPlatformLink
+      ) {
+        continue;
+      }
+      referenceCount += 1;
       await expect(reference).toHaveAttribute("data-external-reference", "");
       await expect(reference).toHaveAttribute("target", "_blank");
       await expect(reference).toHaveAttribute("rel", /noopener/);
+      await expect(reference).toHaveAttribute("rel", /noreferrer/);
       await expect(reference).toContainText("требуется интернет");
     }
   }
   expect(referenceCount).toBeGreaterThan(1);
+
+  await page.goto("./courses/lesson-history/lessons/moved-lesson/");
+  const internalReference = page.getByRole("link", {
+    name: "Внутренняя ссылка на Урок",
+    exact: true,
+  });
+  await expect(internalReference).not.toHaveAttribute(
+    "data-external-reference",
+    "",
+  );
+  await expect(internalReference).not.toHaveAttribute("target", "_blank");
+  await expect(internalReference).not.toHaveAttribute("rel", /noopener/);
+  await expect(internalReference).not.toContainText("требуется интернет");
+
+  const sameOriginExternalReference = page.getByRole("link", {
+    name: /Внешняя ссылка с общего домена.*требуется интернет/,
+  });
+  await expect(sameOriginExternalReference).toHaveAttribute(
+    "data-external-reference",
+    "",
+  );
+  await expect(sameOriginExternalReference).toHaveAttribute(
+    "target",
+    "_blank",
+  );
 
   await context.route("https://www.w3.org/**", (route) =>
     route.fulfill({
@@ -994,6 +1033,7 @@ test("External References are marked, blocked offline, and restored online", asy
   });
   await expect(reference).toHaveAttribute("target", "_blank");
   await expect(reference).toHaveAttribute("rel", /noopener/);
+  await expect(reference).toHaveAttribute("rel", /noreferrer/);
   await expect(reference).toHaveAttribute("data-external-reference", "");
 
   const onlinePagePromise = context.waitForEvent("page");
@@ -1004,20 +1044,29 @@ test("External References are marked, blocked offline, and restored online", asy
   await onlinePage.close();
 
   const lessonUrl = page.url();
+  const selectedAnswer = page.getByRole("checkbox", {
+    name: "Текст в квадратных скобках",
+  });
+  await selectedAnswer.check();
   await context.setOffline(true);
   await reference.click();
   expect(page.url()).toBe(lessonUrl);
-  await expect(
-    page.getByRole("status").filter({
-      hasText: "Для этой ссылки нужен интернет.",
-    }),
-  ).toBeVisible();
+  await expect(reference).toBeFocused();
+  await expect(selectedAnswer).toBeChecked();
+  const offlineMessage = page.getByRole("status").filter({
+    hasText: "Для этой ссылки нужен интернет.",
+  });
+  await expect(offlineMessage).toBeVisible();
+  const offlineMessageId = await offlineMessage.getAttribute("id");
+  expect(offlineMessageId).toBeTruthy();
+  expect(
+    (await reference.getAttribute("aria-describedby"))?.split(/\s+/),
+  ).toContain(offlineMessageId);
   expect(context.pages()).toHaveLength(1);
 
   await context.setOffline(false);
-  await expect(
-    page.getByText("Для этой ссылки нужен интернет."),
-  ).toBeHidden();
+  await expect(offlineMessage).toBeHidden();
+  await expect(reference).not.toHaveAttribute("aria-describedby", /.+/);
   const restoredPagePromise = context.waitForEvent("page");
   await reference.click();
   const restoredPage = await restoredPagePromise;

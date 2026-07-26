@@ -1,8 +1,30 @@
-function visit(node) {
+function isExternalReference(href, platformRoot) {
+  if (!/^(?:https?:)?\/\//i.test(String(href ?? ""))) return false;
+
+  try {
+    const url = new URL(String(href), platformRoot);
+    const platformScope =
+      platformRoot.pathname === "/"
+        ? "/"
+        : `${platformRoot.pathname.replace(/\/+$/, "")}/`;
+    const isInternalPlatformLink =
+      url.origin === platformRoot.origin &&
+      (url.pathname === platformRoot.pathname ||
+        url.pathname.startsWith(platformScope));
+    return (
+      (url.protocol === "http:" || url.protocol === "https:") &&
+      !isInternalPlatformLink
+    );
+  } catch {
+    return false;
+  }
+}
+
+function visit(node, platformRoot) {
   if (
     node?.type === "element" &&
     node.tagName === "a" &&
-    /^https?:\/\//.test(String(node.properties?.href ?? ""))
+    isExternalReference(node.properties?.href, platformRoot)
   ) {
     node.properties = {
       ...node.properties,
@@ -29,9 +51,10 @@ function visit(node) {
     );
   }
 
-  for (const child of node?.children ?? []) visit(child);
+  for (const child of node?.children ?? []) visit(child, platformRoot);
 }
 
-export function externalReferences() {
-  return visit;
+export function externalReferences({ siteBasePath, siteOrigin }) {
+  const platformRoot = new URL(siteBasePath, siteOrigin);
+  return (tree) => visit(tree, platformRoot);
 }

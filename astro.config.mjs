@@ -23,7 +23,11 @@ export default defineConfig({
   output: "static",
   trailingSlash: "always",
   markdown: {
-    processor: unified({ rehypePlugins: [externalReferences] }),
+    processor: unified({
+      rehypePlugins: [
+        [externalReferences, { siteBasePath, siteOrigin }],
+      ],
+    }),
   },
   ...(outDir ? { outDir } : {}),
   ...(cacheDir ? { cacheDir } : {}),
