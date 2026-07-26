@@ -40,6 +40,10 @@ _Avoid_: Difficulty quota, repeated full solution, permanent hinting
 The browsable collection of independent courses and the destination for cross-course navigation. It does not impose an order between courses.
 _Avoid_: Curriculum, course sequence
 
+**Resume Destination**:
+The most recently visited incomplete Lesson, Module Checkpoint, or Capstone Demonstration across the Course Catalog, selected from browser-local progress as the learner's direct return point. If no such progress exists, the learner starts from the Course Catalog rather than an assumed current Course.
+_Avoid_: Current Course, enrolled Course, homepage Course
+
 **Offline Availability**:
 The browser-local state in which the entire currently published Course Catalog and its platform-owned learner interactions remain usable without a network connection. External references are outside this guarantee; Offline Availability neither requires installation nor implies synchronization between browsers or devices.
 _Avoid_: Installation, synchronization, downloaded Course
