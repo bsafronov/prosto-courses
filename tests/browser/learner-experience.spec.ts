@@ -474,12 +474,51 @@ test("Course Overview makes the next action and complete route primary", async (
   ).toHaveCount(1);
 
   const route = page.getByRole("navigation", { name: "Маршрут курса" });
-  await expect(route.getByRole("link")).toHaveCount(13);
+  const routeLinks = route.getByRole("link");
+  await expect(routeLinks).toHaveCount(13);
+  expect(
+    await routeLinks.evaluateAll((links) =>
+      links.map((link) => new URL((link as HTMLAnchorElement).href).pathname),
+    ),
+  ).toEqual([
+    "/prosto-courses/courses/markdown/modules/osnovy/",
+    "/prosto-courses/courses/markdown/lessons/vvedenie/",
+    "/prosto-courses/courses/markdown/lessons/source-render/",
+    "/prosto-courses/courses/markdown/modules/osnovy/checkpoint/",
+    "/prosto-courses/courses/markdown/modules/struktura/",
+    "/prosto-courses/courses/markdown/lessons/formatting/",
+    "/prosto-courses/courses/markdown/lessons/links-code/",
+    "/prosto-courses/courses/markdown/modules/struktura/checkpoint/",
+    "/prosto-courses/courses/markdown/modules/proverka/",
+    "/prosto-courses/courses/markdown/lessons/portability/",
+    "/prosto-courses/courses/markdown/lessons/review/",
+    "/prosto-courses/courses/markdown/modules/proverka/checkpoint/",
+    "/prosto-courses/courses/markdown/capstone/",
+  ]);
+  const firstLesson = route.getByRole("link", {
+    name: /Знакомство с Markdown/,
+  });
+  await expect(firstLesson).toHaveAccessibleName(
+    /^Урок 1: Знакомство с Markdown/,
+  );
+  await expect(
+    route.getByRole("link", {
+      name: /Заголовки, выделение и списки/,
+    }),
+  ).toHaveAccessibleName(/^Урок 3: Заголовки, выделение и списки/);
   await expect(
     route.getByRole("link", {
       name: /Итоговая работа: Понятная инструкция в Markdown/,
     }),
   ).toBeVisible();
+
+  await page.getByRole("link", { name: "Начать", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  await expect(
+    route.getByRole("link", { name: "От исходника к структуре", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(firstLesson).toBeFocused();
 
   const order = await page.evaluate(() => {
     const action = document.querySelector("[data-course-action]")!;

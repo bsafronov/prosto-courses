@@ -30,7 +30,7 @@ const {
   lessonListLabel = "Уроки курса",
   current,
 } = Astro.props;
-let routeIndex = 0;
+let lessonIndex = 0;
 ---
 <div class="outline">
   <ol class="module-list">
@@ -54,13 +54,13 @@ let routeIndex = 0;
           </p>
           <ol class="destination-list" aria-label={label}>
             {lessons.map((lesson) => {
-              routeIndex += 1;
+              lessonIndex += 1;
               const currentSlug = lessonSlug(lesson);
               const destination = lessonDestination(currentSlug);
               return (
                 <li class="destination" data-kind="lesson">
                   <span class="route-node" aria-hidden="true">
-                    {String(routeIndex).padStart(2, "0")}
+                    {String(lessonIndex).padStart(2, "0")}
                   </span>
                   <a
                     href={lessonPath(courseSlug, currentSlug)}
@@ -72,6 +72,7 @@ let routeIndex = 0;
                     data-destination-id={destination.id}
                     data-lesson-title={lesson.data.title}
                   >
+                    <span class="sr-only">Урок {lessonIndex}: </span>
                     <span>{lesson.data.title}</span>
                     <ProgressStatus destination={destination} />
                     <span
@@ -88,7 +89,6 @@ let routeIndex = 0;
             })}
           </ol>
           {(() => {
-            routeIndex += 1;
             const destination = checkpointDestination(slug);
             return (
               <div class="destination checkpoint" data-kind="checkpoint">

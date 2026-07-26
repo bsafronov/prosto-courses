@@ -254,10 +254,7 @@ function refresh(root: HTMLElement, course: StoredCourse) {
     action.textContent = courseActionCopy.start;
     action.href = destinations[0].href;
   } else {
-    const recentId =
-      incomplete.find(
-        (destination) => destination.id === course.lastIncomplete,
-      )?.id ?? mostRecentlyVisitedIncomplete(course, incomplete);
+    const recentId = mostRecentlyVisitedIncomplete(course, incomplete);
     const recent = incomplete.find(
       (destination) => destination.id === recentId,
     );

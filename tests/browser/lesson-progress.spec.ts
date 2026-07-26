@@ -521,6 +521,39 @@ test("Course resumes the most recently visited incomplete core destination", asy
   );
 });
 
+test("Course ignores a stale resume pointer and continues the newest incomplete destination", async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    localStorage.setItem(
+      "prosto-courses:progress:v1",
+      JSON.stringify({
+        courses: {
+          markdown: {
+            destinations: {
+              "lesson:vvedenie": {
+                state: "started",
+                visitedAt: 10,
+              },
+              "checkpoint:struktura": {
+                state: "started",
+                visitedAt: 20,
+              },
+            },
+            lastIncomplete: "lesson:vvedenie",
+          },
+        },
+      }),
+    );
+  });
+  await page.reload();
+
+  await expect(page.getByRole("link", { name: "Продолжить" })).toHaveAttribute(
+    "href",
+    /\/modules\/struktura\/checkpoint\/$/,
+  );
+});
+
 test("core destination progress stays consistent across browser tabs", async ({
   page,
   context,
