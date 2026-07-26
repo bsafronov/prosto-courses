@@ -684,34 +684,85 @@ test("a Catalog Update survives a failed attempt, waits for consent, and preserv
     page.getByRole("heading", { level: 1, name: firstTitle, exact: true }),
   ).toBeVisible();
 
+  await context.setOffline(true);
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { level: 1, name: firstTitle, exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: reflectionPrompt })
+      .getByRole("textbox", { name: "Твоя заметка" }),
+  ).toHaveValue(draft);
+  const transientAnswer = page.getByRole("radio", {
+    name: "**Раздел**",
+  });
+  await transientAnswer.check();
+
   const healthyRelease = await request.post(
     fixtureServerUrl(baseURL, "/__test__/release/2"),
   );
   expect(healthyRelease.ok()).toBe(true);
-  await context.setOffline(true);
   await context.setOffline(false);
 
-  const update = control.getByRole("button", { name: "Обновить" });
+  const refreshedControl = page.getByRole("group", {
+    name: "Офлайн-доступ",
+  });
+  const update = refreshedControl.getByRole("button", { name: "Обновить" });
   await expect(update).toBeVisible({ timeout: 20_000 });
-  await expect(control.locator("[data-pwa-status]")).toHaveText(
+  await expect(refreshedControl.locator("[data-pwa-status]")).toHaveText(
     "Доступно обновление",
   );
-  await expect(control).toContainText(
-    "После обновления откроется Каталог курсов.",
+  await expect(update).toHaveAccessibleDescription(
+    "Текущие несохранённые действия могут быть потеряны. После обновления откроется Каталог курсов.",
   );
   await expect(
     page.getByRole("heading", { level: 1, name: firstTitle, exact: true }),
   ).toBeVisible();
+  await expect(transientAnswer).toBeChecked();
+  const siblingPage = await context.newPage();
+  await siblingPage.goto(page.url());
+  await expect(
+    siblingPage.getByRole("heading", {
+      level: 1,
+      name: firstTitle,
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    siblingPage
+      .getByRole("group", { name: "Офлайн-доступ" })
+      .getByRole("button", { name: "Обновить" }),
+  ).toBeVisible();
 
   await context.setOffline(true);
-  await expect(control.locator("[data-pwa-status]")).toHaveText(
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { level: 1, name: firstTitle, exact: true }),
+  ).toBeVisible();
+  const offlineControl = page.getByRole("group", {
+    name: "Офлайн-доступ",
+  });
+  const offlineUpdate = offlineControl.getByRole("button", {
+    name: "Обновить",
+  });
+  await expect(offlineControl.locator("[data-pwa-status]")).toHaveText(
     "Обновление готово офлайн",
+    { timeout: 20_000 },
   );
-  await expect(update).toBeEnabled();
-  await update.click();
+  await expect(offlineUpdate).toBeEnabled();
+  await offlineUpdate.click();
   await expect(page).toHaveURL(/\/prosto-courses\/$/, { timeout: 20_000 });
   await expect(
     page.getByRole("heading", { name: "Учись новому — урок за уроком." }),
+  ).toBeVisible();
+  await expect(siblingPage).toHaveURL(/\/prosto-courses\/$/, {
+    timeout: 20_000,
+  });
+  await expect(
+    siblingPage.getByRole("heading", {
+      name: "Учись новому — урок за уроком.",
+    }),
   ).toBeVisible();
 
   await page.goto(lessonPath);

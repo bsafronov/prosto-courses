@@ -103,6 +103,7 @@ function createController(config: {
   let registrationStarted = false;
   let updateServiceWorker: (() => Promise<void>) | undefined;
   let currentAction: Action | undefined;
+  let catalogNavigationStarted = false;
 
   function view(): ViewState {
     const status = !state.online
@@ -131,7 +132,8 @@ function createController(config: {
         statusText: state.online
           ? "Доступно обновление"
           : "Обновление готово офлайн",
-        detail: "После обновления откроется Каталог курсов.",
+        detail:
+          "Текущие несохранённые действия могут быть потеряны. После обновления откроется Каталог курсов.",
         action: "update",
         actionText: "Обновить",
       };
@@ -210,6 +212,21 @@ function createController(config: {
     void registration.update().catch(() => undefined);
   }
 
+  function returnToCatalogAfterUpdate() {
+    if (catalogNavigationStarted) return;
+    catalogNavigationStarted = true;
+    window.location.assign(config.catalogUrl);
+  }
+
+  function rememberRegistration(nextRegistration: ServiceWorkerRegistration) {
+    registration = nextRegistration;
+    observeInstall(registration.installing);
+    if (registration.waiting) {
+      state.updateReady = true;
+      emit();
+    }
+  }
+
   async function registerRelease() {
     if (registrationStarted || !state.online) return;
     registrationStarted = true;
@@ -227,16 +244,15 @@ function createController(config: {
         emit();
       },
       onNeedReload() {
-        window.location.assign(config.catalogUrl);
+        returnToCatalogAfterUpdate();
       },
       onRegisteredSW(_scriptUrl, nextRegistration) {
-        registration = nextRegistration;
-        if (!registration) {
+        if (!nextRegistration) {
           preparationFailed();
           return;
         }
-        observeInstall(registration.installing);
-        registration.addEventListener("updatefound", () => {
+        rememberRegistration(nextRegistration);
+        nextRegistration.addEventListener("updatefound", () => {
           observeInstall(registration?.installing ?? null);
         });
         if (navigator.serviceWorker.controller) {
@@ -272,6 +288,9 @@ function createController(config: {
       state.online = navigator.onLine;
       const hasActiveRelease = Boolean(navigator.serviceWorker.controller);
       state.readiness = hasActiveRelease ? "ready" : "preparing";
+      const existingRegistration =
+        await navigator.serviceWorker.getRegistration();
+      if (existingRegistration) rememberRegistration(existingRegistration);
 
       window.addEventListener("beforeinstallprompt", (event) => {
         event.preventDefault();
@@ -296,6 +315,10 @@ function createController(config: {
         if (state.readiness !== "deferred") void registerRelease();
         checkForUpdate();
       });
+      navigator.serviceWorker.addEventListener(
+        "controllerchange",
+        returnToCatalogAfterUpdate,
+      );
 
       if (nav.connection?.saveData && !hasActiveRelease) {
         state.readiness = "deferred";
@@ -322,7 +345,11 @@ function createController(config: {
         return;
       }
       if (currentAction === "update") {
-        await updateServiceWorker?.();
+        if (registration?.waiting) {
+          registration.waiting.postMessage({ type: "SKIP_WAITING" });
+        } else {
+          await updateServiceWorker?.();
+        }
         return;
       }
       if (currentAction === "install" && state.installPrompt) {
