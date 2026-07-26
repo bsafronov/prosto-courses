@@ -1,0 +1,326 @@
+---
+// PROTOTYPE — three Home/Course Catalog variants, switchable via ?variant=, on `/`.
+import type { CourseEntry } from "../../lib/courses";
+import {
+  capstoneDestinationLink,
+  checkpointDestinationLink,
+  coursePath,
+  formatLessonCount,
+  formatMinutes,
+  formatModuleCount,
+  getCourseTree,
+  lessonDestinationLink,
+  lessonMinutes,
+  moduleSlug,
+} from "../../lib/courses";
+import HomeVariantA from "./home/HomeVariantA.astro";
+import HomeVariantB from "./home/HomeVariantB.astro";
+import HomeVariantC from "./home/HomeVariantC.astro";
+import PrototypeSwitcher from "./PrototypeSwitcher.astro";
+
+interface Props {
+  courses: CourseEntry[];
+}
+
+const { courses } = Astro.props;
+const catalog = await Promise.all(
+  courses.map(async (course) => {
+    const tree = await getCourseTree(course.id);
+    const destinations = tree.modules.flatMap(({ module, lessons, checkpoint }) => [
+      ...lessons.map((lesson) => ({
+        ...lessonDestinationLink(course.id, lesson),
+        title: lesson.data.title,
+        capability: lesson.data.capability,
+        moduleTitle: module.data.title,
+        minutes: lessonMinutes(lesson),
+      })),
+      {
+        ...checkpointDestinationLink(course.id, moduleSlug(module)),
+        title: `Проверка Модуля: ${checkpoint.data.title}`,
+        capability: module.data.capability,
+        moduleTitle: module.data.title,
+        minutes: checkpoint.data.time,
+      },
+    ]);
+    destinations.push({
+      ...capstoneDestinationLink(course.id),
+      title: `Итоговая работа: ${tree.capstone.data.title}`,
+      capability: "Соедини навыки Курса в одной реалистичной работе",
+      moduleTitle: "Итоговая работа",
+      minutes: tree.capstone.data.time,
+    });
+    return {
+      id: course.id,
+      title: course.data.title,
+      summary: course.data.summary,
+      href: coursePath(course.id),
+      modules: tree.modules.length,
+      lessons: tree.modules.reduce((total, item) => total + item.lessons.length, 0),
+      minutes: destinations.reduce((total, item) => total + item.minutes, 0),
+      destinations,
+    };
+  }),
+);
+---
+
+<div
+  class="prototype-home"
+  data-home-prototype
+  data-prototype-catalog={JSON.stringify(catalog)}
+>
+  <HomeVariantA>
+    <Fragment slot="resume">
+      <section class="home-intro" data-home-section="resume">
+        <div class="resume-destination" data-resume-destination hidden>
+          <p class="prototype-kicker">
+            <span>Продолжить обучение</span>
+            <span data-resume-course></span>
+          </p>
+          <h1 data-resume-title></h1>
+          <p class="resume-capability" data-resume-capability></p>
+          <div class="resume-facts">
+            <span data-resume-position></span>
+            <span data-resume-time></span>
+            <span data-resume-progress></span>
+          </div>
+          <a class="prototype-primary-action" data-resume-link href="/">
+            Продолжить Урок <span aria-hidden="true">→</span>
+          </a>
+          <div class="resume-route" aria-label="Компактный маршрут курса">
+            <div class="compact-route" data-resume-route aria-hidden="true"></div>
+          </div>
+        </div>
+        <div class="no-progress-intro" data-no-progress>
+          <p class="prototype-kicker">Курсы без лишнего шума</p>
+          <h1>Выбери Курс и начни с первого Урока.</h1>
+          <p>
+            Читай, пробуй, отмечай завершённое. Прогресс останется в этом браузере,
+            а весь Каталог доступен офлайн.
+          </p>
+        </div>
+      </section>
+    </Fragment>
+    <Fragment slot="catalog">
+      <section
+        class="prototype-catalog"
+        data-home-section="catalog"
+        aria-labelledby="prototype-catalog-heading"
+      >
+        <header class="catalog-heading">
+          <p class="prototype-kicker">Курс Каталог</p>
+          <h2 id="prototype-catalog-heading">Каталог курсов</h2>
+          <p>{catalog.length} {catalog.length === 1 ? "Курс" : "Курса"}</p>
+        </header>
+        <ol class="catalog-list">
+          {catalog.map((course, courseIndex) => (
+            <li class="catalog-course" data-catalog-course={course.id}>
+              <span class="catalog-index" aria-hidden="true">
+                {String(courseIndex + 1).padStart(2, "0")}
+              </span>
+              <div class="catalog-course-main">
+                <h3><a href={course.href}>{course.title}</a></h3>
+                <p>{course.summary}</p>
+                <div class="catalog-meta">
+                  <span>{formatModuleCount(course.modules)}</span>
+                  <span>{formatLessonCount(course.lessons)}</span>
+                  <span>{formatMinutes(course.minutes)}</span>
+                </div>
+              </div>
+              <div class="catalog-route">
+                <div class="compact-route" aria-hidden="true">
+                  {course.destinations.map((destination) => (
+                    <span
+                      class="compact-node"
+                      data-course-node={course.id}
+                      data-destination-id={destination.id}
+                      title={destination.title}
+                    >○</span>
+                  ))}
+                </div>
+                <span data-catalog-progress>Не начат</span>
+              </div>
+              <a class="catalog-open" href={course.href}>
+                Открыть Курс <span aria-hidden="true">→</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
+    </Fragment>
+  </HomeVariantA>
+  <HomeVariantB />
+  <HomeVariantC />
+  <PrototypeSwitcher
+    variants={[
+      { key: "A", label: "Редакционный маршрут" },
+      { key: "B", label: "Разделённый атлас" },
+      { key: "C", label: "Маршрутный реестр" },
+    ]}
+  />
+</div>
+
+<script>
+  type Destination = {
+    id: string;
+    href: string;
+    kind: "lesson" | "checkpoint" | "capstone";
+    title: string;
+    capability: string;
+    moduleTitle: string;
+    minutes: number;
+  };
+  type CatalogCourse = {
+    id: string;
+    title: string;
+    destinations: Destination[];
+  };
+  type StoredDestination = {
+    state: "started" | "completed";
+    visitedAt: number;
+  };
+  type StoredProgress = {
+    courses?: Record<string, {
+      destinations?: Record<string, StoredDestination>;
+    }>;
+  };
+
+  const storageKey = "prosto-courses:progress:v1";
+
+  function readProgress(): StoredProgress {
+    try {
+      return JSON.parse(localStorage.getItem(storageKey) ?? "{}");
+    } catch {
+      return {};
+    }
+  }
+
+  function moveHomeSections(root: HTMLElement, variant: string) {
+    const resume = root.querySelector<HTMLElement>('[data-home-section="resume"]');
+    const catalog = root.querySelector<HTMLElement>('[data-home-section="catalog"]');
+    const resumeMount = root.querySelector<HTMLElement>(
+      `[data-home-resume-mount="${variant}"]`,
+    );
+    const catalogMount = root.querySelector<HTMLElement>(
+      `[data-home-catalog-mount="${variant}"]`,
+    );
+    if (resume && resumeMount) resumeMount.append(resume);
+    if (catalog && catalogMount) catalogMount.append(catalog);
+  }
+
+  function refreshHome(root: HTMLElement, catalog: CatalogCourse[]) {
+    const stored = readProgress();
+    const resumeCandidates: Array<{
+      course: CatalogCourse;
+      destination: Destination;
+      state: StoredDestination;
+      index: number;
+      completed: number;
+    }> = [];
+
+    for (const course of catalog) {
+      const courseProgress = stored.courses?.[course.id]?.destinations ?? {};
+      const completed = course.destinations.filter(
+        ({ id }) => courseProgress[id]?.state === "completed",
+      ).length;
+      const started = course.destinations.filter(
+        ({ id }) => courseProgress[id]?.state === "started",
+      ).length;
+      root
+        .querySelectorAll<HTMLElement>(`[data-catalog-course="${CSS.escape(course.id)}"]`)
+        .forEach((courseRow) => {
+          const label = courseRow.querySelector<HTMLElement>("[data-catalog-progress]");
+          if (label) {
+            label.textContent = completed === course.destinations.length
+              ? "✓ Курс завершён"
+              : completed + started > 0
+                ? `${completed} из ${course.destinations.length} завершено`
+                : "Не начат";
+          }
+        });
+      root
+        .querySelectorAll<HTMLElement>(`[data-course-node="${CSS.escape(course.id)}"]`)
+        .forEach((node) => {
+          const state = courseProgress[node.dataset.destinationId ?? ""]?.state;
+          node.dataset.state = state ?? "not-started";
+          node.textContent = state === "completed" ? "✓" : state === "started" ? "●" : "○";
+        });
+      course.destinations.forEach((destination, index) => {
+        const state = courseProgress[destination.id];
+        if (state?.state === "started") {
+          resumeCandidates.push({ course, destination, state, index, completed });
+        }
+      });
+    }
+
+    const resume = resumeCandidates.sort(
+      (left, right) => right.state.visitedAt - left.state.visitedAt,
+    )[0];
+    const destinationSection =
+      root.querySelector<HTMLElement>("[data-resume-destination]");
+    const noProgress = root.querySelector<HTMLElement>("[data-no-progress]");
+    if (!resume) {
+      if (destinationSection) destinationSection.hidden = true;
+      if (noProgress) noProgress.hidden = false;
+      return;
+    }
+
+    if (destinationSection) destinationSection.hidden = false;
+    if (noProgress) noProgress.hidden = true;
+    const setText = (selector: string, value: string) => {
+      const element = root.querySelector<HTMLElement>(selector);
+      if (element) element.textContent = value;
+    };
+    setText("[data-resume-course]", resume.course.title);
+    setText("[data-resume-title]", resume.destination.title.replace(/^Проверка Модуля: |^Итоговая работа: /, ""));
+    setText("[data-resume-capability]", resume.destination.capability);
+    setText(
+      "[data-resume-position]",
+      `${resume.destination.moduleTitle} · ${resume.index + 1} из ${resume.course.destinations.length}`,
+    );
+    setText("[data-resume-time]", `${resume.destination.minutes} мин`);
+    setText(
+      "[data-resume-progress]",
+      `${resume.completed} из ${resume.course.destinations.length} завершено`,
+    );
+    const link = root.querySelector<HTMLAnchorElement>("[data-resume-link]");
+    if (link) {
+      link.href = resume.destination.href;
+      link.firstChild!.textContent =
+        resume.destination.kind === "lesson"
+          ? "Продолжить Урок "
+          : resume.destination.kind === "checkpoint"
+            ? "Продолжить проверку "
+            : "Продолжить итоговую работу ";
+    }
+    const route = root.querySelector<HTMLElement>("[data-resume-route]");
+    if (route) {
+      route.replaceChildren(
+        ...resume.course.destinations.map((destination) => {
+          const node = document.createElement("span");
+          const state =
+            stored.courses?.[resume.course.id]?.destinations?.[destination.id]?.state;
+          node.className = "compact-node";
+          node.dataset.state = state ?? "not-started";
+          node.textContent =
+            state === "completed" ? "✓" : state === "started" ? "●" : "○";
+          return node;
+        }),
+      );
+    }
+  }
+
+  document.querySelectorAll<HTMLElement>("[data-home-prototype]").forEach((root) => {
+    const catalog = JSON.parse(root.dataset.prototypeCatalog ?? "[]") as CatalogCourse[];
+    const currentVariant = document.documentElement.dataset.prototypeVariant ?? "A";
+    moveHomeSections(root, currentVariant);
+    refreshHome(root, catalog);
+    window.addEventListener("prototypevariantchange", (event) => {
+      const variant = (event as CustomEvent<{ variant: string }>).detail.variant;
+      moveHomeSections(root, variant);
+    });
+    window.addEventListener("storage", (event) => {
+      if (event.key === null || event.key === storageKey) refreshHome(root, catalog);
+    });
+    window.addEventListener("pageshow", () => refreshHome(root, catalog));
+  });
+</script>

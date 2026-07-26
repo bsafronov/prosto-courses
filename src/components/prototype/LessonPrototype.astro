@@ -1,0 +1,230 @@
+---
+// PROTOTYPE — three Lesson + persistent Course route variants via ?variant=.
+import { render, type CollectionEntry } from "astro:content";
+import CompletionControl from "../CompletionControl.astro";
+import ProgressStatus from "../ProgressStatus.astro";
+import SequenceDestinationLink from "../SequenceDestinationLink.astro";
+import { semanticComponents } from "../semantic-components";
+import {
+  checkpointDestinationLink,
+  getCoreRouteContext,
+  lessonDestination,
+  lessonDestinationLink,
+  lessonModuleSlug,
+  lessonSlug,
+  moduleSlug,
+  type CourseModule,
+  type CourseTree,
+} from "../../lib/courses";
+import LessonVariantA from "./lesson/LessonVariantA.astro";
+import LessonVariantB from "./lesson/LessonVariantB.astro";
+import LessonVariantC from "./lesson/LessonVariantC.astro";
+import PrototypeCourseRoute from "./PrototypeCourseRoute.astro";
+import PrototypeSwitcher from "./PrototypeSwitcher.astro";
+
+interface Props {
+  course: CollectionEntry<"courses">;
+  lesson: CollectionEntry<"lessons">;
+  tree: CourseTree;
+}
+
+const { course, lesson, tree } = Astro.props;
+const { Content } = await render(lesson);
+const slug = lessonSlug(lesson);
+const currentModule = tree.modules.find(
+  (candidate) => moduleSlug(candidate.module) === lessonModuleSlug(lesson),
+) as CourseModule;
+const lessonIndex = currentModule.lessons.findIndex(
+  (candidate) => candidate.id === lesson.id,
+);
+const previous = currentModule.lessons[lessonIndex - 1];
+const next = currentModule.lessons[lessonIndex + 1];
+const progress = getCoreRouteContext(course.id, tree, lessonDestination(slug));
+const routePosition =
+  progress.destinations.findIndex(({ id }) => id === progress.current.id) + 1;
+const totalMinutes =
+  lesson.data.time.study +
+  lesson.data.time.practice +
+  (lesson.data.time.advanced ?? 0);
+---
+
+<div
+  class="prototype-lesson"
+  data-lesson-prototype
+  data-progress-root
+  data-course-slug={course.id}
+  data-current-destination={progress.current.id}
+  data-core-destinations={JSON.stringify(progress.destinations)}
+>
+  <LessonVariantA>
+    <Fragment slot="route">
+      <PrototypeCourseRoute
+        course={course}
+        tree={tree}
+        currentLessonSlug={slug}
+      />
+    </Fragment>
+    <Fragment slot="content">
+      <article class="prototype-lesson-content" data-prototype-lesson-content>
+        <header class="lesson-head">
+          <p class="prototype-kicker">
+            <span>Урок {String(routePosition).padStart(2, "0")} / {progress.destinations.length}</span>
+            <span>{currentModule.module.data.title}</span>
+          </p>
+          <h1>{lesson.data.title}</h1>
+          <p class="lesson-capability">{lesson.data.capability}</p>
+          <div class="lesson-utility">
+            <span>{totalMinutes} мин</span>
+            <span>{lesson.data.time.study} мин изучение</span>
+            <span>{lesson.data.time.practice} мин практика</span>
+            <ProgressStatus destination={progress.current} />
+          </div>
+        </header>
+        <div class="prose prototype-prose">
+          <Content components={semanticComponents} />
+        </div>
+        <CompletionControl kind="lesson" />
+        <nav class="prototype-sequence" aria-label="Последовательность уроков">
+          {previous ? (
+            <SequenceDestinationLink
+              destination={lessonDestinationLink(course.id, previous)}
+            >
+              ← {previous.data.title}
+            </SequenceDestinationLink>
+          ) : <span />}
+          {next ? (
+            <SequenceDestinationLink
+              destination={lessonDestinationLink(course.id, next)}
+              align="end"
+            >
+              {next.data.title} →
+            </SequenceDestinationLink>
+          ) : (
+            <SequenceDestinationLink
+              destination={checkpointDestinationLink(
+                course.id,
+                lessonModuleSlug(lesson),
+              )}
+              align="end"
+            >
+              Проверка Модуля →
+            </SequenceDestinationLink>
+          )}
+        </nav>
+      </article>
+    </Fragment>
+  </LessonVariantA>
+  <LessonVariantB />
+  <LessonVariantC />
+  <button
+    type="button"
+    class="course-route-backdrop"
+    data-course-route-backdrop
+    aria-label="Закрыть маршрут курса"
+    hidden
+  ></button>
+  <PrototypeSwitcher
+    variants={[
+      { key: "A", label: "Тихая колонка" },
+      { key: "B", label: "Узкий корешок" },
+      { key: "C", label: "Маршрут крупным планом" },
+    ]}
+  />
+</div>
+
+<script>
+  function initialiseLessonPrototype(root: HTMLElement) {
+    const route = root.querySelector<HTMLElement>("[data-prototype-course-route]");
+    const content = root.querySelector<HTMLElement>("[data-prototype-lesson-content]");
+    const toggle = document.querySelector<HTMLButtonElement>("[data-course-route-toggle]");
+    const close = root.querySelector<HTMLButtonElement>("[data-course-route-close]");
+    const backdrop = root.querySelector<HTMLButtonElement>("[data-course-route-backdrop]");
+    if (!route || !content) return;
+    const courseRoute = route;
+    const lessonContent = content;
+    let returnFocus: HTMLElement | null = null;
+
+    function moveContent(variant: string) {
+      closeDrawer();
+      root
+        .querySelector<HTMLElement>(`[data-lesson-route-mount="${variant}"]`)
+        ?.append(courseRoute);
+      root
+        .querySelector<HTMLElement>(`[data-lesson-content-mount="${variant}"]`)
+        ?.append(lessonContent);
+    }
+
+    function openDrawer() {
+      returnFocus = document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+      document.body.dataset.courseRouteOpen = "true";
+      toggle?.setAttribute("aria-expanded", "true");
+      courseRoute.setAttribute("role", "dialog");
+      courseRoute.setAttribute("aria-modal", "true");
+      courseRoute.setAttribute("aria-labelledby", "prototype-course-route-title");
+      if (backdrop) backdrop.hidden = false;
+      close?.focus();
+    }
+
+    function closeDrawer(restoreFocus = false) {
+      delete document.body.dataset.courseRouteOpen;
+      toggle?.setAttribute("aria-expanded", "false");
+      courseRoute.removeAttribute("role");
+      courseRoute.removeAttribute("aria-modal");
+      courseRoute.removeAttribute("aria-labelledby");
+      if (backdrop) backdrop.hidden = true;
+      if (restoreFocus) returnFocus?.focus();
+    }
+
+    toggle?.addEventListener("click", () => {
+      if (document.body.dataset.courseRouteOpen === "true") {
+        closeDrawer(true);
+      } else {
+        openDrawer();
+      }
+    });
+    close?.addEventListener("click", () => closeDrawer(true));
+    backdrop?.addEventListener("click", () => closeDrawer(true));
+    courseRoute.addEventListener("click", (event) => {
+      if (event.target instanceof HTMLAnchorElement) closeDrawer();
+    });
+    window.addEventListener("keydown", (event) => {
+      if (document.body.dataset.courseRouteOpen !== "true") return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeDrawer(true);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = [
+        ...courseRoute.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ];
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
+    window
+      .matchMedia("(min-width: 52.001rem)")
+      .addEventListener("change", ({ matches }) => {
+        if (matches) closeDrawer();
+      });
+    window.addEventListener("prototypevariantchange", (event) => {
+      moveContent((event as CustomEvent<{ variant: string }>).detail.variant);
+    });
+    moveContent(document.documentElement.dataset.prototypeVariant ?? "A");
+  }
+
+  document
+    .querySelectorAll<HTMLElement>("[data-lesson-prototype]")
+    .forEach(initialiseLessonPrototype);
+</script>

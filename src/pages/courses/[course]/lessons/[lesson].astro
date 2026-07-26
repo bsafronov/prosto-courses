@@ -1,24 +1,11 @@
 ---
-import { getCollection, render, type CollectionEntry } from "astro:content";
-import CompletionControl from "../../../../components/CompletionControl.astro";
-import CourseOutline from "../../../../components/CourseOutline.astro";
-import ProgressStatus from "../../../../components/ProgressStatus.astro";
-import SequenceDestinationLink from "../../../../components/SequenceDestinationLink.astro";
-import { semanticComponents } from "../../../../components/semantic-components";
-import WorkloadSummary from "../../../../components/WorkloadSummary.astro";
+import { getCollection, type CollectionEntry } from "astro:content";
+import LessonPrototype from "../../../../components/prototype/LessonPrototype.astro";
 import BaseLayout from "../../../../layouts/BaseLayout.astro";
 import {
-  checkpointDestinationLink,
-  coursePath,
-  getCoreRouteContext,
   getCourseTree,
   lessonCourseSlug,
-  lessonModuleSlug,
-  lessonDestination,
-  lessonDestinationLink,
   lessonSlug,
-  moduleSlug,
-  type CourseModule,
   type CourseTree,
 } from "../../../../lib/courses";
 
@@ -44,108 +31,24 @@ type Props = {
   tree: CourseTree;
 };
 const { course, lesson, tree }: Props = Astro.props;
-const { Content } = await render(lesson);
-const slug = lessonSlug(lesson);
-const currentModule = tree.modules.find(
-  (candidate) => moduleSlug(candidate.module) === lessonModuleSlug(lesson),
-) as CourseModule;
-const lessonIndex = currentModule.lessons.findIndex(
-  (candidate) => candidate.id === lesson.id,
-);
-const previous = currentModule.lessons[lessonIndex - 1];
-const next = currentModule.lessons[lessonIndex + 1];
-const progress = getCoreRouteContext(
-  course.id,
-  tree,
-  lessonDestination(slug),
-);
-const lessonTimeItems = [
-  { label: "Изучение", value: `${lesson.data.time.study} мин` },
-  { label: "Практика", value: `${lesson.data.time.practice} мин` },
-  ...(lesson.data.time.advanced === undefined
-    ? []
-    : [{ label: "Дополнительно", value: `${lesson.data.time.advanced} мин` }]),
-];
 ---
 <BaseLayout
   title={`${lesson.data.title} | ${course.data.title}`}
+  prototype
+  prototypePage="lesson"
 >
-  <div class="container lesson-shell" data-progress-root data-course-slug={course.id} data-current-destination={progress.current.id} data-core-destinations={JSON.stringify(progress.destinations)}>
-    <details class="course-navigation" open>
-      <summary>{course.data.title}: уроки курса</summary>
-      <nav aria-label="Навигация по курсу">
-        <a class="overview-link" href={coursePath(course.id)}>О курсе</a>
-        <CourseOutline
-          courseSlug={course.id}
-          tree={tree}
-          lessonListLabel="Уроки в навигации курса"
-          current={{ kind: "lesson", slug }}
-        />
-      </nav>
-    </details>
-    <article class="lesson-content">
-      <header>
-        <p class="eyebrow">Урок {lessonIndex + 1} из {currentModule.lessons.length}</p>
-        <h1>{lesson.data.title}</h1>
-        <p class="capability">{lesson.data.capability}</p>
-        <WorkloadSummary
-          label="Время на Урок"
-          items={lessonTimeItems}
-        />
-        <ProgressStatus destination={progress.current} />
-      </header>
-      <div class="prose"><Content components={semanticComponents} /></div>
-      <CompletionControl kind="lesson" />
-      <nav class="sequence" aria-label="Последовательность уроков">
-        {previous
-          ? <SequenceDestinationLink
-              destination={lessonDestinationLink(
-                course.id,
-                previous,
-              )}
-            >
-              ← Предыдущий урок: {previous.data.title}
-            </SequenceDestinationLink>
-          : <span></span>}
-        {next
-          ? <SequenceDestinationLink
-              destination={lessonDestinationLink(
-                course.id,
-                next,
-              )}
-              align="end"
-            >
-              Следующий урок: {next.data.title} →
-            </SequenceDestinationLink>
-          : <SequenceDestinationLink
-              destination={checkpointDestinationLink(
-                course.id,
-                lessonModuleSlug(lesson),
-              )}
-              align="end"
-            >
-              Перейти к проверке Модуля: {currentModule.checkpoint.data.title} →
-            </SequenceDestinationLink>}
-      </nav>
-    </article>
-  </div>
+  <button
+    slot="prototype-mobile-leading"
+    class="course-route-toggle"
+    type="button"
+    data-course-route-toggle
+    aria-controls="prototype-course-route"
+    aria-expanded="false"
+  >
+    <span aria-hidden="true">☰</span>
+    <span class="sr-only">Открыть маршрут курса</span>
+  </button>
+  <span slot="prototype-context">{lesson.data.title}</span>
+  <LessonPrototype course={course} lesson={lesson} tree={tree} />
   <script src="../../../../scripts/progress.ts"></script>
 </BaseLayout>
-
-<style>
-  .lesson-shell { display: grid; grid-template-columns: minmax(16rem, 21rem) minmax(0, 48rem); gap: 3rem; align-items: start; padding-top: 2rem; }
-  .course-navigation { position: sticky; top: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); padding: .8rem; }
-  summary { cursor: pointer; font-weight: 800; }
-  nav { margin-top: .8rem; }
-  .overview-link { display: inline-block; margin: .4rem 0 .7rem; font-weight: 700; }
-  .lesson-content { min-width: 0; }
-  header { padding: 1.4rem 0 1.8rem; border-bottom: 1px solid var(--color-border); }
-  h1 { margin: .15rem 0 .6rem; font-size: clamp(2.2rem, 6vw, 3.6rem); line-height: 1.08; letter-spacing: -.045em; }
-  .capability { color: var(--color-muted); font-size: 1.08rem; }
-  .prose { padding-top: 1rem; }
-  .sequence { display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--color-border); margin-top: 2.5rem; padding-top: 1.5rem; }
-  @media (max-width: 52rem) {
-    .lesson-shell { grid-template-columns: 1fr; gap: 1rem; }
-    .course-navigation { position: static; }
-  }
-</style>

@@ -1,0 +1,43 @@
+<label class="prototype-theme-control">
+  <span class="sr-only">Тема</span>
+  <span aria-hidden="true">◐</span>
+  <select data-prototype-theme aria-label="Тема оформления">
+    <option value="system">Системная</option>
+    <option value="light">Светлая</option>
+    <option value="dark">Тёмная</option>
+  </select>
+</label>
+
+<script>
+  const storageKey = "prosto-courses:prototype-theme";
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
+
+  function applyTheme(mode: string) {
+    const resolved = mode === "system"
+      ? media.matches ? "dark" : "light"
+      : mode;
+    document.documentElement.dataset.prototypeTheme = resolved;
+    document.documentElement.dataset.prototypeThemeMode = mode;
+    document
+      .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+      ?.setAttribute("content", resolved === "dark" ? "#09090B" : "#FAFAFA");
+  }
+
+  document
+    .querySelectorAll<HTMLSelectElement>("[data-prototype-theme]")
+    .forEach((select) => {
+      const mode = localStorage.getItem(storageKey) ?? "system";
+      select.value = mode;
+      applyTheme(mode);
+      select.addEventListener("change", () => {
+        localStorage.setItem(storageKey, select.value);
+        applyTheme(select.value);
+      });
+    });
+
+  media.addEventListener("change", () => {
+    if ((localStorage.getItem(storageKey) ?? "system") === "system") {
+      applyTheme("system");
+    }
+  });
+</script>

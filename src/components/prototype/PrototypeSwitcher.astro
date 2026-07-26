@@ -1,0 +1,84 @@
+---
+interface Variant {
+  key: string;
+  label: string;
+}
+
+interface Props {
+  variants: Variant[];
+}
+
+const { variants } = Astro.props;
+const showSwitcher = import.meta.env.DEV;
+---
+
+{showSwitcher && (
+  <nav
+    class="prototype-switcher"
+    data-prototype-switcher
+    data-variants={JSON.stringify(variants)}
+    aria-label="Варианты прототипа"
+  >
+    <button type="button" data-prototype-previous aria-label="Предыдущий вариант">←</button>
+    <span data-prototype-label aria-live="polite"></span>
+    <button type="button" data-prototype-next aria-label="Следующий вариант">→</button>
+  </nav>
+)}
+
+<script>
+  type Variant = { key: string; label: string };
+
+  document
+    .querySelectorAll<HTMLElement>("[data-prototype-switcher]")
+    .forEach((switcher) => {
+      const variants = JSON.parse(switcher.dataset.variants ?? "[]") as Variant[];
+      if (variants.length === 0) return;
+
+      const params = new URLSearchParams(window.location.search);
+      let index = Math.max(
+        0,
+        variants.findIndex(({ key }) => key === params.get("variant")),
+      );
+      const label = switcher.querySelector<HTMLElement>("[data-prototype-label]");
+
+      function show(nextIndex: number) {
+        index = (nextIndex + variants.length) % variants.length;
+        const current = variants[index];
+        document.documentElement.dataset.prototypeVariant = current.key;
+        document
+          .querySelectorAll<HTMLElement>("[data-prototype-variant]")
+          .forEach((variant) => {
+            variant.hidden = variant.dataset.prototypeVariant !== current.key;
+          });
+        if (label) label.textContent = `${current.key} — ${current.label}`;
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.set("variant", current.key);
+        window.history.replaceState({}, "", nextUrl);
+        window.dispatchEvent(
+          new CustomEvent("prototypevariantchange", {
+            detail: { variant: current.key },
+          }),
+        );
+      }
+
+      switcher
+        .querySelector("[data-prototype-previous]")
+        ?.addEventListener("click", () => show(index - 1));
+      switcher
+        .querySelector("[data-prototype-next]")
+        ?.addEventListener("click", () => show(index + 1));
+      window.addEventListener("keydown", (event) => {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        const target = event.target;
+        if (
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement ||
+          (target instanceof HTMLElement && target.isContentEditable)
+        ) return;
+        show(index + (event.key === "ArrowRight" ? 1 : -1));
+      });
+
+      show(index);
+    });
+</script>

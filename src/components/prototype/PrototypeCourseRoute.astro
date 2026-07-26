@@ -1,0 +1,104 @@
+---
+import type { CourseEntry, CourseTree } from "../../lib/courses";
+import {
+  capstoneDestination,
+  capstonePath,
+  checkpointDestination,
+  checkpointPath,
+  coursePath,
+  lessonDestination,
+  lessonPath,
+  lessonSlug,
+  moduleSlug,
+} from "../../lib/courses";
+import ProgressStatus from "../ProgressStatus.astro";
+
+interface Props {
+  course: CourseEntry;
+  tree: CourseTree;
+  currentLessonSlug: string;
+}
+
+const { course, tree, currentLessonSlug } = Astro.props;
+let routeIndex = 0;
+const routeLength =
+  tree.modules.reduce((total, item) => total + item.lessons.length + 1, 0) + 1;
+---
+
+<aside
+  id="prototype-course-route"
+  class="prototype-course-route"
+  data-prototype-course-route
+>
+  <div class="route-mobile-head">
+    <span id="prototype-course-route-title">Маршрут курса</span>
+    <button type="button" data-course-route-close aria-label="Закрыть маршрут">×</button>
+  </div>
+  <header class="route-head">
+    <p class="route-kicker">Курс</p>
+    <a href={coursePath(course.id)}>{course.data.title}</a>
+    <p data-prototype-completion-count>0 из {routeLength} завершено</p>
+    <span class="route-progress" aria-hidden="true">
+      <span data-prototype-route-progress></span>
+    </span>
+  </header>
+  <nav aria-label={`Маршрут курса «${course.data.title}»`}>
+    <ol class="route-modules">
+      {tree.modules.map(({ module, lessons }, moduleIndex) => {
+        const moduleRouteSlug = moduleSlug(module);
+        return (
+          <li class="route-module">
+            <p class="route-module-title">
+              <span>{String(moduleIndex + 1).padStart(2, "0")}</span>
+              {module.data.title}
+            </p>
+            <ol class="route-destinations">
+              {lessons.map((routeLesson) => {
+                routeIndex += 1;
+                const routeLessonSlug = lessonSlug(routeLesson);
+                const destination = lessonDestination(routeLessonSlug);
+                return (
+                  <li class="route-destination" data-kind="lesson">
+                    <span class="route-node" aria-hidden="true">
+                      {String(routeIndex).padStart(2, "0")}
+                    </span>
+                    <a
+                      href={lessonPath(course.id, routeLessonSlug)}
+                      aria-current={routeLessonSlug === currentLessonSlug ? "page" : undefined}
+                      data-lesson-link
+                      data-destination-id={destination.id}
+                      data-lesson-title={routeLesson.data.title}
+                    >
+                      <span>{routeLesson.data.title}</span>
+                      <ProgressStatus destination={destination} />
+                    </a>
+                  </li>
+                );
+              })}
+              {(() => {
+                routeIndex += 1;
+                const destination = checkpointDestination(moduleRouteSlug);
+                return (
+                  <li class="route-destination" data-kind="checkpoint">
+                    <span class="route-node" aria-hidden="true">◆</span>
+                    <a href={checkpointPath(course.id, moduleRouteSlug)}>
+                      <span>Проверка Модуля</span>
+                      <ProgressStatus destination={destination} />
+                    </a>
+                  </li>
+                );
+              })()}
+            </ol>
+          </li>
+        );
+      })}
+      <li class="route-destination route-capstone" data-kind="capstone">
+        <span class="route-node" aria-hidden="true">■</span>
+        <a href={capstonePath(course.id)}>
+          <span>Итоговая работа</span>
+          <ProgressStatus destination={capstoneDestination()} />
+        </a>
+      </li>
+    </ol>
+  </nav>
+</aside>

@@ -1,13 +1,22 @@
 ---
 import PwaControl from "../components/PwaControl.astro";
+import PrototypeFoundation from "../components/prototype/PrototypeFoundation.astro";
+import PrototypeThemeControl from "../components/prototype/PrototypeThemeControl.astro";
 import { sitePath } from "../lib/courses";
 import { pwaInfo } from "virtual:pwa-info";
 import "../styles/global.css";
 
-interface Props { title: string; description?: string }
+interface Props {
+  title: string;
+  description?: string;
+  prototype?: boolean;
+  prototypePage?: "home" | "lesson";
+}
 const {
   title,
   description = "Короткие практические курсы.",
+  prototype = false,
+  prototypePage,
 } = Astro.props;
 ---
 <!doctype html>
@@ -16,7 +25,7 @@ const {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <meta name="description" content={description} />
-    <meta name="theme-color" content="#3347a8" />
+    <meta name="theme-color" content={prototype ? "#FAFAFA" : "#3347a8"} />
     <link
       rel="icon"
       href={sitePath("favicon.svg")}
@@ -31,19 +40,51 @@ const {
     />
     {pwaInfo && <Fragment set:html={pwaInfo.webManifest.linkTag} />}
     <title>{title}</title>
+    {prototype && (
+      <script is:inline>
+        {`
+          (() => {
+            const mode = localStorage.getItem("prosto-courses:prototype-theme") ?? "system";
+            const theme = mode === "system"
+              ? matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+              : mode;
+            document.documentElement.dataset.prototypeThemeMode = mode;
+            document.documentElement.dataset.prototypeTheme = theme;
+            const candidate = new URLSearchParams(location.search).get("variant");
+            document.documentElement.dataset.prototypeVariant =
+              ["A", "B", "C"].includes(candidate) ? candidate : "A";
+          })();
+        `}
+      </script>
+    )}
   </head>
-  <body>
+  <body
+    class:list={{ prototype }}
+    data-prototype-page={prototypePage}
+  >
+    {prototype && <PrototypeFoundation />}
     <header class="site-header">
       <div class="container header-inner">
-        <a class="brand" href={sitePath()}>Prosto.Courses</a>
+        <div class="header-leading">
+          {prototype && <slot name="prototype-mobile-leading" />}
+          <a class="brand" href={sitePath()}>Prosto.Courses</a>
+          {prototype && (
+            <span class="prototype-header-context">
+              <slot name="prototype-context" />
+            </span>
+          )}
+        </div>
         <div class="header-actions">
-          <a href={sitePath()}>Все курсы</a>
+          <a href={sitePath()}>{prototype ? "Каталог" : "Все курсы"}</a>
+          {prototype && <PrototypeThemeControl />}
           <PwaControl />
         </div>
       </div>
     </header>
     <main><slot /></main>
-    <footer class="site-footer"><div class="container">Учись в своём темпе.</div></footer>
+    {!prototype && (
+      <footer class="site-footer"><div class="container">Учись в своём темпе.</div></footer>
+    )}
     <script src="../scripts/external-references.ts"></script>
   </body>
 </html>
@@ -51,8 +92,10 @@ const {
 <style>
   .site-header { border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
   .header-inner { min-height: 4.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .header-leading { min-width: 0; display: flex; align-items: center; gap: .75rem; }
   .header-actions { display: flex; align-items: center; justify-content: flex-end; gap: .75rem; }
   .brand { color: var(--color-ink); font-weight: 850; text-decoration: none; letter-spacing: -.025em; }
+  .prototype-header-context { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .site-footer { margin-top: 5rem; border-top: 1px solid var(--color-border); padding: 2rem 0; color: var(--color-muted); }
   @media (max-width: 42rem) {
     .header-inner { align-items: flex-start; padding-block: .75rem; }

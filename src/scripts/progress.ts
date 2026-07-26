@@ -310,6 +310,18 @@ function refresh(root: HTMLElement, course: StoredCourse) {
     (destination) =>
       course.destinations[destination.id]?.state === "completed",
   ).length;
+  root
+    .querySelectorAll<HTMLElement>("[data-prototype-completion-count]")
+    .forEach((label) => {
+      label.textContent = `${completedCount} из ${destinations.length} завершено`;
+    });
+  root
+    .querySelectorAll<HTMLElement>("[data-prototype-route-progress]")
+    .forEach((line) => {
+      line.style.width = destinations.length === 0
+        ? "0%"
+        : `${(completedCount / destinations.length) * 100}%`;
+    });
   const relevantProgress = destinations.filter(
     (destination) => course.destinations[destination.id],
   );
