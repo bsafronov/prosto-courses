@@ -1,7 +1,6 @@
 import {
   completionControlCopy,
   courseActionCopy,
-  courseStatusCopy,
   lessonRevisionCopy,
   progressStatusAriaLabel,
   progressStatusCopy,
@@ -9,112 +8,18 @@ import {
   type ProgressState,
 } from "../lib/ui-copy";
 import type { CoreDestinationLink } from "../lib/courses";
+import {
+  emptyRecord,
+  isRecord,
+  progressStorageKey as storageKey,
+  readProgress,
+  writeProgress,
+  type StoredCourse,
+  type StoredDestination,
+  type StoredProgress,
+} from "./progress-store";
 
-type StoredDestination = {
-  state: Exclude<ProgressState, "not-started">;
-  visitedAt: number;
-  completedRevision?: number;
-};
-type StoredCourse = {
-  destinations: Record<string, StoredDestination>;
-  lastIncomplete?: string;
-};
-type StoredProgress = { courses: Record<string, StoredCourse> };
-
-const storageKey = "prosto-courses:progress:v1";
 const legacyCompletedRevision = 1;
-
-const emptyRecord = <Value>() =>
-  Object.create(null) as Record<string, Value>;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function storedDestination(value: unknown): StoredDestination | undefined {
-  if (!isRecord(value)) return;
-  if (value.state !== "started" && value.state !== "completed") return;
-  if (
-    typeof value.visitedAt !== "number" ||
-    !Number.isFinite(value.visitedAt) ||
-    value.visitedAt < 0
-  ) return;
-  const completedRevision =
-    value.state === "completed" &&
-    typeof value.completedRevision === "number" &&
-    Number.isInteger(value.completedRevision) &&
-    value.completedRevision > 0
-      ? value.completedRevision
-      : undefined;
-  return {
-    state: value.state,
-    visitedAt: value.visitedAt,
-    ...(completedRevision ? { completedRevision } : {}),
-  };
-}
-
-function readProgress(): StoredProgress {
-  try {
-    const value: unknown = JSON.parse(
-      localStorage.getItem(storageKey) ?? "null",
-    );
-    if (!isRecord(value) || !isRecord(value.courses)) {
-      return { courses: emptyRecord() };
-    }
-
-    const courses = emptyRecord<StoredCourse>();
-    for (const [courseSlug, candidateCourse] of Object.entries(value.courses)) {
-      if (!isRecord(candidateCourse)) continue;
-      const destinations = emptyRecord<StoredDestination>();
-
-      if (isRecord(candidateCourse.destinations)) {
-        for (const [id, candidateDestination] of Object.entries(
-          candidateCourse.destinations,
-        )) {
-          const destination = storedDestination(candidateDestination);
-          if (destination) destinations[id] = destination;
-        }
-      }
-
-      // Migrate the Lesson-only v1 shape without discarding durable progress.
-      if (isRecord(candidateCourse.lessons)) {
-        for (const [lessonSlug, candidateLesson] of Object.entries(
-          candidateCourse.lessons,
-        )) {
-          const destination = storedDestination(candidateLesson);
-          const id = `lesson:${lessonSlug}`;
-          if (destination && !destinations[id]) destinations[id] = destination;
-        }
-      }
-
-      const candidateLastIncomplete = candidateCourse.lastIncomplete;
-      const migratedLastIncomplete =
-        typeof candidateLastIncomplete === "string" &&
-        destinations[`lesson:${candidateLastIncomplete}`]
-          ? `lesson:${candidateLastIncomplete}`
-          : candidateLastIncomplete;
-      courses[courseSlug] = {
-        destinations,
-        ...(typeof migratedLastIncomplete === "string" &&
-        destinations[migratedLastIncomplete]
-          ? { lastIncomplete: migratedLastIncomplete }
-          : {}),
-      };
-    }
-    return { courses };
-  } catch {
-    // Invalid browser-local data is ignored rather than breaking navigation.
-  }
-  return { courses: emptyRecord() };
-}
-
-function writeProgress(progress: StoredProgress) {
-  try {
-    localStorage.setItem(storageKey, JSON.stringify(progress));
-  } catch {
-    // Progress controls remain usable when browser storage is unavailable.
-  }
-}
 
 function ensureCourse(progress: StoredProgress, courseSlug: string): StoredCourse {
   return (progress.courses[courseSlug] ??= {
@@ -313,20 +218,28 @@ function refresh(root: HTMLElement, course: StoredCourse) {
   const relevantProgress = destinations.filter(
     (destination) => course.destinations[destination.id],
   );
-  const courseState: ProgressState =
-    destinations.length > 0 && completedCount === destinations.length
-      ? "completed"
-      : relevantProgress.length > 0
-        ? "started"
-        : "not-started";
   const courseProgress = root.querySelector<HTMLElement>(
     "[data-course-progress]",
   );
   if (courseProgress) {
-    courseProgress.dataset.state = courseState;
+    courseProgress.dataset.state =
+      completedCount === destinations.length && destinations.length > 0
+        ? "completed"
+        : relevantProgress.length > 0
+          ? "started"
+          : "not-started";
     courseProgress.textContent =
-      `Статус курса: ${courseStatusCopy[courseState]}`;
+      completedCount === destinations.length && destinations.length > 0
+        ? `✓ Курс завершён · ${completedCount} из ${destinations.length} завершено`
+        : `${completedCount} из ${destinations.length} завершено`;
   }
+  root
+    .querySelectorAll<HTMLElement>("[data-course-progress-line]")
+    .forEach((line) => {
+      line.style.width = destinations.length
+        ? `${(completedCount / destinations.length) * 100}%`
+        : "0";
+    });
 
   const action = root.querySelector<HTMLAnchorElement>("[data-course-action]");
   if (!action || destinations.length === 0) return;

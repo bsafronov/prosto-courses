@@ -1,38 +1,352 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { coursePath, getCourses } from "../lib/courses";
+import {
+  capstoneDestinationLink,
+  checkpointDestinationLink,
+  courseMinutes,
+  coursePath,
+  formatLessonCount,
+  formatMinutes,
+  formatModuleCount,
+  getCourses,
+  getCourseTree,
+  lessonDestinationLink,
+  lessonMinutes,
+  moduleSlug,
+} from "../lib/courses";
 
 const courses = await getCourses();
+const catalog = await Promise.all(
+  courses.map(async (course) => {
+    const tree = await getCourseTree(course.id);
+    const destinations = tree.modules.flatMap(
+      ({ module, lessons, checkpoint }) => [
+        ...lessons.map((lesson) => ({
+          ...lessonDestinationLink(course.id, lesson),
+          title: lesson.data.title,
+          capability: lesson.data.capability,
+          moduleTitle: module.data.title,
+          minutes: lessonMinutes(lesson),
+        })),
+        {
+          ...checkpointDestinationLink(course.id, moduleSlug(module)),
+          title: checkpoint.data.title,
+          capability: module.data.capability,
+          moduleTitle: module.data.title,
+          minutes: checkpoint.data.time,
+        },
+      ],
+    );
+    destinations.push({
+      ...capstoneDestinationLink(course.id),
+      title: tree.capstone.data.title,
+      capability: course.data.summary,
+      moduleTitle: "Итоговая работа",
+      minutes: tree.capstone.data.time,
+    });
+    return {
+      course,
+      tree,
+      lessonCount: tree.modules.reduce(
+        (count, courseModule) => count + courseModule.lessons.length,
+        0,
+      ),
+      destinations,
+    };
+  }),
+);
+const progressCatalog = catalog.map(({ course, destinations }) => ({
+  id: course.id,
+  title: course.data.title,
+  destinations,
+}));
 ---
 <BaseLayout title="Каталог курсов | Prosto.Courses">
-  <section class="hero container">
-    <p class="eyebrow">Каталог курсов</p>
-    <h1>Учись новому — урок за уроком.</h1>
-    <p>Короткие курсы, понятный прогресс и задания, чтобы проверить себя.</p>
-  </section>
-  <section class="container catalog" aria-labelledby="catalog-heading">
-    <h2 id="catalog-heading">Все курсы</h2>
-    <div class="grid">
-      {courses.map((course) => (
-        <article aria-labelledby={`course-${course.id}`}>
-          <h3 id={`course-${course.id}`}><a href={coursePath(course.id)}>{course.data.title}</a></h3>
-          <p>{course.data.summary}</p>
-          <a class="learn-more" href={coursePath(course.id)} aria-label={`Открыть курс «${course.data.title}»`}>Открыть курс <span aria-hidden="true">→</span></a>
-        </article>
+  <div data-home-progress data-course-catalog={JSON.stringify(progressCatalog)}>
+    <section
+      class="home-intro container resume"
+      aria-label="Продолжить обучение"
+      data-resume-destination
+      hidden
+    >
+      <p class="eyebrow">
+        <span>Продолжить обучение</span>
+        <span data-resume-course></span>
+      </p>
+      <h1 data-resume-title></h1>
+      <p class="resume-capability" data-resume-capability></p>
+      <p class="resume-context">
+        <span data-resume-module></span>
+        <span data-resume-position></span>
+        <span data-resume-time></span>
+        <span data-resume-progress></span>
+      </p>
+      <a class="resume-action" data-resume-link href={coursePath(catalog[0].course.id)}>
+        Продолжить <span aria-hidden="true">→</span>
+      </a>
+    </section>
+    <section class="home-intro container" data-no-progress>
+      <p class="eyebrow">Курсы без лишнего шума</p>
+      <h1>Выбери Курс и начни с первого Урока.</h1>
+      <p>
+        Читай, пробуй, отмечай завершённое. Прогресс останется в этом браузере,
+        а Каталог можно подготовить для работы офлайн.
+      </p>
+    </section>
+    <section class="container catalog" aria-labelledby="catalog-heading">
+    <header class="catalog-heading">
+      <div>
+        <p class="eyebrow">Каталог курсов</p>
+        <h2 id="catalog-heading">Все курсы</h2>
+      </div>
+      <p>{catalog.length} {catalog.length === 1 ? "Курс" : "Курса"}</p>
+    </header>
+    <ol class="catalog-list" aria-label="Каталог курсов">
+      {catalog.map(({ course, tree, lessonCount, destinations }, index) => (
+        <li>
+          <article
+            aria-labelledby={`course-${course.id}`}
+            data-catalog-course={course.id}
+          >
+            <span class="catalog-index" aria-hidden="true">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <div class="catalog-main">
+              <h3 id={`course-${course.id}`}>
+                <a href={coursePath(course.id)}>{course.data.title}</a>
+              </h3>
+              <p>{course.data.summary}</p>
+              <p class="catalog-meta">
+                <span>{formatModuleCount(tree.modules.length)}</span>
+                <span>{formatLessonCount(lessonCount)}</span>
+                <span>{formatMinutes(courseMinutes(tree))}</span>
+              </p>
+            </div>
+            <div class="catalog-route">
+              <div class="compact-route" aria-hidden="true">
+                {destinations.map((destination) => (
+                  <span
+                    class="compact-node"
+                    data-compact-destination
+                    data-destination-id={destination.id}
+                    data-kind={destination.kind}
+                    data-state="not-started"
+                  >
+                    {destination.kind === "lesson"
+                      ? "○"
+                      : destination.kind === "checkpoint"
+                        ? "◆"
+                        : "■"}
+                  </span>
+                ))}
+              </div>
+              <ol
+                class="sr-only"
+                aria-label={`Компактный маршрут курса: ${course.data.title}`}
+              >
+                {destinations.map((destination) => (
+                  <li>
+                    {destination.title}:{" "}
+                    <span
+                      data-catalog-destination-status
+                      data-destination-id={destination.id}
+                    >
+                      Не начато
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              <span data-catalog-progress>Не начат</span>
+            </div>
+            <a class="catalog-open" href={coursePath(course.id)}>
+              Открыть Курс <span aria-hidden="true">→</span>
+            </a>
+          </article>
+        </li>
       ))}
-    </div>
+    </ol>
   </section>
+  </div>
+  <script src="../scripts/home-progress.ts"></script>
 </BaseLayout>
 
 <style>
-  .hero { padding-block: 4.5rem 3rem; }
-  .hero h1 { max-width: 16ch; margin: .2rem 0 .8rem; font-size: clamp(2.2rem, 7vw, 4.5rem); line-height: 1.02; letter-spacing: -.055em; }
-  .hero > p:last-child { max-width: 42rem; color: var(--color-muted); font-size: 1.1rem; }
-  .catalog h2 { font-size: 1.5rem; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: 1rem; }
-  article { display: flex; min-height: 15rem; flex-direction: column; border: 1px solid var(--color-border); border-radius: var(--radius); padding: 1.35rem; background: var(--color-surface); box-shadow: var(--shadow); }
-  h3 { margin: 0; font-size: 1.4rem; line-height: 1.3; }
+  .home-intro {
+    padding-block: clamp(4rem, 9vw, 8rem) clamp(3rem, 7vw, 6rem);
+  }
+  .home-intro h1 {
+    max-width: 19ch;
+    margin: 0;
+    font-size: clamp(2.8rem, 7vw, 6.4rem);
+    font-weight: 600;
+    letter-spacing: -.065em;
+    line-height: .98;
+  }
+  .home-intro > p:last-child {
+    max-width: 48rem;
+    margin-top: 1.35rem;
+    color: var(--color-muted);
+    font-size: clamp(1.05rem, 2vw, 1.25rem);
+  }
+  .home-intro[hidden] { display: none; }
+  .resume .eyebrow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1rem;
+  }
+  .resume .eyebrow span + span::before {
+    margin-right: 1rem;
+    color: var(--color-border);
+    content: "/";
+  }
+  .resume-capability {
+    max-width: 48rem;
+    margin: 1.35rem 0 0;
+    color: var(--color-muted);
+    font-size: clamp(1.05rem, 2vw, 1.25rem);
+  }
+  .resume-context, .catalog-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .45rem 1.25rem;
+    color: var(--color-muted);
+    font-family: var(--font-mono);
+    font-size: .75rem;
+  }
+  .resume-context span + span::before {
+    margin-right: 1.25rem;
+    content: "·";
+  }
+  .resume-action {
+    display: inline-flex;
+    align-items: center;
+    gap: .75rem;
+    border-bottom: 1px solid var(--color-ink);
+    margin-top: 1.5rem;
+    color: var(--color-ink);
+    font-weight: 650;
+    text-decoration: none;
+  }
+  .catalog { padding-block: 2.5rem 7rem; }
+  .catalog-heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .catalog-heading p { margin-block: 0; }
+  .catalog-heading h2 {
+    margin: 0;
+    font-size: clamp(1.8rem, 3vw, 2.75rem);
+    font-weight: 600;
+    letter-spacing: -.045em;
+  }
+  .catalog-heading > p {
+    color: var(--color-muted);
+    font-family: var(--font-mono);
+    font-size: .72rem;
+  }
+  .catalog-list {
+    margin: 0;
+    border-top: 1px solid var(--color-border);
+    padding: 0;
+    list-style: none;
+  }
+  .catalog-list > li { border-bottom: 1px solid var(--color-border); }
+  article {
+    display: grid;
+    grid-template-columns: 3rem minmax(0, 1fr) minmax(8rem, auto) auto;
+    gap: 1.5rem;
+    align-items: start;
+    padding-block: 2rem;
+  }
+  .catalog-index {
+    padding-top: .25rem;
+    color: var(--color-muted);
+    font-family: var(--font-mono);
+    font-size: .75rem;
+  }
+  h3 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+    letter-spacing: -.03em;
+    line-height: 1.3;
+  }
   h3 a { color: var(--color-ink); text-decoration: none; }
-  article p { color: var(--color-muted); }
-  .learn-more { margin-top: auto; font-weight: 750; }
+  .catalog-main > p {
+    max-width: 43rem;
+    margin: .65rem 0 0;
+    color: var(--color-muted);
+  }
+  .catalog-meta span + span::before {
+    margin-right: 1.25rem;
+    content: "·";
+  }
+  .catalog-route {
+    display: grid;
+    gap: .75rem;
+    padding-top: .25rem;
+    color: var(--color-muted);
+    font-family: var(--font-mono);
+    font-size: .72rem;
+  }
+  .compact-route { display: flex; align-items: center; overflow: hidden; }
+  .compact-node {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    width: .95rem;
+    height: .95rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid var(--color-muted);
+    border-radius: 50%;
+    background: var(--color-canvas);
+    color: var(--color-muted);
+    font-size: .48rem;
+  }
+  .compact-node + .compact-node { margin-left: .45rem; }
+  .compact-node + .compact-node::before {
+    position: absolute;
+    z-index: -1;
+    top: calc(50% - .5px);
+    right: 100%;
+    width: .5rem;
+    height: 1px;
+    background: var(--color-border);
+    content: "";
+  }
+  .compact-node[data-kind="checkpoint"],
+  .compact-node[data-kind="capstone"] {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  .compact-node[data-state="started"] {
+    border-color: var(--color-ink);
+    background: var(--color-ink);
+    color: var(--color-canvas);
+  }
+  .compact-node[data-state="completed"] {
+    border-color: var(--color-completed-ink);
+    color: var(--color-completed-ink);
+  }
+  .compact-node[data-revisit="true"] {
+    border-color: var(--color-warning);
+    color: var(--color-warning);
+  }
+  .catalog-open {
+    padding-top: .2rem;
+    color: var(--color-ink);
+    font-size: .85rem;
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  @media (max-width: 52rem) {
+    article { grid-template-columns: 2rem 1fr; gap: 1rem; }
+    .catalog-route, .catalog-open { grid-column: 2; }
+  }
 </style>

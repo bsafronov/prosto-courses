@@ -1,13 +1,27 @@
 ---
 import PwaControl from "../components/PwaControl.astro";
+import ThemeControl from "../components/ThemeControl.astro";
 import { sitePath } from "../lib/courses";
 import { pwaInfo } from "virtual:pwa-info";
+import "@fontsource/onest/400.css";
+import "@fontsource/onest/500.css";
+import "@fontsource/onest/600.css";
+import "@fontsource/onest/700.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
 import "../styles/global.css";
 
-interface Props { title: string; description?: string }
+interface Props {
+  title: string;
+  description?: string;
+  mobileTitle?: string;
+  courseRouteControl?: boolean;
+}
 const {
   title,
   description = "Короткие практические курсы.",
+  mobileTitle,
+  courseRouteControl = false,
 } = Astro.props;
 ---
 <!doctype html>
@@ -16,7 +30,7 @@ const {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <meta name="description" content={description} />
-    <meta name="theme-color" content="#3347a8" />
+    <meta name="theme-color" content="#FAFAFA" />
     <link
       rel="icon"
       href={sitePath("favicon.svg")}
@@ -31,13 +45,45 @@ const {
     />
     {pwaInfo && <Fragment set:html={pwaInfo.webManifest.linkTag} />}
     <title>{title}</title>
+    <script is:inline>
+      {`
+        (() => {
+          let mode = "system";
+          try {
+            const stored = localStorage.getItem("prosto-courses:theme");
+            if (stored === "light" || stored === "dark") mode = stored;
+          } catch {}
+          const theme = mode === "system"
+            ? matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+            : mode;
+          document.documentElement.dataset.themeMode = mode;
+          document.documentElement.dataset.theme = theme;
+          document.querySelector('meta[name="theme-color"]')
+            ?.setAttribute("content", theme === "dark" ? "#09090B" : "#FAFAFA");
+        })();
+      `}
+    </script>
   </head>
   <body>
-    <header class="site-header">
+    <header class:list={["site-header", { "learning-header": courseRouteControl }]}>
       <div class="container header-inner">
-        <a class="brand" href={sitePath()}>Prosto.Courses</a>
+        <div class="header-leading">
+          {courseRouteControl && (
+            <button
+              type="button"
+              class="course-route-toggle"
+              data-course-route-toggle
+              aria-label="Открыть маршрут курса"
+              aria-controls="course-route-panel"
+              aria-expanded="false"
+            >☰</button>
+          )}
+          <a class="brand" href={sitePath()}>Prosto.Courses</a>
+          {mobileTitle && <span class="mobile-title">{mobileTitle}</span>}
+        </div>
         <div class="header-actions">
-          <a href={sitePath()}>Все курсы</a>
+          <a href={sitePath()}>Каталог</a>
+          <ThemeControl />
           <PwaControl />
         </div>
       </div>
@@ -49,13 +95,89 @@ const {
 </html>
 
 <style>
-  .site-header { border-bottom: 1px solid var(--color-border); background: var(--color-surface); }
-  .header-inner { min-height: 4.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-  .header-actions { display: flex; align-items: center; justify-content: flex-end; gap: .75rem; }
-  .brand { color: var(--color-ink); font-weight: 850; text-decoration: none; letter-spacing: -.025em; }
+  .site-header {
+    position: sticky;
+    z-index: 50;
+    top: 0;
+    border-bottom: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-canvas) 92%, transparent);
+    backdrop-filter: blur(14px);
+  }
+  .header-inner {
+    min-height: 3.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1rem;
+    font-size: .875rem;
+  }
+  .header-leading {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+  }
+  .course-route-toggle {
+    display: none;
+    width: 2.35rem;
+    min-height: 2.35rem;
+    border: 1px solid var(--color-border);
+    padding: 0;
+    background: transparent;
+    color: var(--color-ink);
+  }
+  .mobile-title { display: none; }
+  .header-actions > a { color: var(--color-ink); text-decoration: none; }
+  .brand {
+    color: var(--color-ink);
+    font-size: .95rem;
+    font-weight: 650;
+    text-decoration: none;
+    letter-spacing: -.03em;
+  }
   .site-footer { margin-top: 5rem; border-top: 1px solid var(--color-border); padding: 2rem 0; color: var(--color-muted); }
   @media (max-width: 42rem) {
-    .header-inner { align-items: flex-start; padding-block: .75rem; }
-    .header-actions { flex-wrap: wrap; }
+    .header-inner {
+      display: grid;
+      width: calc(100% - 1.5rem);
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: .5rem;
+      padding-block: .5rem;
+    }
+    .header-actions { display: contents; }
+    .header-actions > a { display: none; }
+    :global(.theme-control) { grid-column: 2; grid-row: 1; }
+    :global(.pwa-control) {
+      width: 100%;
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+    .learning-header .header-inner {
+      display: flex;
+      padding-block: 0;
+    }
+    .learning-header .header-actions { display: flex; }
+  }
+  @media (max-width: 52rem) {
+    .course-route-toggle { display: inline-grid; place-items: center; }
+    .course-route-toggle + .brand { display: none; }
+    .mobile-title {
+      display: block;
+      max-width: min(46vw, 22rem);
+      overflow: hidden;
+      color: var(--color-ink);
+      font-size: .82rem;
+      font-weight: 500;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .learning-header .header-actions > a,
+    .learning-header :global(.pwa-control) { display: none !important; }
   }
 </style>

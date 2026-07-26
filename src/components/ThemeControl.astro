@@ -1,0 +1,83 @@
+<label class="theme-control">
+  <span class="sr-only">Тема</span>
+  <span aria-hidden="true">◐</span>
+  <select data-theme-control aria-label="Тема оформления">
+    <option value="system">Системная</option>
+    <option value="light">Светлая</option>
+    <option value="dark">Тёмная</option>
+  </select>
+</label>
+
+<script>
+  type ThemeMode = "system" | "light" | "dark";
+
+  const storageKey = "prosto-courses:theme";
+  const media = window.matchMedia("(prefers-color-scheme: dark)");
+
+  function storedMode(): ThemeMode {
+    try {
+      const value = localStorage.getItem(storageKey);
+      return value === "light" || value === "dark" ? value : "system";
+    } catch {
+      return "system";
+    }
+  }
+
+  function applyTheme(mode: ThemeMode) {
+    const theme =
+      mode === "system" ? (media.matches ? "dark" : "light") : mode;
+    document.documentElement.dataset.themeMode = mode;
+    document.documentElement.dataset.theme = theme;
+    document
+      .querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+      ?.setAttribute("content", theme === "dark" ? "#09090B" : "#FAFAFA");
+    window.dispatchEvent(
+      new CustomEvent("prosto-theme-change", { detail: { mode, theme } }),
+    );
+  }
+
+  document
+    .querySelectorAll<HTMLSelectElement>("[data-theme-control]")
+    .forEach((select) => {
+      const mode = storedMode();
+      select.value = mode;
+      applyTheme(mode);
+      select.addEventListener("change", () => {
+        const nextMode = select.value as ThemeMode;
+        try {
+          localStorage.setItem(storageKey, nextMode);
+        } catch {
+          // The choice still applies for this page when storage is unavailable.
+        }
+        applyTheme(nextMode);
+      });
+    });
+
+  media.addEventListener("change", () => {
+    if (storedMode() === "system") applyTheme("system");
+  });
+</script>
+
+<style>
+  .theme-control {
+    display: inline-flex;
+    min-height: 2rem;
+    align-items: center;
+    gap: .35rem;
+    border-left: 1px solid var(--color-border);
+    padding-left: 1rem;
+    color: var(--color-muted);
+  }
+  select {
+    max-width: 7.5rem;
+    border: 0;
+    padding: .25rem .1rem;
+    background: transparent;
+    color: var(--color-ink);
+    font: 500 .78rem/1.2 var(--font-mono);
+  }
+  @media (max-width: 36rem) {
+    .theme-control { border-left: 0; padding-left: .25rem; }
+    select { width: 5rem; font-size: .68rem; }
+  }
+</style>

@@ -36,10 +36,41 @@ const coreDestinations = getCoreDestinationLinks(course.id, tree);
   description={course.data.summary}
 >
   <div class="container overview" data-progress-root data-course-slug={course.id} data-core-destinations={JSON.stringify(coreDestinations)}>
-    <header>
+    <header class="overview-head">
       <p class="eyebrow">О курсе</p>
       <h1>{course.data.title}</h1>
       <p class="summary">{course.data.summary}</p>
+      <p
+        class="course-progress"
+        data-course-progress
+        role="status"
+        aria-live="polite"
+        aria-label="Прогресс курса"
+      >
+        0 из {coreDestinations.length} завершено
+      </p>
+      <a class="button" data-course-action href={coreDestinations[0].href}>{courseActionCopy.start}</a>
+    </header>
+    <section class="overview-route" aria-labelledby="route-heading">
+      <h2 id="route-heading">Маршрут курса</h2>
+      <p class="guidance">
+        <strong>Рекомендуемая последовательность</strong> помогает
+        ориентироваться и не ограничивает переходы — можно открыть любую часть
+        Курса.
+      </p>
+      <nav aria-label="Маршрут курса">
+        <CourseOutline courseSlug={course.id} tree={tree} />
+      </nav>
+    </section>
+    <article class="supporting prose reading-width">
+      <Content components={semanticComponents} />
+      <h2>Чему ты научишься</h2>
+      <ul>{course.data.outcomes.map((outcome) => <li>{outcome.statement}</li>)}</ul>
+      <h2>Для кого этот курс</h2>
+      <p>{course.data.learnerProfile}</p>
+      <h2>Что нужно уметь</h2>
+      <ul>{course.data.prerequisites.map((prerequisite) => <li>{prerequisite}</li>)}</ul>
+      <h2>Объём и актуальность</h2>
       <WorkloadSummary
         label="Объём курса"
         items={[
@@ -49,52 +80,47 @@ const coreDestinations = getCoreDestinationLinks(course.id, tree);
         ]}
       />
       <ContentFreshness state={courseFreshnessState(course, tree)} />
-      <p
-        class="course-progress"
-        data-course-progress
-        role="status"
-        aria-live="polite"
-        aria-label="Статус курса"
-      >
-        Статус курса: Не начат
-      </p>
       <p class="completion-note">
-        Чтобы завершить Курс, закончи все основные Уроки, проверки Модулей и итоговую работу. Это не оценка и не сертификат.
+        Чтобы завершить Курс, закончи все основные Уроки, проверки Модулей и
+        итоговую работу. Это не оценка и не сертификат.
       </p>
-      <a class="button" data-course-action href={coreDestinations[0].href}>{courseActionCopy.start}</a>
-    </header>
-    <div class="columns">
-      <article class="prose reading-width">
-        <Content components={semanticComponents} />
-        <h2>Для кого этот курс</h2>
-        <p>{course.data.learnerProfile}</p>
-        <h2>Что нужно уметь</h2>
-        <ul>{course.data.prerequisites.map((prerequisite) => <li>{prerequisite}</li>)}</ul>
-        <h2>Чему ты научишься</h2>
-        <ul>{course.data.outcomes.map((outcome) => <li>{outcome.statement}</li>)}</ul>
-      </article>
-      <aside>
-        <h2>Маршрут курса</h2>
-        <p class="guidance"><strong>Рекомендуемая последовательность</strong> — это подсказка: можно открыть любую часть Курса.</p>
-        <nav aria-label="Маршрут курса">
-          <CourseOutline courseSlug={course.id} tree={tree} />
-        </nav>
-      </aside>
-    </div>
+    </article>
   </div>
   <script src="../../scripts/progress.ts"></script>
 </BaseLayout>
 
 <style>
-  .overview { padding-top: 3.5rem; }
-  header { max-width: 47rem; }
-  h1 { margin: .2rem 0 .6rem; font-size: clamp(2.4rem, 7vw, 4.4rem); line-height: 1.05; letter-spacing: -.05em; }
+  .overview { width: min(78rem, calc(100% - 3rem)); padding-top: clamp(3rem, 7vw, 6rem); }
+  .overview-head { max-width: 52rem; }
+  h1 {
+    max-width: 17ch;
+    margin: .2rem 0 .6rem;
+    font-size: clamp(3rem, 7vw, 6rem);
+    font-weight: 600;
+    line-height: .98;
+    letter-spacing: -.06em;
+  }
   .summary { color: var(--color-muted); font-size: 1.15rem; }
-  .course-progress { margin-bottom: .25rem; font-weight: 800; }
+  .course-progress {
+    margin: 1.4rem 0 .9rem;
+    color: var(--color-muted);
+    font: 400 .75rem/1.4 var(--font-mono);
+  }
   .completion-note { max-width: 42rem; margin-top: 0; color: var(--color-muted); font-size: .92rem; }
-  .columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(20rem, .75fr); gap: 3rem; margin-top: 3rem; align-items: start; }
-  aside { position: sticky; top: 1rem; }
-  aside h2 { font-size: 1.15rem; }
-  .guidance { color: var(--color-muted); font-size: .92rem; }
-  @media (max-width: 48rem) { .columns { grid-template-columns: 1fr; gap: 1.5rem; } aside { position: static; } }
+  .overview-route {
+    max-width: 52rem;
+    border-top: 1px solid var(--color-border);
+    margin-top: clamp(3rem, 7vw, 6rem);
+    padding-top: 2rem;
+  }
+  .overview-route h2, .supporting h2 {
+    font-weight: 600;
+    letter-spacing: -.035em;
+  }
+  .guidance { max-width: 42rem; color: var(--color-muted); font-size: .92rem; }
+  .supporting {
+    border-top: 1px solid var(--color-border);
+    margin-top: clamp(3rem, 7vw, 6rem);
+    padding-top: 1rem;
+  }
 </style>

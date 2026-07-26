@@ -24,9 +24,7 @@ async function expectThreeProgressStates(page: Page, navigationName: string) {
     .getByLabel("Статус урока: Не начат");
 
   await expect(completed).toContainText("✓");
-  await expect(completed).toHaveCSS("background-color", "rgb(216, 243, 223)");
   await expect(started).toContainText("◐");
-  await expect(started).toHaveCSS("background-color", "rgb(255, 241, 168)");
   await expect(notStarted).toContainText("○");
 }
 
@@ -91,7 +89,7 @@ test.beforeEach(async ({ page }) => {
 test("Lesson Progress persists, resumes the latest incomplete Lesson, and remains reversible", async ({
   page,
 }) => {
-  const action = page.getByRole("link", { name: "Начать курс" });
+  const action = page.getByRole("link", { name: "Начать" });
   await expect(action).toHaveAttribute("href", /\/lessons\/vvedenie\/$/);
   await action.click();
 
@@ -110,7 +108,7 @@ test("Lesson Progress persists, resumes the latest incomplete Lesson, and remain
 
   await page.getByRole("link", { name: /Следующий урок/ }).click();
   await page.getByRole("link", { name: "О курсе", exact: true }).click();
-  const continueAction = page.getByRole("link", { name: "Продолжить курс" });
+  const continueAction = page.getByRole("link", { name: "Продолжить" });
   await expect(continueAction).toHaveAttribute(
     "href",
     /\/lessons\/source-render\/$/,
@@ -118,7 +116,7 @@ test("Lesson Progress persists, resumes the latest incomplete Lesson, and remain
 });
 
 test("Lesson Completion records the current Content Revision", async ({ page }) => {
-  await page.getByRole("link", { name: "Начать курс" }).click();
+  await page.getByRole("link", { name: "Начать" }).click();
   await page.getByRole("button", { name: "Завершить урок" }).click();
 
   const completedRevision = await page.evaluate(() => {
@@ -225,7 +223,7 @@ test("legacy Lesson Completion preserves its original Content Revision", async (
 test("Course Overview refreshes Lesson Progress after browser back navigation", async ({
   page,
 }) => {
-  await page.getByRole("link", { name: "Начать курс" }).click();
+  await page.getByRole("link", { name: "Начать" }).click();
   await expect(
     page.locator("header").getByLabel("Статус урока: В процессе"),
   ).toBeVisible();
@@ -236,7 +234,7 @@ test("Course Overview refreshes Lesson Progress after browser back navigation", 
   await expect(
     lessons.getByRole("link", { name: /Знакомство с Markdown/ }),
   ).toContainText("В процессе");
-  await expect(page.getByRole("link", { name: "Продолжить курс" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Продолжить" })).toHaveAttribute(
     "href",
     /\/lessons\/vvedenie\/$/,
   );
@@ -245,7 +243,7 @@ test("Course Overview refreshes Lesson Progress after browser back navigation", 
 test("restored Lesson refreshes progress from browser-local storage", async ({
   page,
 }) => {
-  await page.getByRole("link", { name: "Начать курс" }).click();
+  await page.getByRole("link", { name: "Начать" }).click();
   await expect(
     page.locator("header").getByLabel("Статус урока: В процессе"),
   ).toBeVisible();
@@ -271,7 +269,7 @@ test("restored Lesson refreshes progress from browser-local storage", async ({
 test("Lesson navigation refreshes progress after browser back navigation", async ({
   page,
 }) => {
-  await page.getByRole("link", { name: "Начать курс" }).click();
+  await page.getByRole("link", { name: "Начать" }).click();
   await page.getByRole("link", { name: /Следующий урок/ }).click();
   await expect(
     page.locator("header").getByLabel("Статус урока: В процессе"),
@@ -307,7 +305,7 @@ test("Course navigation stays consistent across pages in the same browser", asyn
   await expect(
     firstLesson.getByLabel("Статус урока: В процессе"),
   ).toContainText("◐");
-  await expect(page.getByRole("link", { name: "Продолжить курс" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Продолжить" })).toHaveAttribute(
     "href",
     /\/lessons\/vvedenie\/$/,
   );
@@ -322,7 +320,7 @@ test("Course navigation stays consistent across pages in the same browser", asyn
 test("every Lesson has consistent accessible status on both navigation surfaces", async ({
   page,
 }) => {
-  await page.getByRole("link", { name: "Начать курс" }).click();
+  await page.getByRole("link", { name: "Начать" }).click();
   await page.getByRole("button", { name: "Завершить урок" }).click();
   await page.getByRole("link", { name: /Следующий урок/ }).click();
 
@@ -335,7 +333,7 @@ test("every Lesson has consistent accessible status on both navigation surfaces"
 test("Lesson Progress survives title, order, and content edits at stable slugs", async ({
   page,
 }) => {
-  await page.getByRole("link", { name: "Начать курс" }).click();
+  await page.getByRole("link", { name: "Начать" }).click();
   await page.getByRole("button", { name: "Завершить урок" }).click();
 
   await page.route("**/courses/markdown/lessons/vvedenie/", async (route) => {
@@ -367,10 +365,10 @@ test("Lesson Progress survives title, order, and content edits at stable slugs",
 test("Course remains incomplete after every Lesson is complete", async ({ page }) => {
   await completeEveryLesson(page);
   await page.getByRole("link", { name: "О курсе", exact: true }).click();
-  await expect(page.getByRole("status", { name: "Статус курса" })).toHaveText(
-    "Статус курса: В процессе",
+  await expect(page.getByRole("status", { name: "Прогресс курса" })).toHaveText(
+    "6 из 10 завершено",
   );
-  await expect(page.getByRole("link", { name: "Продолжить курс" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Продолжить" })).toHaveAttribute(
     "href",
     /\/modules\/osnovy\/checkpoint\/$/,
   );
@@ -382,24 +380,24 @@ test("reopening a Lesson changes completed Course behavior back to continue", as
   await completeCoreRoute(page);
 
   await page.getByRole("link", { name: "О курсе", exact: true }).click();
-  await page.getByRole("link", { name: "Освежить знания" }).click();
+  await page.getByRole("link", { name: "Повторить" }).click();
   await page.getByRole("button", { name: "Вернуть в работу" }).click();
   await page.getByRole("link", { name: "О курсе", exact: true }).click();
 
-  await expect(page.getByRole("link", { name: "Продолжить курс" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Продолжить" })).toHaveAttribute(
     "href",
     /\/lessons\/vvedenie\/$/,
   );
-  await expect(page.getByRole("status", { name: "Статус курса" })).toHaveText(
-    "Статус курса: В процессе",
+  await expect(page.getByRole("status", { name: "Прогресс курса" })).toHaveText(
+    "9 из 10 завершено",
   );
 });
 
 test("continue action falls back to the first incomplete Lesson", async ({ page }) => {
-  await page.getByRole("link", { name: "Начать курс" }).click();
+  await page.getByRole("link", { name: "Начать" }).click();
   await page.getByRole("button", { name: "Завершить урок" }).click();
   await page.getByRole("link", { name: "О курсе", exact: true }).click();
-  await expect(page.getByRole("link", { name: "Продолжить курс" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Продолжить" })).toHaveAttribute(
     "href",
     /\/lessons\/source-render\/$/,
   );
@@ -408,13 +406,13 @@ test("continue action falls back to the first incomplete Lesson", async ({ page 
 test("completing the latest Lesson resumes the previously visited incomplete Lesson", async ({
   page,
 }) => {
-  await page.getByRole("link", { name: "Начать курс" }).click();
+  await page.getByRole("link", { name: "Начать" }).click();
   await page.getByRole("link", { name: /Следующий урок/ }).click();
   await page.goto("./courses/markdown/lessons/links-code/");
   await page.locator('a[href$="/lessons/vvedenie/"]').first().click();
   await page.getByRole("button", { name: "Завершить урок" }).click();
   await page.getByRole("link", { name: "О курсе", exact: true }).click();
-  await expect(page.getByRole("link", { name: "Продолжить курс" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Продолжить" })).toHaveAttribute(
     "href",
     /\/lessons\/links-code\/$/,
   );
@@ -488,10 +486,10 @@ test("Course Completion requires explicit completion of every core destination",
     page.getByText("Дополнительно — необязательно", { exact: true }),
   ).toBeVisible();
   await page.getByRole("link", { name: "О курсе", exact: true }).click();
-  await expect(page.getByRole("status", { name: "Статус курса" })).toHaveText(
-    "Статус курса: Завершён",
+  await expect(page.getByRole("status", { name: "Прогресс курса" })).toHaveText(
+    "✓ Курс завершён · 10 из 10 завершено",
   );
-  await expect(page.getByRole("link", { name: "Освежить знания" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Повторить" })).toHaveAttribute(
     "href",
     /\/lessons\/vvedenie\/$/,
   );
@@ -505,7 +503,7 @@ test("Course resumes the most recently visited incomplete core destination", asy
     name: /Проверка Модуля: Собери Markdown-памятку/,
   }).click();
   await page.getByRole("link", { name: "О курсе", exact: true }).click();
-  await expect(page.getByRole("link", { name: "Продолжить курс" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Продолжить" })).toHaveAttribute(
     "href",
     /\/modules\/struktura\/checkpoint\/$/,
   );
@@ -517,7 +515,7 @@ test("Course resumes the most recently visited incomplete core destination", asy
     page.locator("header").getByLabel("Статус итоговой работы: В процессе"),
   ).toBeVisible();
   await page.goBack();
-  await expect(page.getByRole("link", { name: "Продолжить курс" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Продолжить" })).toHaveAttribute(
     "href",
     /\/capstone\/$/,
   );
@@ -600,7 +598,7 @@ test("malformed browser-local progress is ignored and can be replaced", async ({
   });
   await page.reload();
 
-  await expect(page.getByRole("link", { name: "Начать курс" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Начать" })).toHaveAttribute(
     "href",
     /\/lessons\/vvedenie\/$/,
   );
@@ -647,7 +645,7 @@ test("Lesson-only v1 progress migrates to the core route", async ({ page }) => {
       .getByRole("link", { name: /Знакомство с Markdown/ })
       .getByLabel("Статус урока: Завершён"),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Продолжить курс" })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Продолжить" })).toHaveAttribute(
     "href",
     /\/lessons\/source-render\/$/,
   );

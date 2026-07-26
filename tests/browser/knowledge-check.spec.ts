@@ -12,7 +12,7 @@ test("single-choice Knowledge Check announces response-specific feedback and all
   const check = page.locator("[data-knowledge-check]");
   const feedback = check.locator("[data-feedback]");
   await expect(check.getByText("Проверь себя", { exact: true })).toBeVisible();
-  await expect(page.getByRole("status")).toHaveCount(1);
+  await expect(check.getByRole("status")).toHaveCount(1);
   await expect(feedback).toHaveAttribute("role", "status");
   await expect(feedback).toHaveAttribute("aria-live", "polite");
   await expect(feedback).toHaveAttribute("aria-atomic", "true");

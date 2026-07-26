@@ -162,6 +162,9 @@ test("promise and navigation remain readable at a narrow viewport", async ({
 
   await page.getByRole("link", { name: "От исходника к структуре" }).click();
   await expect(page.getByRole("group", { name: "Объём Модуля" })).toBeVisible();
+  await page
+    .getByRole("button", { name: "Открыть маршрут курса" })
+    .click();
   await expect(
     page.getByRole("navigation", { name: "Навигация по курсу" }),
   ).toBeVisible();

@@ -23,9 +23,9 @@ export const progressStatusAriaLabel = (
 ) => `Статус ${destinationStatusName[kind]}: ${label}`;
 
 export const courseActionCopy = {
-  start: "Начать курс",
-  continue: "Продолжить курс",
-  review: "Освежить знания",
+  start: "Начать",
+  continue: "Продолжить",
+  review: "Повторить",
 } as const;
 
 export const courseStatusCopy: Record<ProgressState, string> = {

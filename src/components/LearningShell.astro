@@ -1,0 +1,301 @@
+---
+import type {
+  CoreDestinationLink,
+  CourseEntry,
+  CourseTree,
+} from "../lib/courses";
+import { coursePath, getCoreDestinationLinks } from "../lib/courses";
+import CourseOutline from "./CourseOutline.astro";
+
+interface Props {
+  course: CourseEntry;
+  tree: CourseTree;
+  current: {
+    kind: "module" | "lesson" | "checkpoint" | "capstone";
+    slug: string;
+  };
+  destination?: CoreDestinationLink;
+}
+
+const { course, tree, current, destination } = Astro.props;
+const destinations = getCoreDestinationLinks(course.id, tree);
+---
+
+<div
+  class="container learning-shell"
+  data-progress-root
+  data-course-slug={course.id}
+  data-current-destination={destination?.id}
+  data-core-destinations={JSON.stringify(destinations)}
+>
+  <aside class="course-route-panel" id="course-route-panel" data-course-route-panel>
+    <div class="route-mobile-head">
+      <span id="course-route-title">Маршрут курса</span>
+      <button
+        type="button"
+        data-course-route-close
+        aria-label="Закрыть маршрут курса"
+      >×</button>
+    </div>
+    <nav aria-label="Навигация по курсу">
+      <header class="route-head">
+        <span>Маршрут курса</span>
+        <strong>{course.data.title}</strong>
+        <a href={coursePath(course.id)}>О курсе</a>
+        <p data-course-progress role="status" aria-live="polite">Не начат</p>
+        <p class="route-guidance">
+          Рекомендуемая последовательность не ограничивает переходы — можно
+          открыть любую часть Курса.
+        </p>
+        <span class="route-progress" aria-hidden="true">
+          <span data-course-progress-line></span>
+        </span>
+      </header>
+      <CourseOutline
+        courseSlug={course.id}
+        tree={tree}
+        lessonListLabel="Уроки в навигации курса"
+        current={current}
+      />
+    </nav>
+  </aside>
+
+  <div class="learning-content"><slot /></div>
+
+  <button
+    type="button"
+    class="course-route-backdrop"
+    data-course-route-backdrop
+    aria-hidden="true"
+    tabindex="-1"
+    hidden
+  ></button>
+</div>
+
+<script>
+  function initialiseCourseRoute(root: HTMLElement) {
+    const panel = root.querySelector<HTMLElement>("[data-course-route-panel]");
+    const toggle = document.querySelector<HTMLButtonElement>(
+      "[data-course-route-toggle]",
+    );
+    const close = root.querySelector<HTMLButtonElement>(
+      "[data-course-route-close]",
+    );
+    const backdrop = root.querySelector<HTMLButtonElement>(
+      "[data-course-route-backdrop]",
+    );
+    const mobile = window.matchMedia("(max-width: 52rem)");
+    if (!panel || !toggle || !close || !backdrop) return;
+    const courseRoute = panel;
+    const routeToggle = toggle;
+    const closeControl = close;
+    const routeBackdrop = backdrop;
+
+    let returnFocus: HTMLElement | null = null;
+
+    function setClosedAccessibility() {
+      if (mobile.matches) {
+        courseRoute.inert = true;
+        courseRoute.setAttribute("aria-hidden", "true");
+      } else {
+        courseRoute.inert = false;
+        courseRoute.removeAttribute("aria-hidden");
+      }
+    }
+
+    function openDrawer() {
+      returnFocus =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : routeToggle;
+      courseRoute.inert = false;
+      courseRoute.removeAttribute("aria-hidden");
+      courseRoute.setAttribute("role", "dialog");
+      courseRoute.setAttribute("aria-modal", "true");
+      courseRoute.setAttribute("aria-labelledby", "course-route-title");
+      document.body.dataset.courseRouteOpen = "true";
+      routeToggle.setAttribute("aria-expanded", "true");
+      routeBackdrop.hidden = false;
+      closeControl.focus();
+    }
+
+    function closeDrawer(restoreFocus = false) {
+      delete document.body.dataset.courseRouteOpen;
+      routeToggle.setAttribute("aria-expanded", "false");
+      courseRoute.removeAttribute("role");
+      courseRoute.removeAttribute("aria-modal");
+      courseRoute.removeAttribute("aria-labelledby");
+      routeBackdrop.hidden = true;
+      setClosedAccessibility();
+      if (restoreFocus) returnFocus?.focus();
+    }
+
+    routeToggle.addEventListener("click", () => {
+      if (document.body.dataset.courseRouteOpen === "true") {
+        closeDrawer(true);
+      } else {
+        openDrawer();
+      }
+    });
+    closeControl.addEventListener("click", () => closeDrawer(true));
+    routeBackdrop.addEventListener("click", () => closeDrawer(true));
+    courseRoute.addEventListener("click", (event) => {
+      if (event.target instanceof HTMLAnchorElement && mobile.matches) {
+        closeDrawer();
+      }
+    });
+    window.addEventListener("keydown", (event) => {
+      if (document.body.dataset.courseRouteOpen !== "true") return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeDrawer(true);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = [
+        ...courseRoute.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ];
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
+    mobile.addEventListener("change", () => closeDrawer());
+    setClosedAccessibility();
+  }
+
+  document
+    .querySelectorAll<HTMLElement>("[data-progress-root]")
+    .forEach(initialiseCourseRoute);
+</script>
+
+<script src="../scripts/progress.ts"></script>
+
+<style>
+  .learning-shell {
+    display: grid;
+    grid-template-columns: 18rem minmax(0, 1fr);
+    gap: clamp(3rem, 6vw, 6rem);
+    align-items: start;
+  }
+  .course-route-panel {
+    position: sticky;
+    top: 5.5rem;
+    width: 18rem;
+    max-height: calc(100vh - 7rem);
+    padding-block: 2.5rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .route-mobile-head { display: none; }
+  .route-head { margin-bottom: 2rem; }
+  .route-head > span:first-child,
+  .route-head [data-course-progress] {
+    margin: 0;
+    color: var(--color-muted);
+    font: 400 .68rem/1.4 var(--font-mono);
+    text-transform: uppercase;
+  }
+  .route-guidance {
+    color: var(--color-muted);
+    font-size: .72rem;
+    line-height: 1.45;
+  }
+  .route-head > strong {
+    display: block;
+    margin: .35rem 0 .6rem;
+    color: var(--color-ink);
+    font-weight: 650;
+    letter-spacing: -.025em;
+    line-height: 1.35;
+  }
+  .route-head > a {
+    color: var(--color-muted);
+    font-size: .75rem;
+    text-decoration: none;
+  }
+  .route-progress {
+    display: block;
+    height: 2px;
+    margin-top: .75rem;
+    background: var(--color-border);
+  }
+  .route-progress > span {
+    display: block;
+    width: 0;
+    height: 100%;
+    background: var(--color-ink);
+    transition: width 180ms ease-out;
+  }
+  .learning-content { min-width: 0; }
+  .course-route-backdrop[hidden] { display: none; }
+  @media (max-width: 52rem) {
+    .learning-shell {
+      display: block;
+      width: min(100% - 2rem, 44rem);
+    }
+    .course-route-panel {
+      position: fixed;
+      z-index: 90;
+      top: 3.5rem;
+      bottom: 0;
+      left: 0;
+      width: min(88vw, 23rem);
+      max-height: none;
+      border-right: 1px solid var(--color-border);
+      padding: 0 1.25rem 3rem;
+      background: var(--color-canvas);
+      box-shadow: var(--shadow);
+      transform: translateX(-105%);
+      transition: transform 180ms ease-out;
+    }
+    body[data-course-route-open="true"] .course-route-panel {
+      transform: translateX(0);
+    }
+    body[data-course-route-open="true"] { overflow: hidden; }
+    .route-mobile-head {
+      position: sticky;
+      z-index: 2;
+      top: 0;
+      display: flex;
+      min-height: 3.75rem;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--color-border);
+      margin-bottom: 1rem;
+      background: var(--color-canvas);
+      font-weight: 600;
+    }
+    .route-mobile-head button {
+      width: 2.35rem;
+      min-height: 2.35rem;
+      border-color: var(--color-border);
+      background: transparent;
+      color: var(--color-ink);
+      font-size: 1.4rem;
+    }
+    .course-route-backdrop {
+      position: fixed;
+      z-index: 80;
+      inset: 3.5rem 0 0;
+      width: 100%;
+      min-height: 0;
+      border: 0;
+      border-radius: 0;
+      padding: 0;
+      background: rgb(9 9 11 / 56%);
+    }
+    .course-route-backdrop:hover { background: rgb(9 9 11 / 56%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .course-route-panel, .route-progress > span { transition: none; }
+  }
+</style>

@@ -47,8 +47,8 @@ export default defineConfig({
         display: "standalone",
         start_url: siteScope,
         scope: siteScope,
-        theme_color: "#3347a8",
-        background_color: "#f6f4ee",
+        theme_color: "#18181b",
+        background_color: "#fafafa",
         icons: [
           {
             src: `${siteScope}pwa-192x192.png`,

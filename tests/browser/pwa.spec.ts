@@ -97,9 +97,7 @@ async function expectOfflineFallback(
   const catalog = page.getByRole("link", { name: "Перейти в Каталог курсов" });
   await expect(catalog).toHaveAttribute("href", catalogHref);
   await catalog.click();
-  await expect(
-    page.getByRole("heading", { name: "Учись новому — урок за уроком." }),
-  ).toBeVisible();
+  await expect(page.getByRole("list", { name: "Каталог курсов" })).toBeVisible();
 }
 
 test.beforeEach(async ({ baseURL, request }) => {
@@ -133,7 +131,7 @@ test("the deployable release exposes install identity under the configured base 
     display: "standalone",
     start_url: "/prosto-courses/",
     scope: "/prosto-courses/",
-    theme_color: "#3347a8",
+    theme_color: "#18181b",
   });
   expect(manifest.orientation).toBeUndefined();
   expect(manifest.icons).toEqual(
@@ -292,7 +290,7 @@ test("the deployable release exposes root-scoped install identity", async ({
     display: "standalone",
     start_url: "/",
     scope: "/",
-    theme_color: "#3347a8",
+    theme_color: "#18181b",
     icons: expect.arrayContaining([
       expect.objectContaining({ src: "/pwa-192x192.png" }),
       expect.objectContaining({ src: "/pwa-512x512.png" }),
@@ -317,7 +315,9 @@ test("the root-deployed release remains complete and scoped offline", async ({
   for (const route of routes) {
     await page.goto(new URL(route, rootUrl).href);
     await expect(page.locator("main")).not.toBeEmpty();
-    const heading = (await page.locator("h1").first().textContent())?.trim();
+    const heading = (
+      await page.locator("h1:visible").first().textContent()
+    )?.trim();
     expect(heading).toBeTruthy();
     routeHeadings.set(route, heading!);
     const diagrams = page.locator("[data-mermaid-container]");
@@ -365,7 +365,7 @@ test("the root-deployed release remains complete and scoped offline", async ({
     for (const route of routes) {
       await offlinePage.goto(new URL(route, rootUrl).href);
       await expect(
-        offlinePage.locator("h1").first(),
+        offlinePage.locator("h1:visible").first(),
       ).toHaveText(routeHeadings.get(route)!);
       await expect(
         offlinePage.getByRole("heading", {
@@ -501,7 +501,7 @@ test("preparing Offline Availability keeps focus stable through completion", asy
   const control = page.getByRole("group", { name: "Офлайн-доступ" });
   const status = control.locator("[data-pwa-status]");
   await expect(status).toHaveText("Подготовка офлайн");
-  const catalogLink = page.getByRole("link", { name: "Все курсы" });
+  const catalogLink = page.getByRole("link", { name: "Каталог" });
   await catalogLink.focus();
   await expect(catalogLink).toBeFocused();
 
@@ -754,14 +754,16 @@ test("a Catalog Update survives a failed attempt, waits for consent, and preserv
   await offlineUpdate.click();
   await expect(page).toHaveURL(/\/prosto-courses\/$/, { timeout: 20_000 });
   await expect(
-    page.getByRole("heading", { name: "Учись новому — урок за уроком." }),
+    page.getByRole("heading", {
+      name: "Выбери Курс и начни с первого Урока.",
+    }),
   ).toBeVisible();
   await expect(siblingPage).toHaveURL(/\/prosto-courses\/$/, {
     timeout: 20_000,
   });
   await expect(
     siblingPage.getByRole("heading", {
-      name: "Учись новому — урок за уроком.",
+      name: "Выбери Курс и начни с первого Урока.",
     }),
   ).toBeVisible();
 
@@ -1000,7 +1002,9 @@ test("an unsupported browser keeps the ordinary site quiet", async ({
   await page.goto("./");
 
   await expect(
-    page.getByRole("heading", { name: "Учись новому — урок за уроком." }),
+    page.getByRole("heading", {
+      name: "Выбери Курс и начни с первого Урока.",
+    }),
   ).toBeVisible();
   await expect(
     page.getByRole("group", { name: "Офлайн-доступ" }),

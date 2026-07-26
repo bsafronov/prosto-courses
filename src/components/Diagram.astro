@@ -30,23 +30,49 @@ const { title, description, howToRead, takeaway } = Astro.props;
 <script>
   import mermaid from "mermaid";
 
-  mermaid.initialize({
-    startOnLoad: false,
-    securityLevel: "strict",
-    theme: "neutral",
-    flowchart: { htmlLabels: false, useMaxWidth: true },
-  });
+  let renderVersion = 0;
 
-  async function renderDiagram(container: HTMLElement, index: number) {
-    if (container.dataset.mermaidRendered) return;
-    const source = container.querySelector(
-      "pre[data-language='mermaid'] code, code.language-mermaid",
-    )?.textContent;
+  function initialiseTheme() {
+    const styles = getComputedStyle(document.documentElement);
+    const color = (name: string) => styles.getPropertyValue(name).trim();
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: "strict",
+      theme: "base",
+      themeVariables: {
+        background: color("--color-canvas"),
+        primaryColor: color("--color-surface"),
+        primaryTextColor: color("--color-ink"),
+        primaryBorderColor: color("--color-border"),
+        lineColor: color("--color-muted"),
+        secondaryColor: color("--color-surface"),
+        tertiaryColor: color("--color-canvas"),
+        textColor: color("--color-ink"),
+      },
+      flowchart: { htmlLabels: false, useMaxWidth: true },
+    });
+  }
+
+  async function renderDiagram(
+    container: HTMLElement,
+    index: number,
+    force = false,
+  ) {
+    if (container.dataset.mermaidRendered && !force) return;
+    const source =
+      container.dataset.mermaidSource ??
+      container.querySelector(
+        "pre[data-language='mermaid'] code, code.language-mermaid",
+      )?.textContent;
     if (!source?.trim()) return;
+    container.dataset.mermaidSource = source;
+    if (force) delete container.dataset.mermaidRendered;
 
     try {
+      initialiseTheme();
+      renderVersion += 1;
       const { svg, bindFunctions } = await mermaid.render(
-        `course-diagram-${index}`,
+        `course-diagram-${index}-${renderVersion}`,
         source,
       );
       container.innerHTML = svg;
@@ -65,28 +91,33 @@ const { title, description, howToRead, takeaway } = Astro.props;
   document
     .querySelectorAll<HTMLElement>("[data-mermaid-container]")
     .forEach((container, index) => void renderDiagram(container, index));
+  window.addEventListener("prosto-theme-change", () => {
+    document
+      .querySelectorAll<HTMLElement>("[data-mermaid-container]")
+      .forEach((container, index) => {
+        delete container.dataset.mermaidRendered;
+        void renderDiagram(container, index, true);
+      });
+  });
 </script>
 
 <style>
   .diagram {
     min-width: 0;
     margin: 2rem 0;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    background: var(--color-surface);
-    box-shadow: var(--shadow);
-    overflow: hidden;
+    border: 0;
+    background: transparent;
   }
   figcaption {
     border-bottom: 1px solid var(--color-border);
-    padding: .9rem 1rem;
+    padding: .9rem 0;
     font-weight: 800;
   }
   .diagram-visual {
     max-width: 100%;
     overflow-x: auto;
-    padding: 1rem;
-    background: #fbfcff;
+    padding: 1rem 0;
+    background: transparent;
   }
   .diagram-visual :global(pre) { display: none; }
   .diagram-visual :global(svg) {
@@ -100,7 +131,7 @@ const { title, description, howToRead, takeaway } = Astro.props;
     display: grid;
     gap: .65rem;
     border-top: 1px solid var(--color-border);
-    padding: 1rem;
+    padding: 1rem 0;
   }
   .diagram-interpretation p { margin: 0; }
   @media (prefers-reduced-motion: reduce) {

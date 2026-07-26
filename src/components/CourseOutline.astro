@@ -1,14 +1,17 @@
 ---
 import type { CourseTree } from "../lib/courses";
+import { lessonRevisionCopy } from "../lib/ui-copy";
 import {
   capstoneDestination,
   capstonePath,
   checkpointDestination,
   checkpointPath,
+  lessonDestination,
+  lessonPath,
+  lessonSlug,
   modulePath,
   moduleSlug,
 } from "../lib/courses";
-import CourseLessonList from "./CourseLessonList.astro";
 import ProgressStatus from "./ProgressStatus.astro";
 
 interface Props {
@@ -27,6 +30,7 @@ const {
   lessonListLabel = "Уроки курса",
   current,
 } = Astro.props;
+let routeIndex = 0;
 ---
 <div class="outline">
   <ol class="module-list">
@@ -37,57 +41,177 @@ const {
         : `${lessonListLabel}: ${module.data.title}`;
       return (
         <li class="module">
-          <a
-            class="module-link"
-            href={modulePath(courseSlug, slug)}
-            aria-current={current?.kind === "module" && current.slug === slug
-              ? "page"
-              : undefined}
-          >
-            <span aria-hidden="true">{moduleIndex + 1}</span>
-            {module.data.title}
-          </a>
-          <CourseLessonList
-            courseSlug={courseSlug}
-            lessons={lessons}
-            label={label}
-            currentLessonSlug={current?.kind === "lesson" ? current.slug : undefined}
-          />
-          <a
-            class="assessment-link"
-            href={checkpointPath(courseSlug, slug)}
-            aria-current={current?.kind === "checkpoint" && current.slug === slug
-              ? "page"
-              : undefined}
-          >
-            <span>Проверка Модуля: {checkpoint.data.title}</span>
-            <ProgressStatus
-              destination={checkpointDestination(slug)}
-            />
-          </a>
+          <p class="module-title">
+            <span aria-hidden="true">
+              {String(moduleIndex + 1).padStart(2, "0")}
+            </span>
+            <a
+              href={modulePath(courseSlug, slug)}
+              aria-current={current?.kind === "module" && current.slug === slug
+                ? "page"
+                : undefined}
+            >{module.data.title}</a>
+          </p>
+          <ol class="destination-list" aria-label={label}>
+            {lessons.map((lesson) => {
+              routeIndex += 1;
+              const currentSlug = lessonSlug(lesson);
+              const destination = lessonDestination(currentSlug);
+              return (
+                <li class="destination" data-kind="lesson">
+                  <span class="route-node" aria-hidden="true">
+                    {String(routeIndex).padStart(2, "0")}
+                  </span>
+                  <a
+                    href={lessonPath(courseSlug, currentSlug)}
+                    aria-current={current?.kind === "lesson" &&
+                      current.slug === currentSlug
+                      ? "page"
+                      : undefined}
+                    data-lesson-link
+                    data-destination-id={destination.id}
+                    data-lesson-title={lesson.data.title}
+                  >
+                    <span>{lesson.data.title}</span>
+                    <ProgressStatus destination={destination} />
+                    <span
+                      class="revisit"
+                      data-revision-revisit
+                      data-destination-id={destination.id}
+                      hidden
+                    >
+                      {lessonRevisionCopy.revisitLabel}
+                    </span>
+                  </a>
+                </li>
+              );
+            })}
+          </ol>
+          {(() => {
+            routeIndex += 1;
+            const destination = checkpointDestination(slug);
+            return (
+              <div class="destination checkpoint" data-kind="checkpoint">
+                <span class="route-node" aria-hidden="true">◆</span>
+                <a
+                  href={checkpointPath(courseSlug, slug)}
+                  aria-current={current?.kind === "checkpoint" &&
+                    current.slug === slug
+                    ? "page"
+                    : undefined}
+                >
+                  <span>Проверка Модуля: {checkpoint.data.title}</span>
+                  <ProgressStatus destination={destination} />
+                </a>
+              </div>
+            );
+          })()}
         </li>
       );
     })}
+    <li class="destination capstone" data-kind="capstone">
+      <span class="route-node" aria-hidden="true">■</span>
+      <a
+        href={capstonePath(courseSlug)}
+        aria-current={current?.kind === "capstone" ? "page" : undefined}
+      >
+        <span>Итоговая работа: {tree.capstone.data.title}</span>
+        <ProgressStatus destination={capstoneDestination()} />
+      </a>
+    </li>
   </ol>
-  <a
-    class="capstone-link"
-    href={capstonePath(courseSlug)}
-    aria-current={current?.kind === "capstone" ? "page" : undefined}
-  >
-    <span>Итоговая работа: {tree.capstone.data.title}</span>
-    <ProgressStatus
-      destination={capstoneDestination()}
-    />
-  </a>
 </div>
 
 <style>
-  .outline { display: grid; gap: .75rem; }
-  .module-list { list-style: none; display: grid; gap: 1rem; margin: 0; padding: 0; }
-  .module { display: grid; gap: .65rem; }
-  .module-link { display: flex; align-items: center; gap: .65rem; color: var(--color-ink); font-weight: 800; text-decoration: none; }
-  .module-link span { display: grid; width: 1.8rem; height: 1.8rem; place-items: center; border-radius: 50%; background: var(--color-brand); color: white; font-size: .85rem; }
-  .assessment-link, .capstone-link { display: flex; align-items: center; justify-content: space-between; gap: .65rem; border: 1px dashed var(--color-border); border-radius: .65rem; padding: .7rem .8rem; color: var(--color-ink); font-weight: 720; text-decoration: none; }
-  .capstone-link { border-style: solid; border-color: var(--color-brand); }
-  a[aria-current="page"] { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+  .module-list, .destination-list {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .module-list { gap: 2rem; }
+  .module-title {
+    display: grid;
+    grid-template-columns: 2rem 1fr;
+    gap: .6rem;
+    margin: 0 0 .8rem;
+    color: var(--color-muted);
+    font-size: .74rem;
+    font-weight: 500;
+    line-height: 1.35;
+  }
+  .module-title > span { font-family: var(--font-mono); }
+  .module-title a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .module-title a[aria-current="page"] {
+    color: var(--color-ink);
+    font-weight: 650;
+  }
+  .destination-list {
+    position: relative;
+    gap: .25rem;
+  }
+  .destination-list::before {
+    position: absolute;
+    top: 1rem;
+    bottom: 1rem;
+    left: .85rem;
+    width: 1px;
+    background: var(--color-border);
+    content: "";
+  }
+  .destination {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.7rem minmax(0, 1fr);
+    gap: .65rem;
+    align-items: start;
+  }
+  .route-node {
+    z-index: 1;
+    display: grid;
+    width: 1.7rem;
+    height: 1.7rem;
+    place-items: center;
+    border: 1px solid var(--color-border);
+    border-radius: 50%;
+    background: var(--color-canvas);
+    color: var(--color-muted);
+    font: 400 .58rem/1 var(--font-mono);
+  }
+  .destination[data-kind="checkpoint"] .route-node,
+  .capstone .route-node {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    font-size: .7rem;
+  }
+  .destination > a {
+    display: grid;
+    gap: .1rem;
+    padding: .3rem .15rem .7rem;
+    color: var(--color-muted);
+    font-size: .78rem;
+    line-height: 1.35;
+    text-decoration: none;
+  }
+  .destination > a[aria-current="page"] {
+    color: var(--color-ink);
+    font-weight: 650;
+  }
+  .destination:has(a[aria-current="page"]) .route-node {
+    border-color: var(--color-ink);
+    background: var(--color-ink);
+    color: var(--color-canvas);
+  }
+  .checkpoint { margin-top: .25rem; }
+  .capstone { margin-top: -1.3rem; }
+  .revisit {
+    color: var(--color-warning);
+    font: 500 .68rem/1.3 var(--font-mono);
+    text-decoration: underline;
+    text-underline-offset: .18em;
+  }
 </style>
