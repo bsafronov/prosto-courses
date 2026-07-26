@@ -46,22 +46,20 @@ const {
     {pwaInfo && <Fragment set:html={pwaInfo.webManifest.linkTag} />}
     <title>{title}</title>
     <script is:inline>
-      {`
-        (() => {
-          let mode = "system";
-          try {
-            const stored = localStorage.getItem("prosto-courses:theme");
-            if (stored === "light" || stored === "dark") mode = stored;
-          } catch {}
-          const theme = mode === "system"
-            ? matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
-            : mode;
-          document.documentElement.dataset.themeMode = mode;
-          document.documentElement.dataset.theme = theme;
-          document.querySelector('meta[name="theme-color"]')
-            ?.setAttribute("content", theme === "dark" ? "#09090B" : "#FAFAFA");
-        })();
-      `}
+      (() => {
+        let mode = "system";
+        try {
+          const stored = localStorage.getItem("prosto-courses:theme");
+          if (stored === "light" || stored === "dark") mode = stored;
+        } catch {}
+        const theme = mode === "system"
+          ? matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+          : mode;
+        document.documentElement.dataset.themeMode = mode;
+        document.documentElement.dataset.theme = theme;
+        document.querySelector('meta[name="theme-color"]')
+          ?.setAttribute("content", theme === "dark" ? "#09090B" : "#FAFAFA");
+      })();
     </script>
   </head>
   <body>

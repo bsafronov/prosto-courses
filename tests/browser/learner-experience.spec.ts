@@ -140,9 +140,44 @@ test("Home resumes the newest valid incomplete destination across the Course Cat
 test("theme follows the system before paint and persists an explicit choice", async ({
   page,
 }) => {
+  await page.addInitScript(() => {
+    const firstFrameTheme = new Promise((resolve) => {
+      requestAnimationFrame(() => {
+        resolve({
+          theme: document.documentElement.dataset.theme,
+          mode: document.documentElement.dataset.themeMode,
+          themeColor: document
+            .querySelector('meta[name="theme-color"]')
+            ?.getAttribute("content"),
+        });
+      });
+    });
+    Object.defineProperty(window, "__firstFrameTheme", {
+      configurable: true,
+      value: firstFrameTheme,
+    });
+  });
+
+  const firstFrameTheme = () =>
+    page.evaluate(() => {
+      const instrumentedWindow = window as typeof window & {
+        __firstFrameTheme: Promise<{
+          theme?: string;
+          mode?: string;
+          themeColor?: string | null;
+        }>;
+      };
+      return instrumentedWindow.__firstFrameTheme;
+    });
+
   await page.emulateMedia({ colorScheme: "dark" });
   await page.reload();
 
+  expect(await firstFrameTheme()).toEqual({
+    theme: "dark",
+    mode: "system",
+    themeColor: "#09090B",
+  });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(page.locator("html")).toHaveAttribute(
     "data-theme-mode",
@@ -161,6 +196,11 @@ test("theme follows the system before paint and persists an explicit choice", as
     .selectOption("light");
   await page.goto("./courses/markdown/lessons/vvedenie/");
 
+  expect(await firstFrameTheme()).toEqual({
+    theme: "light",
+    mode: "light",
+    themeColor: "#FAFAFA",
+  });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await expect(page.locator("html")).toHaveAttribute(
     "data-theme-mode",
@@ -173,6 +213,129 @@ test("theme follows the system before paint and persists an explicit choice", as
     "content",
     "#FAFAFA",
   );
+});
+
+test("visual foundation uses the exact palettes and typography roles", async ({
+  page,
+}) => {
+  await page.goto("./courses/markdown/lessons/vvedenie/");
+
+  const themeControl = page.getByRole("combobox", {
+    name: "Тема оформления",
+  });
+  await expect(themeControl.locator("option")).toHaveText([
+    "Системная",
+    "Светлая",
+    "Тёмная",
+  ]);
+
+  const brand = page.getByRole("link", { name: "Prosto.Courses" });
+  const offlineState = page.getByRole("group", { name: "Офлайн-доступ" });
+  const lessonPosition = page.getByText("Урок 1 из 2", { exact: true });
+  const code = page.locator("main code").first();
+
+  const themes = [
+    {
+      mode: "light",
+      canvas: "rgb(250, 250, 250)",
+      surface: "rgb(255, 255, 255)",
+      ink: "rgb(24, 24, 27)",
+      muted: "rgb(113, 113, 122)",
+      border: "rgb(228, 228, 231)",
+      focus: "rgb(63, 63, 70)",
+    },
+    {
+      mode: "dark",
+      canvas: "rgb(9, 9, 11)",
+      surface: "rgb(24, 24, 27)",
+      ink: "rgb(250, 250, 250)",
+      muted: "rgb(161, 161, 170)",
+      border: "rgb(39, 39, 42)",
+      focus: "rgb(212, 212, 216)",
+    },
+  ] as const;
+
+  for (const theme of themes) {
+    await themeControl.selectOption(theme.mode);
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-theme",
+      theme.mode,
+    );
+    await brand.focus();
+
+    const presentation = await brand.evaluate((brandElement) => {
+      const body = getComputedStyle(document.body);
+      const offline = getComputedStyle(
+        document.querySelector('[aria-label="Офлайн-доступ"]')!,
+      );
+      const brandStyle = getComputedStyle(brandElement);
+      return {
+        canvas: body.backgroundColor,
+        surface: offline.backgroundColor,
+        ink: body.color,
+        muted: offline.color,
+        border: offline.borderTopColor,
+        focus: brandStyle.outlineColor,
+      };
+    });
+
+    expect(presentation).toEqual({
+      canvas: theme.canvas,
+      surface: theme.surface,
+      ink: theme.ink,
+      muted: theme.muted,
+      border: theme.border,
+      focus: theme.focus,
+    });
+  }
+
+  await expect(page.locator("body")).toHaveCSS("font-family", /Onest/);
+  await expect(code).toHaveCSS("font-family", /IBM Plex Mono/);
+  await expect(lessonPosition).toHaveCSS("font-family", /IBM Plex Mono/);
+  await expect(offlineState).toHaveCSS("font-family", /IBM Plex Mono/);
+});
+
+test("thin learner Header exposes shared controls on every learner route", async ({
+  page,
+}) => {
+  const routes = [
+    "./",
+    "./courses/markdown/",
+    "./courses/markdown/modules/osnovy/",
+    "./courses/markdown/lessons/vvedenie/",
+    "./courses/markdown/modules/osnovy/checkpoint/",
+    "./courses/markdown/capstone/",
+    "./offline/",
+  ];
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page
+    .getByRole("combobox", { name: "Тема оформления" })
+    .selectOption("dark");
+
+  for (const route of routes) {
+    await page.goto(route);
+
+    const header = page.getByRole("banner");
+    await expect(
+      header.getByRole("link", { name: "Prosto.Courses" }),
+    ).toBeVisible();
+    await expect(
+      header.getByRole("link", { name: "Каталог", exact: true }),
+    ).toBeVisible();
+    await expect(
+      header.getByRole("combobox", { name: "Тема оформления" }),
+    ).toHaveValue("dark");
+    await expect(
+      header.getByRole("group", { name: "Офлайн-доступ" }),
+    ).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-theme-mode",
+      "dark",
+    );
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    expect((await header.boundingBox())!.height).toBeLessThanOrEqual(64);
+  }
 });
 
 test("Lesson keeps the Course route persistent on desktop and accessible in a mobile drawer", async ({
