@@ -84,16 +84,27 @@ const routePosition =
     <article class="lesson-content">
       <header>
         <p class="eyebrow">
-          <span>Урок {lessonIndex + 1} из {currentModule.lessons.length}</span>
-          <span>Маршрут: {routePosition} из {progress.destinations.length}</span>
+          Урок {lessonIndex + 1} из {currentModule.lessons.length}
         </p>
         <h1>{lesson.data.title}</h1>
-        <p class="capability">{lesson.data.capability}</p>
-        <WorkloadSummary
-          label="Время на Урок"
-          items={lessonTimeItems}
-        />
-        <ProgressStatus destination={progress.current} />
+        <div
+          class="lesson-utility"
+          role="group"
+          aria-label="Сведения об Уроке"
+        >
+          <p class="capability">{lesson.data.capability}</p>
+          <p class="route-position">
+            Маршрут: {routePosition} из {progress.destinations.length}
+          </p>
+          <WorkloadSummary
+            label="Время на Урок"
+            items={lessonTimeItems}
+          />
+          <div class="lesson-progress">
+            <span>Прогресс Урока</span>
+            <ProgressStatus destination={progress.current} />
+          </div>
+        </div>
       </header>
       <div class="prose"><Content components={semanticComponents} /></div>
       <CompletionControl kind="lesson" />
@@ -146,30 +157,44 @@ const routePosition =
     width: min(100%, 69ch);
     min-width: 0;
     padding-block: clamp(3rem, 7vw, 6.5rem) 7rem;
+    font-size: 18px;
   }
   header { border-bottom: 1px solid var(--color-border); padding-bottom: 2rem; }
   .eyebrow {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: .5rem 1rem;
     font-family: var(--font-mono);
   }
   h1 {
     max-width: 15ch;
     margin: 0;
-    font-size: clamp(2.7rem, 5.5vw, 5rem);
+    font-size: clamp(2.7rem, 5.5vw, 4.5rem);
     font-weight: 600;
     letter-spacing: -.06em;
     line-height: 1;
   }
   .capability {
     max-width: 44rem;
-    margin-top: 1.15rem;
+    margin: 0;
     color: var(--color-muted);
     font-size: 1.05rem;
   }
-  .prose { padding-top: 1.25rem; font-size: 18px; line-height: 1.72; }
+  .lesson-utility { margin-top: 1.15rem; }
+  .route-position {
+    margin: .7rem 0 0;
+    color: var(--color-muted);
+    font: 400 .72rem/1.4 var(--font-mono);
+    text-transform: uppercase;
+  }
+  .lesson-utility :global(.workload) { margin-block: .8rem; }
+  .lesson-progress {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    color: var(--color-muted);
+    font: 400 .72rem/1.4 var(--font-mono);
+    text-transform: uppercase;
+  }
+  .prose { padding-top: 1.25rem; line-height: 1.72; }
   .sequence {
     display: grid;
     grid-template-columns: 1fr 1fr;

@@ -375,13 +375,23 @@ test("Lesson keeps the Course route persistent on desktop and accessible in a mo
   expect(desktopGeometry.articleLeft).toBeGreaterThan(
     desktopGeometry.routeRight,
   );
-  expect(desktopGeometry.articleWidth).toBeLessThanOrEqual(760);
+  expect(desktopGeometry.articleWidth).toBeGreaterThanOrEqual(780);
+  expect(desktopGeometry.articleWidth).toBeLessThanOrEqual(840);
 
   await page.setViewportSize({ width: 390, height: 844 });
+  const header = page.getByRole("banner");
   const toggle = page.getByRole("button", {
     name: "Открыть маршрут курса",
   });
+  const mobileTitle = header.getByText("Как читать Markdown-исходник", {
+    exact: true,
+  });
+  await expect(mobileTitle).toHaveCSS("text-overflow", "ellipsis");
+  await expect(
+    header.getByRole("combobox", { name: "Тема оформления" }),
+  ).toBeVisible();
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  const mobileArticleBefore = await page.locator("main article").boundingBox();
   await toggle.click();
 
   const drawer = page.getByRole("dialog", { name: "Маршрут курса" });
@@ -391,12 +401,35 @@ test("Lesson keeps the Course route persistent on desktop and accessible in a mo
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await expect(close).toBeFocused();
   await expect(page.locator("body")).toHaveCSS("overflow", "hidden");
+  await expect
+    .poll(async () => (await drawer.boundingBox())!.x)
+    .toBeGreaterThanOrEqual(0);
+  const [mobileArticleDuring, drawerBox] = await Promise.all([
+    page.locator("main article").boundingBox(),
+    drawer.boundingBox(),
+  ]);
+  expect(mobileArticleDuring!.x).toBeCloseTo(mobileArticleBefore!.x);
+  expect(mobileArticleDuring!.width).toBeCloseTo(mobileArticleBefore!.width);
+  expect(drawerBox!.x).toBeGreaterThanOrEqual(0);
+  expect(drawerBox!.x + drawerBox!.width).toBeLessThanOrEqual(390);
 
   await page.keyboard.press("Shift+Tab");
   await expect(drawer.getByRole("link").last()).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(close).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(toggle).toBeFocused();
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+  await toggle.click();
+  await close.click();
+  await expect(toggle).toBeFocused();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await toggle.click();
+  await expect(drawer).toHaveCSS("transition-duration", "0s");
+  await page.keyboard.press("Escape");
 
   await toggle.click();
   await page.mouse.click(385, 200);
@@ -405,6 +438,91 @@ test("Lesson keeps the Course route persistent on desktop and accessible in a mo
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(390);
+
+  await page.setViewportSize({ width: 320, height: 700 });
+  const [toggleBox, titleBox, narrowThemeBox] = await Promise.all([
+    toggle.boundingBox(),
+    mobileTitle.boundingBox(),
+    header
+      .getByRole("combobox", { name: "Тема оформления" })
+      .boundingBox(),
+  ]);
+  expect(toggleBox!.x + toggleBox!.width).toBeLessThanOrEqual(titleBox!.x);
+  expect(titleBox!.x + titleBox!.width).toBeLessThanOrEqual(narrowThemeBox!.x);
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(320);
+});
+
+test("Lesson keeps 18px prose within a restrained reading measure", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("./courses/markdown/lessons/vvedenie/");
+
+  const firstParagraph = page.getByText(
+    /Представь инструкцию из двадцати строк/,
+  );
+  const readingGeometry = await firstParagraph.evaluate((paragraph) => {
+    const prose = paragraph.parentElement!;
+    const style = getComputedStyle(paragraph);
+    const characterMeasure = document.createElement("span");
+    characterMeasure.style.position = "absolute";
+    characterMeasure.style.visibility = "hidden";
+    characterMeasure.textContent = "0";
+    prose.append(characterMeasure);
+    const characterWidth = characterMeasure.getBoundingClientRect().width;
+    characterMeasure.remove();
+    return {
+      fontSize: Number.parseFloat(style.fontSize),
+      lineMeasure: prose.getBoundingClientRect().width / characterWidth,
+    };
+  });
+
+  expect(readingGeometry.fontSize).toBe(18);
+  expect(readingGeometry.lineMeasure).toBeGreaterThanOrEqual(65);
+  expect(readingGeometry.lineMeasure).toBeLessThanOrEqual(70);
+});
+
+test("Lesson heading keeps meaningful content in the first desktop viewport", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("./courses/markdown/lessons/formatting/");
+
+  const heading = page.getByRole("heading", {
+    level: 1,
+    name: "Заголовки, выделение и списки",
+  });
+  const firstContentHeading = page.getByRole("heading", {
+    level: 2,
+    name: "Заголовки создают структуру",
+  });
+  expect(
+    Number.parseFloat(await heading.evaluate((element) =>
+      getComputedStyle(element).fontSize)),
+  ).toBeLessThanOrEqual(72);
+  expect((await firstContentHeading.boundingBox())!.y).toBeLessThan(900);
+});
+
+test("Lesson groups capability, route position, workload, and progress as utility information", async ({
+  page,
+}) => {
+  await page.goto("./courses/markdown/lessons/source-render/");
+
+  const utility = page.getByRole("group", {
+    name: "Сведения об Уроке",
+  });
+  await expect(utility).toContainText(
+    "Различать блочные конструкции и элементы внутри строки по Markdown-исходнику",
+  );
+  await expect(utility).toContainText("Маршрут: 2 из 10");
+  await expect(
+    utility.getByRole("group", { name: "Время на Урок" }),
+  ).toContainText("Изучение10 мин");
+  await expect(
+    utility.getByLabel("Статус урока: В процессе"),
+  ).toBeVisible();
 });
 
 test("every learning destination shares the same Course route semantics", async ({
