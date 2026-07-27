@@ -80,7 +80,13 @@ const ticks = Array.from({ length: 5 }, (_, index) => {
   const value = domainMinimum + (domainSpan * index) / 4;
   return { value, y: yPosition(value) };
 }).reverse();
-const palette = ["#3347a8", "#b54708", "#18794e", "#7c3aed", "#a11b4b"];
+const palette = [
+  "var(--color-data-series-1)",
+  "var(--color-data-series-2)",
+  "var(--color-data-series-3)",
+  "var(--color-data-series-4)",
+  "var(--color-data-series-5)",
+];
 const patternKinds = ["solid", "diagonal", "dots", "crosshatch"];
 const chartKey = crypto.randomUUID();
 ---
@@ -115,18 +121,24 @@ const chartKey = crypto.randomUUID();
               {pattern === "diagonal" && (
                 <path
                   d="M-2 2 L2 -2 M0 10 L10 0 M8 12 L12 8"
-                  stroke="white"
+                  stroke="var(--color-canvas)"
                   stroke-width="2"
                   opacity=".72"
                 />
               )}
               {pattern === "dots" && (
-                <circle cx="5" cy="5" r="2" fill="white" opacity=".78" />
+                <circle
+                  cx="5"
+                  cy="5"
+                  r="2"
+                  fill="var(--color-canvas)"
+                  opacity=".78"
+                />
               )}
               {pattern === "crosshatch" && (
                 <path
                   d="M0 0 L10 10 M10 0 L0 10"
-                  stroke="white"
+                  stroke="var(--color-canvas)"
                   stroke-width="1.5"
                   opacity=".68"
                 />
@@ -374,17 +386,18 @@ const chartKey = crypto.randomUUID();
     background-image: repeating-linear-gradient(
       135deg,
       transparent 0 4px,
-      rgb(255 255 255 / 75%) 4px 6px
+      var(--color-canvas) 4px 6px
     );
   }
   .chart-swatch-dots {
-    background-image: radial-gradient(white 1.5px, transparent 1.5px);
+    background-image:
+      radial-gradient(var(--color-canvas) 1.5px, transparent 1.5px);
     background-size: 7px 7px;
   }
   .chart-swatch-crosshatch {
     background-image:
-      linear-gradient(45deg, transparent 44%, rgb(255 255 255 / 70%) 45% 55%, transparent 56%),
-      linear-gradient(-45deg, transparent 44%, rgb(255 255 255 / 70%) 45% 55%, transparent 56%);
+      linear-gradient(45deg, transparent 44%, var(--color-canvas) 45% 55%, transparent 56%),
+      linear-gradient(-45deg, transparent 44%, var(--color-canvas) 45% 55%, transparent 56%);
     background-size: 9px 9px;
   }
   .chart-table-scroll {

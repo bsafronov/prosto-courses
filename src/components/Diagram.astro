@@ -17,6 +17,7 @@ const { title, description, howToRead, takeaway } = Astro.props;
     aria-label={description}
     aria-busy="true"
     data-mermaid-container
+    tabindex="0"
   >
     <slot />
   </div>
@@ -43,7 +44,7 @@ const { title, description, howToRead, takeaway } = Astro.props;
         background: color("--color-canvas"),
         primaryColor: color("--color-surface"),
         primaryTextColor: color("--color-ink"),
-        primaryBorderColor: color("--color-border"),
+        primaryBorderColor: color("--color-muted"),
         lineColor: color("--color-muted"),
         secondaryColor: color("--color-surface"),
         tertiaryColor: color("--color-canvas"),
@@ -123,9 +124,14 @@ const { title, description, howToRead, takeaway } = Astro.props;
   .diagram-visual :global(svg) {
     display: block;
     width: 100% !important;
-    max-width: 100%;
+    min-width: 44rem;
+    max-width: none;
     height: auto;
     margin-inline: auto;
+  }
+  .diagram-visual:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 3px;
   }
   .diagram-interpretation {
     display: grid;

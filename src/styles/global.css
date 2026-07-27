@@ -13,6 +13,11 @@
   --color-completed-ink: #28613b;
   --color-warning: #8a5a00;
   --color-error: #a12828;
+  --color-data-series-1: #3d566e;
+  --color-data-series-2: #695d4e;
+  --color-data-series-3: #47665b;
+  --color-data-series-4: #625771;
+  --color-data-series-5: #704f5c;
   --shadow: 0 1rem 3rem rgb(24 24 27 / 10%);
   --radius: .25rem;
   --font-sans: "Onest", ui-sans-serif, system-ui, sans-serif;
@@ -39,6 +44,11 @@ html[data-theme="dark"] {
   --color-completed-ink: #9bd4ab;
   --color-warning: #e8bb66;
   --color-error: #f09a9a;
+  --color-data-series-1: #a8bfd3;
+  --color-data-series-2: #c9bba8;
+  --color-data-series-3: #a9c8bc;
+  --color-data-series-4: #c2b6d0;
+  --color-data-series-5: #cbaebb;
   --shadow: 0 1rem 3rem rgb(0 0 0 / 35%);
   color-scheme: dark;
 }
@@ -114,28 +124,103 @@ textarea:focus-visible {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
-.prose h2 { margin-top: 2.2rem; line-height: 1.25; }
-.prose h3 { margin-top: 1.75rem; line-height: 1.3; }
+.prose > :where(p, ul, ol, blockquote, pre, table) {
+  margin-block: 1.15rem;
+}
+.prose > :first-child {
+  margin-top: 0;
+}
+.prose p {
+  text-wrap: pretty;
+}
+.prose > h2 {
+  margin: 3rem 0 1rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 1.15rem;
+  font-size: 1.55em;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+.prose > h3 {
+  margin: 2.25rem 0 0.85rem;
+  font-size: 1.18em;
+  font-weight: 600;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+.prose > :where(ul, ol) {
+  padding-inline-start: 1.55rem;
+}
+.prose > :where(ul, ol) > li {
+  padding-inline-start: 0.25rem;
+}
+.prose > :where(ul, ol) > li + li {
+  margin-top: 0.45rem;
+}
+.prose > :where(ul, ol) > li::marker {
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
 .prose code {
   border: 1px solid var(--color-border);
-  border-radius: .15rem;
-  padding: .08em .28em;
+  border-radius: 0.15rem;
+  padding: 0.08em 0.28em;
   background: var(--color-surface);
   color: var(--color-ink);
   font-family: var(--font-mono);
-  font-size: .88em;
+  font-size: 0.88em;
+  overflow-wrap: anywhere;
 }
 .prose pre {
+  max-width: 100%;
   overflow-x: auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  padding: 1.25rem;
+  overscroll-behavior-inline: contain;
+  border: 0;
+  border-block: 1px solid var(--color-border);
+  border-radius: 0;
+  padding: 1.15rem 1rem;
   background: var(--color-surface);
   color: var(--color-ink);
-  box-shadow: inset 3px 0 var(--color-ink);
+  box-shadow: inset 2px 0 var(--color-muted);
+  line-height: 1.6;
 }
-.prose pre code { border: 0; padding: 0; background: transparent; }
-.prose blockquote { margin-inline: 0; border-left: .25rem solid var(--color-brand); padding-left: 1rem; color: var(--color-muted); }
+.prose pre code {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  overflow-wrap: normal;
+}
+.prose > table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.9em;
+  line-height: 1.5;
+}
+.prose > table :where(th, td) {
+  border-block: 1px solid var(--color-border);
+  padding: 0.65rem 0.55rem;
+  text-align: start;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.prose > table th {
+  font-weight: 600;
+}
+.prose > table thead th {
+  color: var(--color-muted);
+  font: 500 0.72rem/1.4 var(--font-mono);
+  letter-spacing: 0.01em;
+}
+.prose blockquote {
+  margin-inline: 0;
+  border-left: 2px solid var(--color-muted);
+  padding-left: 1rem;
+  color: var(--color-muted);
+}
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }

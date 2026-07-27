@@ -42,7 +42,7 @@ test("Diagram renders Mermaid with an equivalent visible interpretation", async 
   );
 
   const firstCheckOption = page.getByRole("radio").first();
-  for (let step = 0; step < 20; step += 1) {
+  for (let step = 0; step < 30; step += 1) {
     const optionIsFocused = await firstCheckOption.evaluate(
       (option) => option === document.activeElement,
     );
