@@ -116,7 +116,7 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
 ---
 
 <form
-  class="knowledge-check"
+  class="knowledge-check work-area"
   data-knowledge-check
   data-type={type}
   data-answer={JSON.stringify(authoredAnswer)}
@@ -124,7 +124,7 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
   data-tolerance={numericTolerance}
 >
   <fieldset>
-    <legend><span>Проверь себя</span>{prompt}</legend>
+    <legend><span class="work-area__eyebrow">Проверь себя</span>{prompt}</legend>
     {
       (type === "single" || type === "multiple") && (
         <div class="options">
@@ -478,33 +478,74 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
 <style>
   .knowledge-check {
     margin: 2.5rem 0;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    padding: 1.35rem;
-    background: var(--color-surface);
+    overflow: hidden;
   }
-  fieldset { border: 0; padding: 0; margin: 0 0 1rem; }
+  fieldset {
+    min-width: 0;
+    border: 0;
+    margin: 0;
+    padding: 1.25rem 1.25rem 0;
+  }
   legend { display: grid; gap: .25rem; width: 100%; font-weight: 750; font-size: 1.08rem; }
-  legend span { color: var(--color-muted); font: 500 .7rem/1.4 var(--font-mono); letter-spacing: .02em; text-transform: uppercase; }
-  .options, .matching-list, .ordering-list { display: grid; gap: .55rem; margin-top: 1rem; }
-  .options label { display: flex; gap: .65rem; align-items: start; background: var(--color-canvas); border: 1px solid var(--color-border); border-radius: var(--radius); padding: .65rem .75rem; cursor: pointer; }
+  legend .work-area__eyebrow { margin: 0; }
+  .options, .matching-list, .ordering-list {
+    display: grid;
+    gap: 0;
+    margin-top: 1rem;
+    border-block: 1px solid var(--color-border);
+  }
+  .options label {
+    display: flex;
+    gap: .65rem;
+    align-items: start;
+    border: 0;
+    border-radius: 0;
+    padding: .8rem .15rem;
+    background: transparent;
+    cursor: pointer;
+  }
+  .options label + label { border-top: 1px solid var(--color-border); }
   input { margin-top: .35rem; accent-color: var(--color-brand); }
   .answer-field { display: grid; gap: .45rem; margin-top: 1rem; font-weight: 700; }
   .answer-field input { width: 100%; margin: 0; border: 1px solid var(--color-border); border-radius: var(--radius); padding: .6rem; background: var(--color-canvas); color: inherit; font: inherit; font-weight: 400; }
   .numeric-answer { display: flex; align-items: center; gap: .55rem; }
   .numeric-unit { font-weight: 600; }
-  .matching-row { display: grid; gap: .45rem; background: var(--color-canvas); border: 1px solid var(--color-border); border-radius: var(--radius); padding: .65rem .75rem; }
+  .matching-row {
+    display: grid;
+    gap: .45rem;
+    border: 0;
+    border-radius: 0;
+    padding: .8rem .15rem;
+    background: transparent;
+  }
+  .matching-row + .matching-row { border-top: 1px solid var(--color-border); }
   .matching-row span { font-weight: 700; }
   select { width: 100%; border: 1px solid var(--color-border); border-radius: var(--radius); padding: .55rem; background: var(--color-canvas); color: inherit; font: inherit; }
   .ordering-list { list-style: none; padding: 0; }
-  .ordering-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .35rem .75rem; align-items: center; background: var(--color-canvas); border: 1px solid var(--color-border); border-radius: var(--radius); padding: .65rem .75rem; }
+  .ordering-list li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: .35rem .75rem;
+    align-items: center;
+    border: 0;
+    border-radius: 0;
+    padding: .8rem .15rem;
+    background: transparent;
+  }
+  .ordering-list li + li { border-top: 1px solid var(--color-border); }
   .ordering-list [data-ordering-text] { font-weight: 700; }
   .ordering-position { grid-column: 1; color: var(--color-muted); font-size: .85rem; }
   .ordering-controls { grid-column: 2; grid-row: 1 / span 2; display: flex; gap: .35rem; }
   .ordering-controls button { padding: .4rem .55rem; }
   .ordering-announcement { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-  .feedback { margin-top: 1rem; border-left: 2px solid currentColor; padding: .4rem 0 .4rem .75rem; }
-  .feedback:empty { margin: 0; padding: 0; }
+  .knowledge-check > button { margin: 1.25rem; }
+  .feedback {
+    margin: 0;
+    border-top: 1px solid var(--color-border);
+    border-left: 3px solid currentColor;
+    padding: 1rem 1.25rem;
+  }
+  .feedback:empty { border: 0; margin: 0; padding: 0; }
   .feedback[data-result="correct"] { color: var(--color-completed-ink); background: transparent; }
   .feedback[data-result="incorrect"] { color: var(--color-warning); background: transparent; }
   .feedback strong, .feedback span { display: block; }
@@ -513,4 +554,19 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
   .response-feedback ul { margin: .35rem 0 0; padding-left: 1.25rem; }
   .response-feedback li + li { margin-top: .3rem; }
   .governing-idea { margin-top: .65rem; }
+  @media (max-width: 34rem) {
+    fieldset { padding-inline: 1rem; }
+    .knowledge-check > button {
+      width: calc(100% - 2rem);
+      margin-inline: 1rem;
+    }
+    .ordering-list li { grid-template-columns: minmax(0, 1fr); }
+    .ordering-position { grid-column: 1; }
+    .ordering-controls {
+      grid-column: 1;
+      grid-row: auto;
+      flex-wrap: wrap;
+    }
+    .feedback { padding-inline: 1rem; }
+  }
 </style>

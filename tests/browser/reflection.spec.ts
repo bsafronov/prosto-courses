@@ -12,6 +12,39 @@ test.beforeEach(async ({ context, page }) => {
   await page.reload();
 });
 
+test("Reflection keeps private-note controls readable in both themes", async ({
+  page,
+}) => {
+  const reflection = page.getByRole("region", { name: prompt });
+  const note = reflection.getByRole("textbox", { name: "Твоя заметка" });
+  const copy = reflection.getByRole("button", { name: "Копировать" });
+  const deleteNote = reflection.getByRole("button", {
+    name: "Удалить навсегда",
+  });
+
+  for (const [theme, surface, muted] of [
+    ["light", "rgb(255, 255, 255)", "rgb(113, 113, 122)"],
+    ["dark", "rgb(24, 24, 27)", "rgb(161, 161, 170)"],
+  ] as const) {
+    await page
+      .getByRole("combobox", { name: "Тема оформления" })
+      .selectOption(theme);
+
+    await expect(reflection).toHaveCSS("background-color", surface);
+    await expect(reflection).toHaveCSS("border-top-width", "1px");
+    await expect(copy).toHaveCSS("opacity", "1");
+    await expect(copy).toHaveCSS("cursor", "not-allowed");
+    await expect(deleteNote).toHaveCSS("border-left-width", "1px");
+    await expect(deleteNote).toHaveCSS("opacity", "1");
+    await expect(deleteNote).toHaveCSS("color", muted);
+
+    await note.focus();
+    await expect(note).toBeFocused();
+    await expect(note).toHaveCSS("outline-style", "solid");
+    await expect(note).toHaveCSS("outline-width", "2px");
+  }
+});
+
 test("Reflection keeps a private draft across reloads without affecting completion", async ({
   page,
 }) => {

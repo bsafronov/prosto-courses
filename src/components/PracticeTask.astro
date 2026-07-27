@@ -30,13 +30,15 @@ const titleId = `${taskId}-title`;
 ---
 
 <section
-  class="practice-task"
+  class="practice-task work-area"
   data-practice-task
   role="region"
   aria-labelledby={titleId}
 >
   <header>
-    <p class="eyebrow">{levelLabels[level]} · {estimatedMinutes} мин</p>
+    <p class="work-area__eyebrow">
+      {levelLabels[level]} · {estimatedMinutes} мин
+    </p>
     <h2 id={titleId}>{title}</h2>
     <p class="goal"><strong>Цель:</strong> {goal}</p>
   </header>
@@ -126,40 +128,39 @@ const titleId = `${taskId}-title`;
 
 <style>
   .practice-task {
-    min-width: 0;
     margin: 2rem 0;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    padding: 1.25rem;
-    background: var(--color-surface);
+    overflow: hidden;
   }
-  header { padding-bottom: 1rem; border-bottom: 1px solid var(--color-border); }
-  .eyebrow {
-    margin: 0 0 .3rem;
-    color: var(--color-muted);
-    font: 500 .7rem/1.4 var(--font-mono);
-    letter-spacing: .02em;
-    text-transform: uppercase;
-  }
+  header { padding: 1.25rem; }
   h2 { margin: 0; font-size: 1.35rem; }
   h3 { margin: 0 0 .45rem; font-size: 1rem; }
   .goal { margin: .65rem 0 0; color: var(--color-muted); }
-  .task-list, .prompt, .support { margin-top: 1.1rem; }
-  .task-list ul, .support ol { margin: .4rem 0 0; padding-left: 1.35rem; }
-  .prompt {
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    padding: 1rem;
-    background: var(--color-canvas);
+  .task-list, .prompt, .support {
+    margin: 0;
+    border: 0;
+    border-top: 1px solid var(--color-border);
+    border-radius: 0;
+    padding: 1rem 1.25rem;
+    background: transparent;
   }
+  .task-list ul, .support ol { margin: .4rem 0 0; padding-left: 1.35rem; }
   .prompt :global(p:first-of-type) { margin-top: 0; }
   .prompt :global(p:last-of-type) { margin-bottom: 0; }
-  .support {
+  [data-task-feedback-destination]:not(:empty) {
     border-top: 1px solid var(--color-border);
-    padding-top: 1rem;
+    padding: 1rem 1.25rem 1.25rem;
   }
   .support p { margin: 0 0 .7rem; color: var(--color-muted); font-size: .92rem; }
   .support li { margin: .35rem 0; }
   .support button { margin-top: .75rem; }
-  .support button:disabled { cursor: not-allowed; opacity: .65; }
+  @media (max-width: 34rem) {
+    header,
+    .task-list,
+    .prompt,
+    .support,
+    [data-task-feedback-destination]:not(:empty) {
+      padding-inline: 1rem;
+    }
+    .support button { width: 100%; }
+  }
 </style>

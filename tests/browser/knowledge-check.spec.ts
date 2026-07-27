@@ -6,6 +6,67 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+test("Knowledge Check uses one bounded work area with internally ruled options", async ({
+  page,
+}) => {
+  const check = page.locator("[data-knowledge-check]");
+  const options = check.locator(".options label");
+
+  await expect(check).toHaveCSS("border-top-width", "1px");
+  await expect(check).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(options).toHaveCount(3);
+
+  for (const option of await options.all()) {
+    await expect(option).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await expect(option).toHaveCSS("border-left-width", "0px");
+    await expect(option).toHaveCSS("border-right-width", "0px");
+    await expect(option).toHaveCSS("border-radius", "0px");
+  }
+});
+
+test("Knowledge Check feedback and disabled controls stay explicit in both themes", async ({
+  page,
+}) => {
+  const check = page.locator("[data-knowledge-check]");
+  const feedback = check.locator("[data-feedback]");
+
+  await check
+    .getByRole("radio", { name: "Он требует подключения базы данных" })
+    .check();
+  await check.getByRole("button", { name: "Проверить ответ" }).click();
+  await expect(feedback).toContainText("Почти! Попробуй ещё раз.");
+
+  for (const [theme, warning] of [
+    ["light", "rgb(138, 90, 0)"],
+    ["dark", "rgb(232, 187, 102)"],
+  ] as const) {
+    await page
+      .getByRole("combobox", { name: "Тема оформления" })
+      .selectOption(theme);
+    await expect(feedback).toHaveCSS("color", warning);
+    await expect(feedback).toHaveCSS("border-left-width", "3px");
+  }
+
+  await check
+    .getByRole("radio", {
+      name: "Он остаётся читаемым без специального редактора",
+    })
+    .check();
+  await check.getByRole("button", { name: "Проверить ответ" }).click();
+  await expect(feedback).toContainText("Верно!");
+  await expect(feedback).toHaveCSS("color", "rgb(155, 212, 171)");
+
+  await page.goto("./courses/markdown/lessons/formatting/");
+  const disabledMove = page
+    .locator("[data-ordering-item]")
+    .first()
+    .getByRole("button", { name: /Переместить .+ выше/ });
+  await expect(disabledMove).toBeDisabled();
+  await expect(disabledMove).toHaveCSS("cursor", "not-allowed");
+  await expect(disabledMove).toHaveCSS("opacity", "1");
+  await expect(disabledMove).toHaveCSS("border-left-width", "1px");
+});
+
 test("single-choice Knowledge Check announces response-specific feedback and allows keyboard retries", async ({
   page,
 }) => {
@@ -370,6 +431,7 @@ test("exact Knowledge Check applies declared normalization and clears on reload"
 test("numeric Knowledge Check applies tolerance, exposes its unit, and allows retry", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 320, height: 800 });
   await page.goto("./courses/accessible-images/lessons/describe-purpose/");
   const check = page.locator('[data-knowledge-check][data-type="numeric"]');
   const answer = check.getByRole("spinbutton", {
@@ -377,6 +439,19 @@ test("numeric Knowledge Check applies tolerance, exposes its unit, and allows re
   });
   const feedback = check.locator("[data-feedback]");
   await expect(check.getByText("characters", { exact: true })).toBeVisible();
+
+  const [checkBox, answerBox, unitBox] = await Promise.all([
+    check.boundingBox(),
+    answer.boundingBox(),
+    check.getByText("characters", { exact: true }).boundingBox(),
+  ]);
+  expect(checkBox).not.toBeNull();
+  expect(answerBox).not.toBeNull();
+  expect(unitBox).not.toBeNull();
+  expect(answerBox!.x + answerBox!.width).toBeLessThanOrEqual(unitBox!.x);
+  expect(unitBox!.x + unitBox!.width).toBeLessThanOrEqual(
+    checkBox!.x + checkBox!.width,
+  );
 
   await answer.focus();
   await page.keyboard.type("4");

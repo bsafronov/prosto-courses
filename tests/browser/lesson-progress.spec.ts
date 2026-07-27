@@ -86,6 +86,30 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+test("Completion control presents a clear reversible local action boundary", async ({
+  page,
+}) => {
+  await page.getByRole("link", { name: "Начать" }).click();
+
+  const completion = page.getByRole("region", {
+    name: "Завершение урока",
+  });
+  const toggle = completion.locator("[data-completion-toggle]");
+
+  await expect(completion).toContainText("Локальная отметка");
+  await expect(completion).toHaveCSS("border-top-width", "1px");
+  await expect(completion).toHaveCSS(
+    "background-color",
+    "rgb(255, 255, 255)",
+  );
+  await expect(toggle).toHaveAccessibleName("Завершить урок");
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(toggle).toHaveText("Вернуть в работу");
+});
+
 test("Lesson Progress persists, resumes the latest incomplete Lesson, and remains reversible", async ({
   page,
 }) => {

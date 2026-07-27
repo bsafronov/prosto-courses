@@ -9,6 +9,21 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+test("Practice Task keeps its activity inside one bounded work area", async ({
+  page,
+}) => {
+  const task = page.getByRole("region", { name: taskTitle });
+  const prompt = task.locator("[data-task-prompt]");
+
+  await expect(task).toHaveCSS("border-top-width", "1px");
+  await expect(task).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(prompt).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(prompt).toHaveCSS("border-top-width", "1px");
+  await expect(prompt).toHaveCSS("border-left-width", "0px");
+  await expect(prompt).toHaveCSS("border-right-width", "0px");
+  await expect(prompt).toHaveCSS("border-radius", "0px");
+});
+
 test("Practice Task reveals authored hints progressively from the keyboard", async ({
   page,
 }) => {
@@ -95,4 +110,51 @@ test("open Practice Task uses observable Self-Assessment without a score", async
     "aria-pressed",
     "false",
   );
+});
+
+test("interactive work areas remain usable at narrow widths with reduced motion", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.reload();
+
+  const task = page.getByRole("region", { name: taskTitle });
+  const reflection = page.getByRole("region", {
+    name: "Как изменился бы твой способ оформлять заметку после этого урока?",
+  });
+  const surfaces = [
+    page.locator("[data-knowledge-check]").first(),
+    task,
+    reflection,
+    page.getByRole("region", { name: "Завершение урока" }),
+  ];
+
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  for (const surface of surfaces) {
+    const box = await surface.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(320);
+  }
+
+  const hint = task.getByRole("button", {
+    name: "Показать подсказку 1 из 2",
+  });
+  await hint.focus();
+  await page.keyboard.press("Enter");
+  await expect(task.getByText("Сначала назови главные части заметки.")).toBeVisible();
+
+  const note = reflection.getByRole("textbox", { name: "Твоя заметка" });
+  await note.focus();
+  await page.keyboard.type("Локальная заметка");
+  await expect(note).toHaveValue("Локальная заметка");
+
+  const completion = page.locator("[data-completion-toggle]");
+  await completion.focus();
+  await expect(completion).toBeFocused();
 });

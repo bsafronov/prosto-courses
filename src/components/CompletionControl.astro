@@ -13,20 +13,23 @@ const { kind } = Astro.props;
 const copy = completionControlCopy[kind];
 const headingId = `${kind}-completion-heading`;
 ---
-<section class="completion" aria-labelledby={headingId}>
-  <h2 id={headingId}>{copy.heading}</h2>
-  {kind === "lesson" && (
-    <p
-      class="revision-notice"
-      data-revision-notice
-      role="status"
-      aria-live="polite"
-      hidden
-    >
-      {lessonRevisionCopy.notice}
-    </p>
-  )}
-  <p>{copy.description}</p>
+<section class="completion work-area" aria-labelledby={headingId}>
+  <div class="completion-copy">
+    <p class="work-area__eyebrow">Локальная отметка</p>
+    <h2 id={headingId}>{copy.heading}</h2>
+    {kind === "lesson" && (
+      <p
+        class="revision-notice"
+        data-revision-notice
+        role="status"
+        aria-live="polite"
+        hidden
+      >
+        {lessonRevisionCopy.notice}
+      </p>
+    )}
+    <p class="description">{copy.description}</p>
+  </div>
   <button type="button" data-completion-toggle aria-pressed="false">
     {copy.complete}
   </button>
@@ -34,13 +37,25 @@ const headingId = `${kind}-completion-heading`;
 
 <style>
   .completion {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1.5rem;
+    align-items: end;
     margin-top: 3rem;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    padding: 1.2rem;
-    background: var(--color-surface);
+    padding: 1.25rem;
   }
+  .completion-copy { min-width: 0; }
   .completion h2 { margin: 0; font-size: 1.25rem; }
-  .completion p { color: var(--color-muted); }
+  .completion .description { margin: .65rem 0 0; color: var(--color-muted); }
   .completion .revision-notice { border-left: .25rem solid var(--color-brand); padding-left: .8rem; color: var(--color-ink); font-weight: 700; }
+  .completion button { min-width: 11rem; }
+  .completion button[aria-pressed="true"] {
+    border: 1px solid var(--color-border);
+    background: var(--color-canvas);
+    color: var(--color-ink);
+  }
+  @media (max-width: 34rem) {
+    .completion { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+    .completion button { width: 100%; }
+  }
 </style>

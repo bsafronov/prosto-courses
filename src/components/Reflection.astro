@@ -22,12 +22,12 @@ const privacyId = `${reflectionId}-privacy`;
 ---
 
 <section
-  class="reflection"
+  class="reflection work-area"
   data-reflection
   data-reflection-id={reflectionId}
   aria-labelledby={promptId}
 >
-  <p class="eyebrow">Осмысли опыт</p>
+  <p class="work-area__eyebrow">Осмысли опыт</p>
   <h2 id={promptId}>{prompt}</h2>
   {
     guidance.length > 0 && (
@@ -178,19 +178,8 @@ const privacyId = `${reflectionId}-privacy`;
 
 <style>
   .reflection {
-    min-width: 0;
     margin: 2rem 0;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    padding: 1.2rem;
-    background: var(--color-surface);
-  }
-  .eyebrow {
-    margin: 0 0 .3rem;
-    color: var(--color-muted);
-    font: 500 .7rem/1.4 var(--font-mono);
-    letter-spacing: .02em;
-    text-transform: uppercase;
+    padding: 1.25rem;
   }
   h2 { margin: 0 0 1rem; font-size: 1.2rem; }
   .guidance {
@@ -218,16 +207,29 @@ const privacyId = `${reflectionId}-privacy`;
   }
   .privacy {
     margin: .55rem 0 1rem;
+    border-left: 2px solid var(--color-muted);
+    padding-left: .65rem;
     color: var(--color-muted);
-    font-size: .9rem;
+    font: 500 .78rem/1.55 var(--font-mono);
   }
-  .actions { display: flex; flex-wrap: wrap; gap: .65rem; }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .65rem;
+    border-top: 1px solid var(--color-border);
+    padding-top: 1rem;
+  }
   .actions button:last-child {
-    border-color: var(--color-error);
+    border: 1px solid var(--color-error);
     color: var(--color-error);
     background: var(--color-surface);
   }
-  .actions button:disabled { cursor: not-allowed; opacity: .55; }
+  .actions button:last-child:disabled,
+  .actions button:last-child:disabled:hover {
+    border-color: var(--color-border);
+    background: var(--color-canvas);
+    color: var(--color-muted);
+  }
   .status { min-height: 1.5em; margin: .75rem 0 0; font-weight: 700; }
   @media (max-width: 34rem) {
     .actions { display: grid; }
