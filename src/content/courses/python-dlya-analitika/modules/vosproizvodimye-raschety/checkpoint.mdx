@@ -1,0 +1,161 @@
+---
+title: Восстановление воспроизводимого расчёта
+outcomes:
+  - reproduce-analysis
+  - calculate-with-arrays
+time: 35
+---
+
+В этом Module ты связал project environment, чистое состояние kernel,
+минимальный Python и NumPy. Checkpoint проверяет их вместе: отдельное верное
+выражение недостаточно, если notebook выполняется только в случайном порядке.
+
+<KnowledgeCheck
+  type="single"
+  prompt="Notebook работает после ручного запуска последней ячейки, но падает после Restart and Run All с NameError. Что это доказывает?"
+  outcomes={["reproduce-analysis"]}
+  options={[
+    {
+      id: "hidden-state",
+      text: "Результат зависел от объекта, оставшегося в старом состоянии kernel",
+      feedback: "Да. Clean run удалил скрытое состояние и обнаружил неверный порядок или отсутствующее определение.",
+    },
+    {
+      id: "numpy-unavailable",
+      text: "NumPy не поддерживает Jupyter",
+      feedback: "NumPy работает в Jupyter. NameError указывает на неизвестное имя, а не на несовместимость библиотеки.",
+    },
+    {
+      id: "lockfile-too-exact",
+      text: "Exact versions в uv.lock мешают выполнению Python",
+      feedback: "Lockfile делает environment воспроизводимой. NameError относится к порядку определения имён.",
+    },
+  ]}
+  answer="hidden-state"
+  explanation="Restart удаляет объекты из памяти; Run All показывает, создаёт ли notebook каждую зависимость до использования."
+/>
+
+## Неисправный notebook
+
+Фрагменты расположены не по dependency order.
+
+Фрагмент A:
+
+```python
+region_revenue = revenue_after_returns(units, returns, prices)
+region_totals = region_revenue.sum(axis=1)
+```
+
+Фрагмент B:
+
+```python
+import numpy as np
+```
+
+Фрагмент C:
+
+```python
+def revenue_after_returns(units, returns, prices):
+    net_units = units - returns
+    assert net_units.shape == units.shape
+    assert np.all(net_units >= 0)
+    return net_units * prices
+```
+
+Фрагмент D:
+
+```python
+units = np.array(
+    [
+        [3, 2, 1],
+        [4, 1, 2],
+    ]
+)
+returns = np.array(
+    [
+        [0, 1, 0],
+        [1, 0, 0],
+    ]
+)
+prices = np.array([500.0, 800.0, 1200.0])
+```
+
+Фрагмент E:
+
+```python
+assert region_revenue.shape == (2, 3)
+assert region_totals.tolist() == [3500.0, 4700.0]
+assert region_revenue.sum() == 8200.0
+
+large_cells = region_revenue >= 1500
+assert int(large_cells.sum()) == 3
+```
+
+<PracticeTask
+  title="Восстанови notebook и докажи расчёт"
+  level="core"
+  estimatedMinutes={35}
+  goal="Собрать воспроизводимую цепочку Python/NumPy из неисправных фрагментов"
+  outcomes={["reproduce-analysis", "calculate-with-arrays"]}
+  constraints={[
+    "Не объединяй всё в одну непрозрачную cell",
+    "Не удаляй asserts",
+    "Не записывай ожидаемые итоги вместо вычисления",
+    "Финальная проверка выполняется после Restart and Run All",
+  ]}
+  criteria={[
+    "Imports, data, function, calculation и checks расположены по dependency order",
+    "Объяснены shape входов и broadcasting prices",
+    "Возвраты вычитаются до умножения на цену",
+    "Итоги регионов равны 3500 и 4700, общий итог — 8200",
+    "Маска содержит три ячейки не меньше 1500",
+    "Project восстанавливается через uv sync --locked",
+  ]}
+>
+  Создай новый notebook `module-1-checkpoint.ipynb`, расположи пять фрагментов
+  в рабочем порядке и добавь Markdown cells с объяснением dependencies,
+  shapes, mask и axis. Выполни clean run.
+
+  Затем временно поменяй один `returns` на число больше `units`. Убедись, что
+  проверка отрицательных `net_units` останавливает расчёт. Верни исходное
+  значение и снова выполни Restart and Run All.
+
+  <TaskRubric
+    criteria={[
+      {
+        "criterion": "Notebook воспроизводим",
+        "evidence": "После uv sync --locked и Restart and Run All все имена определяются до использования, asserts проходят",
+      },
+      {
+        "criterion": "Форма объяснена",
+        "evidence": "Units и returns имеют shape (2, 3), prices — (3,), broadcasting относится к товарным столбцам",
+      },
+      {
+        "criterion": "Расчёт проверен",
+        "evidence": "Region totals 3500 и 4700, total 8200 и три large cells получены из arrays",
+      },
+      {
+        "criterion": "Ошибка диагностируется",
+        "evidence": "Невозможный возврат вызывает assert до формирования итогов, а исправление подтверждается clean run",
+      },
+    ]}
+  />
+</PracticeTask>
+
+## Что повторить при затруднении
+
+- Project не восстанавливается → вернись к «Проект и notebook без магии».
+- Непонятен `None` или тип → «Значения и коллекции вместо ячеек».
+- Функция возвращает `None` → «Условия, повторения и небольшие функции».
+- Теряется смысл позиции → «Как NumPy хранит набор чисел».
+- Перепутан итог по оси → «Маски, оси и векторные расчёты».
+
+<Reflection
+  prompt="Какой контроль в Checkpoint дал самое сильное evidence: clean run, shape, граница или числовой итог?"
+  outcomes={["reproduce-analysis", "calculate-with-arrays"]}
+  guidance={[
+    "Назови сбой, который он обнаруживает",
+    "Объясни, какой неверный результат мог пройти без него",
+    "Выбери один контроль для следующего Module",
+  ]}
+/>

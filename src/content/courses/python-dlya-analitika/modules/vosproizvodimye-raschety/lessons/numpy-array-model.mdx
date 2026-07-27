@@ -1,0 +1,197 @@
+---
+title: Как NumPy хранит набор чисел
+order: 4
+revision: 1
+capability: Предсказывать результат операции по форме, типу данных и индексации NumPy array
+outcomes:
+  - calculate-with-arrays
+time:
+  study: 17
+  practice: 18
+  advanced: 10
+---
+
+Python list умеет хранить разные типы и свободно менять длину. NumPy array
+делает другой обмен: обычно хранит элементы одного типа в прямоугольной форме.
+За это ограничение аналитик получает компактную модель массовых вычислений.
+
+Официальное beginner guide NumPy описывает `ndarray` как однородную
+N-dimensional структуру и вводит базовые атрибуты
+[`shape`, `ndim`, `size` и `dtype`](https://numpy.org/doc/stable/user/absolute_beginners.html).
+
+## Форма отвечает на вопрос «что где находится»
+
+```python
+import numpy as np
+
+units = np.array(
+    [
+        [12, 15, 11],
+        [8, 7, 10],
+    ],
+    dtype=np.int64,
+)
+```
+
+Пусть строки — регионы `north`, `south`, а столбцы — товары `basic`,
+`standard`, `premium`.
+
+```python
+units.ndim
+units.shape
+units.size
+units.dtype
+```
+
+Смысл:
+
+- `ndim == 2` — две оси;
+- `shape == (2, 3)` — две строки и три столбца;
+- `size == 6` — шесть значений;
+- `dtype == int64` — каждый элемент хранится как целое число.
+
+<Callout kind="key">
+  `shape` — не декоративная подпись. Она задаёт, какие измерения совместимы и
+  что будет означать следующая операция.
+</Callout>
+
+## Индекс указывает позицию по каждой оси
+
+```python
+north_basic = units[0, 0]
+south_premium = units[1, 2]
+north_all_products = units[0, :]
+standard_all_regions = units[:, 1]
+```
+
+Результаты:
+
+- `north_basic` → `12`;
+- `south_premium` → `10`;
+- `north_all_products` → array `[12, 15, 11]`;
+- `standard_all_regions` → array `[15, 7]`.
+
+Двоеточие означает «все позиции этой оси». В `units[:, 1]` выбираются все
+строки и второй столбец.
+
+## dtype влияет на смысл и результат
+
+Среднее значение целого array может быть дробным:
+
+```python
+units.mean()
+```
+
+NumPy вернёт float. Если добавить неизвестное значение, обычный integer array
+не может хранить `np.nan` без изменения dtype:
+
+```python
+units_with_gap = units.astype(np.float64)
+units_with_gap[1, 1] = np.nan
+```
+
+Это не значит, что float автоматически «лучше». Тип нужно выбирать по данным:
+целое количество, дробная цена, boolean mask. Несовместимый dtype может
+привести к ошибке, лишней памяти или неожиданному преобразованию.
+
+<KnowledgeCheck
+  type="matching"
+  prompt="Сопоставь атрибут NumPy array и вопрос, на который он отвечает."
+  outcomes={["calculate-with-arrays"]}
+  pairs={[
+    {
+      id: "array-shape",
+      left: "shape",
+      right: "Сколько позиций находится на каждой оси?",
+      feedback: "Shape перечисляет длину каждой оси.",
+    },
+    {
+      id: "array-ndim",
+      left: "ndim",
+      right: "Сколько осей у array?",
+      feedback: "Ndim — число измерений, то есть осей.",
+    },
+    {
+      id: "array-size",
+      left: "size",
+      right: "Сколько всего элементов?",
+      feedback: "Size — произведение длин всех осей.",
+    },
+    {
+      id: "array-dtype",
+      left: "dtype",
+      right: "Какой тип хранит каждый элемент?",
+      feedback: "Dtype описывает представление элементов array.",
+    },
+  ]}
+  explanation="Форма, число осей, общее число элементов и тип отвечают на разные вопросы и вместе позволяют предсказать операцию."
+/>
+
+<PracticeTask
+  title="Прочитай array до вычисления"
+  level="core"
+  estimatedMinutes={18}
+  goal="Связать позиции array с рядами и столбцами исходной аналитической таблицы"
+  outcomes={["calculate-with-arrays"]}
+  constraints={[
+    "Сначала запиши прогноз без запуска каждой строки",
+    "Не изменяй исходный sales array",
+    "Используй индексацию по двум осям",
+  ]}
+  criteria={[
+    "Названы ndim, shape, size и dtype",
+    "Получены продажи east за март",
+    "Получены продажи февраля по всем регионам",
+    "Создана float-копия с одним np.nan",
+    "Исходный array остался без изменения",
+  ]}
+  hints={[
+    "Строки — west, east, central; столбцы — январь, февраль, март, апрель.",
+    "East — строка с индексом 1, март — столбец с индексом 2.",
+    "Для копии сначала вызови astype(np.float64).",
+  ]}
+>
+  Дан array:
+
+  ```python
+  sales = np.array(
+      [
+          [120, 135, 128, 142],
+          [98, 105, 111, 109],
+          [150, 147, 155, 160],
+      ],
+      dtype=np.int64,
+  )
+  ```
+
+  До запуска предскажи `ndim`, `shape`, `size` и смысл `sales[1, 2]`.
+  Выбери продажи февраля по всем регионам. Затем создай `sales_with_gap` как
+  float-копию, замени значение east за март на `np.nan` и докажи, что
+  `sales[1, 2]` осталось равно 111.
+
+  <TaskSolution
+    reasoning="Array имеет две оси, shape (3, 4), size 12 и dtype int64. Sales[1, 2] выбирает east за март и равно 111. Февраль по всем регионам выбирается sales[:, 1] и даёт [135, 105, 147]. Astype(np.float64) создаёт отдельный array, поэтому присваивание np.nan в копии не меняет исходные 111."
+    alternatives={["Создать копию через sales.astype(float); явный np.float64 делает ожидаемый dtype точнее."]}
+    likelyErrors={["Принять индекс 1 за первую строку.", "Перепутать порядок row, column.", "Попытаться записать np.nan прямо в integer array.", "Создать ссылку sales_with_gap = sales и изменить исходник."]}
+  />
+</PracticeTask>
+
+## Необязательное углубление: view или copy
+
+<Callout kind="advanced">
+  Slice NumPy часто создаёт view: изменение `part = sales[:, :2]` может изменить
+  исходный `sales`. Если нужна независимая стадия, используй
+  `part = sales[:, :2].copy()`. Проверь поведение на одном значении и восстанови
+  notebook через Restart and Run All.
+</Callout>
+
+<Reflection
+  prompt="Какие две оси естественно описывают один из твоих регулярных отчётов?"
+  outcomes={["calculate-with-arrays"]}
+  guidance={[
+    "Назови смысл строк",
+    "Назови смысл столбцов",
+    "Укажи тип одного элемента и его единицу",
+  ]}
+/>
+

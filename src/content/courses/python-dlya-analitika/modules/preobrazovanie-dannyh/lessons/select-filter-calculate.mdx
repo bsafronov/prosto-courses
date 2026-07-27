@@ -1,0 +1,243 @@
+---
+title: От вопроса к строкам и показателям
+order: 1
+revision: 1
+capability: Выбирать наблюдения, преобразовывать даты и рассчитывать признаки без скрытого изменения исходника
+outcomes:
+  - answer-with-transformations
+  - prepare-tabular-data
+time:
+  study: 14
+  practice: 21
+  advanced: 10
+---
+
+Вопрос «какова выручка оплаченных заказов за июль?» уже содержит три решения:
+
+- measure — выручка;
+- population — оплаченные заказы;
+- period — июль.
+
+Если сначала вызвать методы pandas, а потом придумывать смысл получившейся
+таблицы, легко включить отмены или не тот период. Начинай с проверяемого
+условия.
+
+## Создай проверенные исходные строки
+
+```python
+import pandas as pd
+
+raw = pd.DataFrame(
+    {
+        "order_id": ["A-1", "A-2", "A-3", "A-4", "A-5", "A-6"],
+        "order_date": [
+            "2026-06-30",
+            "2026-07-01",
+            "2026-07-10",
+            "2026-07-15",
+            "2026-07-31",
+            "2026-08-01",
+        ],
+        "region": ["north", "north", "south", "south", "north", "south"],
+        "units": [2, 1, 3, 1, 4, 2],
+        "unit_price": [500.0, 1200.0, 450.0, 800.0, 600.0, 700.0],
+        "discount_rate": [0.0, 0.1, 0.0, 0.0, 0.2, 0.0],
+        "status": ["paid", "paid", "paid", "cancelled", "paid", "paid"],
+    }
+)
+
+working = raw.assign(
+    order_date=lambda frame: pd.to_datetime(frame["order_date"])
+)
+```
+
+`raw` остаётся исходной стадией, `working` получает date dtype.
+
+## Выбирай строки одной boolean mask
+
+```python
+july_paid = (
+    working["status"].eq("paid")
+    & working["order_date"].ge("2026-07-01")
+    & working["order_date"].lt("2026-08-01")
+)
+
+selected = working.loc[
+    july_paid,
+    [
+        "order_id",
+        "order_date",
+        "region",
+        "units",
+        "unit_price",
+        "discount_rate",
+    ],
+].copy()
+```
+
+Правая граница записана как `< 2026-08-01`. Такой half-open interval включает
+весь июль независимо от времени внутри последнего дня.
+
+Для сочетания условий нужны круглые скобки вокруг отдельных сравнений, если ты
+используешь операторы `&` и `|`. Python `and` и `or` не выполняют
+поэлементное сравнение Series.
+
+<Callout kind="warning">
+  Избегай `working[mask]["column"] = value`. Chained selection затрудняет
+  понимание, изменился ли исходный DataFrame. Выбирай через `.loc[...]` и явно
+  создавай `.copy()` для новой стадии.
+</Callout>
+
+## Рассчитывай показатели именованными стадиями
+
+```python
+selected = selected.assign(
+    gross_revenue=lambda frame: frame["units"] * frame["unit_price"],
+)
+
+selected = selected.assign(
+    net_revenue=lambda frame: (
+        frame["gross_revenue"] * (1 - frame["discount_rate"])
+    ),
+    month=lambda frame: frame["order_date"].dt.to_period("M").astype("string"),
+)
+```
+
+[`DataFrame.assign`](https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.assign.html)
+возвращает новый DataFrame и позволяет ссылаться на columns, созданные ранее в
+цепочке. Разделение gross и net revenue делает скидку наблюдаемой.
+
+Контроли:
+
+```python
+assert selected["order_id"].tolist() == ["A-2", "A-3", "A-5"]
+assert selected["month"].eq("2026-07").all()
+assert selected["net_revenue"].sum() == 4470.0
+assert len(raw) == 6
+```
+
+Net revenue:
+
+- A-2: `1 × 1200 × 0.9 = 1080`;
+- A-3: `3 × 450 = 1350`;
+- A-5: `4 × 600 × 0.8 = 1920`.
+
+Сумма равна `4350`, а не `4470`. Этот конфликт — полезная проверка: письменный
+контроль и ручной расчёт не согласуются. Исправь assert:
+
+```python
+assert selected["net_revenue"].sum() == 4350.0
+```
+
+<Callout kind="error">
+  Правдоподобный expected value тоже может быть ошибочным. Если assert падает,
+  проверь и код, и ожидание по независимому малому примеру; не меняй число
+  только ради зелёной проверки.
+</Callout>
+
+<KnowledgeCheck
+  type="multiple"
+  prompt="Какие условия корректно описывают оплаченные заказы июля?"
+  outcomes={["answer-with-transformations"]}
+  options={[
+    {
+      id: "paid-status",
+      text: "status равен paid",
+      feedback: "Да. Это population вопроса.",
+    },
+    {
+      id: "inclusive-start",
+      text: "order_date не раньше 2026-07-01",
+      feedback: "Да. Начало июля включено.",
+    },
+    {
+      id: "exclusive-next-month",
+      text: "order_date раньше 2026-08-01",
+      feedback: "Да. Исключительная правая граница покрывает весь июль.",
+    },
+    {
+      id: "first-thirty-rows",
+      text: "Взять первые 30 строк",
+      feedback: "Позиция строки не определяет календарный период.",
+    },
+  ]}
+  answer={["paid-status", "inclusive-start", "exclusive-next-month"]}
+  explanation="Population, inclusive start и exclusive next-period boundary прямо следуют из аналитического вопроса."
+/>
+
+<PracticeTask
+  title="Рассчитай стоимость завершённых сессий"
+  level="core"
+  estimatedMinutes={21}
+  goal="Выразить population, period и measure отдельными проверяемыми шагами"
+  outcomes={["answer-with-transformations", "prepare-tabular-data"]}
+  constraints={[
+    "Не изменяй raw",
+    "Используй half-open interval для недели 2026-07-06 — 2026-07-12",
+    "Не включай cancelled sessions",
+  ]}
+  criteria={[
+    "started_at преобразован в datetime в working",
+    "Mask включает completed и даты от 2026-07-06 до 2026-07-13 не включительно",
+    "Duration hours рассчитана из minutes",
+    "Cost рассчитана как duration_hours × hourly_rate",
+    "Ready содержит S-2, S-3 и S-5",
+    "Общая cost равна 725",
+  ]}
+>
+  Используй:
+
+  ```python
+  sessions = pd.DataFrame(
+      {
+          "session_id": ["S-1", "S-2", "S-3", "S-4", "S-5", "S-6"],
+          "started_at": [
+              "2026-07-05",
+              "2026-07-06",
+              "2026-07-08",
+              "2026-07-10",
+              "2026-07-12",
+              "2026-07-13",
+          ],
+          "minutes": [60, 90, 120, 45, 30, 60],
+          "hourly_rate": [100, 200, 150, 300, 250, 100],
+          "status": [
+              "completed",
+              "completed",
+              "completed",
+              "cancelled",
+              "completed",
+              "completed",
+          ],
+      }
+  )
+  ```
+
+  Подготовь completed sessions за неделю с 6 июля включительно до 13 июля
+  исключительно. Рассчитай `duration_hours` и `cost`, сохрани ожидаемые IDs и
+  total в asserts.
+
+  <TaskSolution
+    reasoning="Half-open interval выбирает 6–12 июля, status исключает S-4. Ready содержит S-2, S-3 и S-5. Costs равны 1.5 × 200 = 300, 2 × 150 = 300 и 0.5 × 250 = 125; total 725."
+    alternatives={["Создать week_start и week_end как pd.Timestamp и использовать их в mask."]}
+    likelyErrors={["Включить 13 июля через <= week_end.", "Использовать and вместо & для Series.", "Рассчитать minutes × hourly_rate без перевода минут в часы.", "Изменить expected value ради прохождения assert."]}
+  />
+</PracticeTask>
+
+## Необязательное углубление
+
+<Callout kind="advanced">
+  Ту же mask можно выразить через `.query()`, а стадии — одной method chain.
+  Используй такой стиль только если names и boundaries остаются читаемыми.
+  Сравни две версии по ease проверки, а не по числу строк.
+</Callout>
+
+<Reflection
+  prompt="Какой expected value в твоём анализе можно проверить независимым малым расчётом?"
+  outcomes={["answer-with-transformations"]}
+  guidance={[
+    "Назови measure и population",
+    "Выбери три–пять строк для ручной проверки",
+    "Укажи, что будешь делать при расхождении",
+  ]}
+/>

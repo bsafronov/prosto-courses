@@ -1,0 +1,238 @@
+---
+title: Типы, пропуски и дубликаты
+order: 2
+revision: 1
+capability: Диагностировать проблему качества по наблюдаемому симптому до изменения данных
+outcomes:
+  - prepare-tabular-data
+time:
+  study: 16
+  practice: 19
+  advanced: 5
+---
+
+Inspection сообщает: «есть два одинаковых `order_id`» или «одно значение даты
+не разбирается». Диагностика добавляет причинный вопрос: это точный повтор,
+несколько позиций одного заказа, другой format или ошибка источника?
+
+Нельзя выбирать метод очистки только по названию симптома.
+
+## Создай диагностический dataset
+
+```python
+import pandas as pd
+
+orders = pd.DataFrame(
+    {
+        "order_id": ["3001", "3002", "3002", "3003", "3004", "3005"],
+        "order_date": [
+            "2026-07-01",
+            "2026-07-02",
+            "2026-07-02",
+            "bad-date",
+            "2026-07-04",
+            "2026-07-05",
+        ],
+        "region": ["north", "North", "North", "south", "south", "east"],
+        "units": [2, 1, 1, None, -1, 3],
+        "unit_price": [500.0, 1200.0, 1200.0, 800.0, 450.0, 0.0],
+        "status": ["paid", "paid", "paid", "paid", "paid", "promo"],
+    }
+)
+```
+
+### Типы: технический и семантический
+
+`order_id` хранится как string, хотя состоит из цифр. Это семантическое решение:
+идентификатор не складывают и не усредняют.
+
+```python
+orders.dtypes
+```
+
+`order_date` тоже string, но ожидается дата. Не меняй столбец сразу. Сначала
+измерь, сколько значений не разбирается:
+
+```python
+parsed_dates = pd.to_datetime(orders["order_date"], errors="coerce")
+invalid_date_count = int(parsed_dates.isna().sum())
+```
+
+### Пропуск: отсутствует ли обязательное значение
+
+```python
+missing_by_column = orders.isna().sum()
+```
+
+`units` отсутствует у оплаченного заказа. Для расчёта выручки это существенный
+пропуск. Но пустая дата закрытия у открытого обращения могла бы быть ожидаемой.
+Обязательность зависит от состояния и вопроса.
+
+### Дубликат: на каком grain
+
+```python
+exact_duplicate_count = int(orders.duplicated().sum())
+repeated_order_id_count = int(orders["order_id"].duplicated().sum())
+```
+
+Здесь обе метрики равны 1, потому что строки `3002` полностью совпадают. В
+другой таблице повтор `order_id` мог бы означать несколько товаров одного
+заказа.
+
+### Категория: пробел или новый смысл
+
+```python
+region_counts = orders["region"].value_counts(dropna=False)
+```
+
+`"north"` и `"North"` могут быть одной категорией с разным регистром. Это
+гипотеза, которую нужно сверить с data contract. Автоматический `.str.lower()`
+без такого правила способен объединить разные коды.
+
+### Граница: невозможное или редкое
+
+```python
+non_positive_units = orders["units"].le(0)
+zero_price = orders["unit_price"].eq(0)
+```
+
+Отрицательное количество у статуса `paid` выглядит противоречием. Нулевая цена
+у `promo` может быть допустимой акцией. Одинаковое число `0` получает разный
+диагноз из-за контекста.
+
+<Callout kind="key">
+  Диагноз связывает symptom с grain, state, domain rule и аналитическим
+  вопросом. Метод pandas только измеряет symptom.
+</Callout>
+
+## Собери quality report без исправлений
+
+```python
+quality_report = pd.Series(
+    {
+        "rows": len(orders),
+        "exact_duplicates": int(orders.duplicated().sum()),
+        "repeated_order_ids": int(orders["order_id"].duplicated().sum()),
+        "invalid_dates": invalid_date_count,
+        "missing_units": int(orders["units"].isna().sum()),
+        "non_positive_units": int(non_positive_units.sum()),
+        "region_variants": orders["region"].nunique(dropna=False),
+        "zero_prices": int(zero_price.sum()),
+    },
+    name="count",
+)
+```
+
+Report фиксирует наблюдения. Рядом нужен журнал решений:
+
+| Symptom | Hypothesis | Проверка источника | Решение пока |
+| --- | --- | --- | --- |
+| Полный повтор `3002` | Повторная выгрузка одной записи | Сравнить все поля и ключ | Кандидат на удаление |
+| `bad-date` | Неразбираемая дата | Проверить source record | Изолировать |
+| `units` отсутствует | Не записано количество | Проверить обязательность для `paid` | Изолировать |
+| `units = -1` | Возврат или ошибка знака | Сверить status/schema | Не менять |
+| `unit_price = 0`, `promo` | Допустимая акция | Сверить business rule | Не считать ошибкой |
+
+<KnowledgeCheck
+  type="matching"
+  prompt="Сопоставь symptom и следующий диагностический вопрос."
+  outcomes={["prepare-tabular-data"]}
+  pairs={[
+    {
+      id: "repeated-key",
+      left: "Повторяется order_id",
+      right: "Каков grain и допускает ли заказ несколько строк?",
+      feedback: "Повтор ключа оценивают относительно grain.",
+    },
+    {
+      id: "missing-value",
+      left: "Есть пропуск",
+      right: "Обязательно ли поле в этом состоянии строки?",
+      feedback: "Пропуск может быть ошибкой или ожидаемым состоянием.",
+    },
+    {
+      id: "zero-value",
+      left: "Значение равно нулю",
+      right: "Ноль допустим правилом или заменяет неизвестное?",
+      feedback: "Ноль — наблюдаемое число; его смысл задаёт domain rule.",
+    },
+    {
+      id: "category-variant",
+      left: "Категории различаются регистром",
+      right: "Это варианты одного кода или разные значения?",
+      feedback: "Нормализация допустима только после проверки контракта.",
+    },
+  ]}
+  explanation="Один внешний symptom не определяет исправление; сначала проверяется смысл поля и строки."
+/>
+
+<PracticeTask
+  title="Диагностируй обращения без исправлений"
+  level="core"
+  estimatedMinutes={19}
+  goal="Составить quality report и журнал гипотез до очистки"
+  outcomes={["prepare-tabular-data"]}
+  constraints={[
+    "Не вызывай dropna или drop_duplicates",
+    "Не нормализуй категории до формулировки правила",
+    "Не называй редкое значение ошибкой без evidence",
+  ]}
+  criteria={[
+    "Назван grain одной строки",
+    "Измерены точные повторы и повторы ключа отдельно",
+    "Проверены даты, пропуски, границы и категории",
+    "Каждый symptom связан с диагностическим вопросом",
+    "Quality report не изменяет исходный DataFrame",
+  ]}
+>
+  Используй dataset:
+
+  ```python
+  tickets = pd.DataFrame(
+      {
+          "ticket_id": ["T-1", "T-2", "T-2", "T-3", "T-4", "T-5"],
+          "opened_at": [
+              "2026-07-01",
+              "2026-07-02",
+              "2026-07-02",
+              "unknown",
+              "2026-07-04",
+              "2026-07-05",
+          ],
+          "priority": ["high", "low", "low", "HIGH", None, "urgent"],
+          "resolution_hours": [4.0, 12.0, 12.0, -2.0, None, 96.0],
+          "status": ["closed", "closed", "closed", "closed", "open", "closed"],
+      }
+  )
+  ```
+
+  Прими grain «одна строка — одно обращение». Составь quality report и журнал
+  минимум для exact duplicate, invalid date, category variants, missing value,
+  negative duration и редкого `urgent`. Не исправляй данные.
+
+  <TaskSolution
+    reasoning="Dataset содержит шесть строк, один точный повтор T-2 и пять уникальных ticket_id. Дата unknown не разбирается. Priority отсутствует у открытого T-4: это требует проверки обязательности, а не автоматического заполнения. HIGH может быть вариантом high после подтверждения контракта. Отрицательная resolution_hours у closed T-3 противоречит длительности. Urgent и 96 часов редкие, но редкость не доказывает ошибку."
+    alternatives={["Хранить quality report как DataFrame с columns symptom, count, hypothesis и next_check вместо отдельных Series и Markdown-таблицы."]}
+    likelyErrors={["Удалить T-2 до подтверждения grain.", "Привести все priority к lower case без проверки.", "Заменить отрицательное значение модулем.", "Посчитать urgent ошибкой только из-за редкости."]}
+  />
+</PracticeTask>
+
+## Необязательное углубление: nullable dtypes
+
+<Callout kind="advanced">
+  `convert_dtypes()` предлагает pandas nullable dtypes, например `Int64` и
+  `string`. Сравни `orders.dtypes` до и после на копии. Не принимай
+  преобразование автоматически: сначала проверь, соответствует ли предложенный
+  тип семантике каждого столбца.
+</Callout>
+
+<Reflection
+  prompt="Какой symptom в твоих данных чаще всего ошибочно принимают за готовый диагноз?"
+  outcomes={["prepare-tabular-data"]}
+  guidance={[
+    "Назови symptom",
+    "Предложи две возможные причины",
+    "Укажи проверку, которая различит причины",
+  ]}
+/>
+

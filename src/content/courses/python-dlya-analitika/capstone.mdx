@@ -1,0 +1,299 @@
+---
+title: Воспроизводимый анализ обращений
+outcomes:
+  - reproduce-analysis
+  - calculate-with-arrays
+  - prepare-tabular-data
+  - answer-with-transformations
+  - communicate-findings
+criteria:
+  - statement: Project восстанавливается по pyproject.toml и uv.lock, а notebook выполняется сверху вниз в чистом kernel
+    outcomes:
+      - reproduce-analysis
+  - statement: Превышение SLA рассчитано векторной NumPy-операцией с объяснением формы и типов
+    outcomes:
+      - calculate-with-arrays
+  - statement: Качество CSV/XLSX диагностировано до очистки, а каждое изменение подтверждено контролями
+    outcomes:
+      - prepare-tabular-data
+  - statement: Фильтры, признаки, группировки, pivot и merge образуют проверяемую цепочку без необъяснимой потери строк
+    outcomes:
+      - answer-with-transformations
+  - statement: Графики и выводы связаны с exact evidence, а предположения и ограничения названы отдельно
+    outcomes:
+      - communicate-findings
+time: 100
+---
+
+## Реалистичная задача
+
+Команда поддержки хочет понять, какие combinations команды и канала требуют
+дополнительного внимания. У каждой команды свой SLA target. Нужно сравнить
+долю превышений SLA и типичное время решения закрытых обращений, проверить
+June/July change и передать воспроизводимый notebook.
+
+Dataset синтетический. Пороги SLA заданы в справочнике и не являются
+универсальной отраслевой нормой.
+
+## Создай локальные источники
+
+Запусти bootstrap cell один раз в отдельном notebook или script. Fixed seed
+создаёт одинаковые файлы у всех learners.
+
+```python
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+rng = np.random.default_rng(20260727)
+data_dir = Path("data")
+data_dir.mkdir(exist_ok=True)
+
+request_count = 48
+request_number = np.arange(request_count)
+created = pd.Series(
+    pd.date_range(
+        "2026-06-01 09:00",
+        periods=request_count,
+        freq="30h",
+    )
+)
+duration_hours = rng.integers(2, 31, size=request_count).astype(float)
+is_open = request_number % 7 == 0
+
+closed = created + pd.to_timedelta(duration_hours, unit="h")
+closed.loc[is_open] = pd.NaT
+
+team_id = np.resize(
+    np.array(["T1", "T2", "T3", "T4"]),
+    request_count,
+).copy()
+channel = np.resize(
+    np.array(["chat", "email", "phone"]),
+    request_count,
+)
+priority = np.resize(
+    np.array(["low", "medium", "high"]),
+    request_count,
+)
+status = np.where(is_open, "open", "closed")
+satisfaction = rng.integers(1, 6, size=request_count).astype(float)
+satisfaction[is_open] = np.nan
+satisfaction[8] = np.nan
+
+requests_source = pd.DataFrame(
+    {
+        "request_id": [f"R-{value:03d}" for value in request_number + 1],
+        "created_at": created.dt.strftime("%Y-%m-%d %H:%M"),
+        "closed_at": closed.dt.strftime("%Y-%m-%d %H:%M"),
+        "team_id": team_id,
+        "channel": channel,
+        "priority": priority,
+        "status": status,
+        "satisfaction": satisfaction,
+    }
+)
+
+requests_source.loc[10, "created_at"] = "bad-date"
+requests_source.loc[15, "closed_at"] = "2026-06-01 00:00"
+requests_source.loc[20, "team_id"] = "T9"
+requests_source = pd.concat(
+    [requests_source, requests_source.iloc[[5]]],
+    ignore_index=True,
+)
+
+teams_source = pd.DataFrame(
+    {
+        "team_id": ["T1", "T2", "T3", "T4"],
+        "team_name": ["Atlas", "Boreal", "Cedar", "Delta"],
+        "region": ["north", "south", "east", "west"],
+        "sla_hours": [8.0, 12.0, 24.0, 16.0],
+    }
+)
+
+requests_source.to_csv(data_dir / "requests.csv", index=False)
+teams_source.to_excel(data_dir / "teams.xlsx", index=False)
+```
+
+После bootstrap начни новый analysis notebook с чтения файлов. Не используй
+`requests_source` или `teams_source` как вход анализа.
+
+## Data contract
+
+`requests.csv`:
+
+| Column | Смысл |
+| --- | --- |
+| `request_id` | идентификатор обращения; ожидается unique на grain обращения |
+| `created_at` | время создания |
+| `closed_at` | время закрытия; допустимо отсутствует у `open` |
+| `team_id` | ключ команды |
+| `channel` | chat, email или phone |
+| `priority` | low, medium или high |
+| `status` | open или closed |
+| `satisfaction` | оценка 1–5; может отсутствовать |
+
+`teams.xlsx`:
+
+| Column | Смысл |
+| --- | --- |
+| `team_id` | unique key команды |
+| `team_name` | отображаемое имя |
+| `region` | регион команды |
+| `sla_hours` | target maximum для duration закрытого обращения |
+
+Grain `requests` — одно обращение. Grain `teams` — одна команда. Ожидаемая
+cardinality merge — many-to-one.
+
+## Required scope
+
+1. Восстановить exact environment через `uv sync --locked`.
+2. Загрузить CSV/XLSX с явными identifier dtypes.
+3. Зафиксировать shape, types, пропуски, exact duplicates, key uniqueness и
+   категории.
+4. Разобрать timestamps, рассчитать resolution hours и изолировать
+   противоречивые строки.
+5. Разделить quality issues и обращения вне scope closed-analysis.
+6. Выполнить left many-to-one merge со справочником, измерить unmatched keys.
+7. Рассчитать `sla_breached` через NumPy comparison двух equal-shape arrays.
+8. Создать summary минимум на grain `month × team × channel`: unique requests,
+   breach rate и median resolution hours.
+9. Создать pivot или другую exact evidence table для comparison.
+10. Построить минимум два charts для разных вопросов:
+    - comparison team/channel;
+    - June/July change.
+11. Сформулировать минимум три findings, limitations и следующий вопрос.
+12. Выполнить Restart Kernel and Run All, сохранить notebook и `uv.lock`.
+
+## Контрольные ориентиры
+
+Эти числа помогают проверить pipeline, но не подсказывают аналитические
+findings:
+
+- raw CSV содержит 49 строк;
+- есть один exact duplicate;
+- после удаления exact duplicate остаётся 48 обращений;
+- 7 обращений имеют status `open` и находятся вне scope closed-analysis;
+- отдельно обнаруживаются одна invalid created date, одна negative duration и
+  один unmatched `team_id`;
+- после объяснённых исключений ready closed/matched dataset содержит 38 строк.
+
+Если число отличается, не подгоняй filter. Найди стадию расхождения и объясни
+его.
+
+<PracticeTask
+  title="Подготовь и передай анализ SLA"
+  level="core"
+  estimatedMinutes={100}
+  goal="Самостоятельно провести воспроизводимый анализ от двух источников до evidence-based сообщения"
+  outcomes={["reproduce-analysis", "calculate-with-arrays", "prepare-tabular-data", "answer-with-transformations", "communicate-findings"]}
+  constraints={[
+    "Используй только synthetic files из bootstrap cell",
+    "Не изменяй raw stages",
+    "Не восстанавливай неизвестные timestamps или team_id догадкой",
+    "Не используй causal language",
+    "Не кодируй series только цветом",
+  ]}
+  criteria={[
+    "Environment, sources, grain, keys и units описаны",
+    "Quality report и controls согласуют 49 → 48 → scope/issues → 38 ready rows",
+    "Merge проверен через validate, indicator, row count и unmatched total",
+    "NumPy mask SLA имеет ту же shape, что ready dataset, и boolean dtype",
+    "Summary и pivot сохраняют expected count/totals",
+    "Два charts имеют title, axes, units и redundant series cues",
+    "Три findings называют exact evidence",
+    "Limitations отделены от hypotheses и next question",
+    "Restart and Run All завершается без ручного восстановления state",
+  ]}
+  hints={[
+    "Сначала создай audit table по каждой стадии, не начинай с графика.",
+    "Для SLA сравни resolution_hours.to_numpy() и sla_hours.to_numpy().",
+    "Перед finding сохрани compact evidence table на нужном grain.",
+  ]}
+>
+  Разбей работу на milestones:
+
+  1. setup и clean load;
+  2. quality diagnosis;
+  3. cleaning + reconciliation;
+  4. checked merge;
+  5. NumPy SLA calculation;
+  6. grouped evidence;
+  7. charts + findings;
+  8. clean handoff.
+
+  <TaskRubric
+    criteria={[
+      {
+        "criterion": "Анализ воспроизводится",
+        "evidence": "pyproject.toml и uv.lock сохранены; relative data paths работают; clean run пересоздаёт все outputs",
+      },
+      {
+        "criterion": "NumPy calculation объяснён",
+        "evidence": "Два equal-shape numeric arrays сравниваются векторно; результат boolean и связан построчно с ready requests",
+      },
+      {
+        "criterion": "Качество контролируется",
+        "evidence": "Baseline предшествует изменениям; duplicate, invalid date, negative duration, open scope и unmatched key учитываются раздельно",
+      },
+      {
+        "criterion": "Преобразования проверяемы",
+        "evidence": "Dates, duration, merge, grouping и pivot имеют row-count, uniqueness, unmatched и reconciliation controls",
+      },
+      {
+        "criterion": "Сообщение опирается на evidence",
+        "evidence": "Charts дополняют exact tables; findings называют values; causal claims отсутствуют",
+      },
+      {
+        "criterion": "Границы честны",
+        "evidence": "Synthetic data, missing satisfaction, короткий период и исключённые quality issues названы; hypotheses вынесены в next questions",
+      },
+    ]}
+  />
+</PracticeTask>
+
+## Вероятные сбои
+
+- exact duplicate удалён до baseline;
+- open requests названы quality errors из-за отсутствующего `closed_at`;
+- negative duration превращена в absolute value;
+- inner join молча удалил T9;
+- breach rate рассчитан как среднее групповых rates без сохранения numerator;
+- Seaborn повторно агрегировал уже готовую summary;
+- color — единственный series cue;
+- finding объясняет причину, которой нет в dataset;
+- notebook показывает старые outputs и падает после clean run.
+
+## Optional extensions
+
+- Сравни breach rate внутри одинакового priority.
+- Добавь confidence-neutral counts рядом с rates, не выполняя statistical
+  inference.
+- Сохрани ready-data в Parquet после добавления подходящего engine и сравни
+  dtypes при повторном чтении.
+- Опиши, когда ту же задачу удобнее выполнить Polars или DuckDB, не переписывая
+  core analysis.
+
+<Reflection
+  prompt="Какое решение в Capstone сильнее всего изменилось после контроля качества или clean run?"
+  outcomes={["reproduce-analysis", "prepare-tabular-data", "communicate-findings"]}
+  guidance={[
+    "Назови исходное решение",
+    "Покажи symptom или failed control",
+    "Объясни исправление и оставшееся ограничение",
+  ]}
+/>
+
+## Куда двигаться дальше
+
+Следующий отдельный шаг зависит от задач:
+
+- SQL и DuckDB — запросы к нескольким большим источникам;
+- Polars/Parquet — columnar workflows и lazy execution;
+- SciPy/statsmodels — statistical inference;
+- Plotly — interactive delivery;
+- scikit-learn — predictive modeling.
+
+Эти инструменты не заменяют основу Курса: grain, quality, vectorized
+calculation, checked transformation, evidence и reproducibility.

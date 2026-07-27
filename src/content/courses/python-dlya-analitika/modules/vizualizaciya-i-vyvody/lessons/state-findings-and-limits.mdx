@@ -1,0 +1,199 @@
+---
+title: Вывод, предположение или ограничение
+order: 3
+revision: 1
+capability: Связывать каждый вывод с evidence и передавать notebook, выполняющийся сверху вниз
+outcomes:
+  - communicate-findings
+  - reproduce-analysis
+time:
+  study: 15
+  practice: 20
+  advanced: 10
+---
+
+Последняя code cell не завершает анализ. Читателю нужны ответы:
+
+- на какой вопрос отвечал notebook;
+- какие данные и строки участвовали;
+- какое evidence поддерживает каждый вывод;
+- чего данные не позволяют утверждать;
+- как повторить расчёт.
+
+## Четыре уровня утверждения
+
+| Уровень | Пример | Что требуется |
+| --- | --- | --- |
+| Fact из результата | Email median = 14 часов в July | Exact table или output |
+| Comparison | Email выше chat на 9 часов в July | Два сопоставимых значения |
+| Hypothesis | Возможно, email cases сложнее | Явная маркировка и новый вопрос |
+| Causal claim | Сложность вызвала задержку | Design, которого здесь нет |
+
+Наблюдательный notebook обычно поддерживает первые два уровня. Hypothesis
+направляет следующую проверку, но не становится finding.
+
+<Callout kind="key">
+  Finding = claim + точное evidence + boundary. Если boundary отсутствует,
+  читатель легко услышит больше, чем показывают данные.
+</Callout>
+
+## Структура передаваемого notebook
+
+1. **Question:** population, period, measure.
+2. **Environment:** Python/dependency instructions.
+3. **Data contract:** sources, grain, keys, units.
+4. **Quality:** baseline, issues, changes, controls.
+5. **Transformation:** filters, measures, GroupBy/merge checks.
+6. **Evidence:** exact summary table.
+7. **Chart:** relationship и accessible labels.
+8. **Findings:** numbered claims со ссылкой на evidence.
+9. **Limitations:** missing coverage, synthetic context, no causal design.
+10. **Reproduction:** Restart and Run All, `uv sync --locked`.
+
+Эта структура не требует превращать каждую строку в отдельный heading. Она
+делает dependencies и reasoning видимыми.
+
+## Проверяй lineage перед текстом
+
+```python
+assert len(raw) == rows_baseline
+assert ready["order_id"].is_unique
+assert combined["_merge"].eq("both").all()
+assert summary["revenue"].sum() == ready["revenue"].sum()
+```
+
+Только после прохода controls сформулируй finding:
+
+> В July south revenue составила 5 500 ₽ против 2 200 ₽ у north в synthetic
+> dataset.
+
+Limit:
+
+> Dataset содержит четыре February orders и не позволяет объяснить причину
+> difference или переносить magnitude на реальные продажи.
+
+Next question:
+
+> Сохраняется ли difference на полном периоде и внутри одинаковых категорий?
+
+## Не путай output и evidence
+
+Notebook может хранить старый chart после изменения upstream code. Restart and
+Run All пересоздаёт outputs, но ещё нужно глазами сравнить ключевые controls.
+Перед передачей:
+
+1. `uv sync --locked`;
+2. Restart Kernel;
+3. Run All Cells;
+4. проверь asserts и final totals;
+5. сохрани notebook;
+6. убедись, что raw data path относительный и доступен получателю;
+7. перечисли ограничения.
+
+<KnowledgeCheck
+  type="single"
+  prompt="Какое утверждение допустимо по двухмесячной descriptive summary без causal design?"
+  outcomes={["communicate-findings"]}
+  options={[
+    {
+      id: "descriptive-comparison",
+      text: "Email median выше chat в обоих показанных месяцах",
+      feedback: "Да. Это прямое сравнение четырёх значений summary.",
+    },
+    {
+      id: "process-cause",
+      text: "Новый процесс вызвал рост времени email",
+      feedback: "Summary не содержит intervention design и альтернативных объяснений.",
+    },
+    {
+      id: "future-guarantee",
+      text: "Email обязательно останется медленнее в следующем месяце",
+      feedback: "Две прошлые точки не гарантируют будущий результат.",
+    },
+  ]}
+  answer="descriptive-comparison"
+  explanation="Descriptive data поддерживают наблюдаемое comparison, но не причину и не гарантию прогноза."
+/>
+
+<PracticeTask
+  title="Передай короткий анализ"
+  level="core"
+  estimatedMinutes={20}
+  goal="Связать evidence table, chart, findings, limitations и reproduction steps"
+  outcomes={["communicate-findings", "reproduce-analysis"]}
+  constraints={[
+    "Не используй causal verbs",
+    "Каждый finding ссылается на exact values",
+    "Notebook проходит Restart and Run All",
+  ]}
+  criteria={[
+    "Question называет period, population и measure",
+    "Evidence table предшествует chart",
+    "Два findings содержат exact comparisons",
+    "Минимум одно limitation ограничивает перенос вывода",
+    "Next question проверяем и не подменяет finding",
+    "Reproduction cell называет uv sync --locked и clean run",
+  ]}
+>
+  Используй evidence:
+
+  | Month | Chat median, hours | Email median, hours | Chat tickets | Email tickets |
+  | --- | ---: | ---: | ---: | ---: |
+  | June | 4 | 12 | 120 | 80 |
+  | July | 5 | 14 | 140 | 95 |
+
+  Создай notebook section с question, DataFrame, chart, двумя findings,
+  limitation и next question. Один finding должен сравнить channels в July,
+  второй — June/July change внутри одного channel. Закрой section reproduction
+  checklist.
+
+  <TaskRubric
+    criteria={[
+      {
+        "criterion": "Findings проверяемы",
+        "evidence": "Текст называет exact values 5/14 или 4/12 и не выходит за два месяца",
+      },
+      {
+        "criterion": "Chart дополняет evidence",
+        "evidence": "Relationship виден визуально, exact table остаётся рядом",
+      },
+      {
+        "criterion": "Boundary честна",
+        "evidence": "Synthetic data, две точки времени и отсутствие causal design названы",
+      },
+      {
+        "criterion": "Следующий вопрос отделён",
+        "evidence": "Hypothesis сформулирована как проверка нового периода, case mix или другого source",
+      },
+      {
+        "criterion": "Handoff воспроизводим",
+        "evidence": "uv.lock сохранён, relative paths доступны, Restart and Run All проходит",
+      },
+    ]}
+  />
+</PracticeTask>
+
+## Необязательное углубление: executable export
+
+<Callout kind="advanced">
+  Jupyter `nbconvert` может повторно выполнить notebook и создать HTML:
+
+  ```sh
+  uv run jupyter nbconvert --to html --execute analysis.ipynb
+  ```
+
+  Выполняй export только на synthetic или разрешённых данных: HTML может
+  содержать outputs. Export не заменяет `.ipynb`, `pyproject.toml`, `uv.lock` и
+  source files, если получателю нужно повторить анализ.
+</Callout>
+
+<Reflection
+  prompt="Какое утверждение из твоего последнего анализа нужно переименовать из вывода в hypothesis?"
+  outcomes={["communicate-findings"]}
+  guidance={[
+    "Назови доступное evidence",
+    "Покажи недостающую проверку причины",
+    "Сформулируй следующий вопрос",
+  ]}
+/>
+

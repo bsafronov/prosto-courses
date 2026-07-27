@@ -1,0 +1,217 @@
+---
+title: Проект и notebook без магии
+order: 1
+revision: 1
+capability: Создавать uv-проект, запускать JupyterLab и воспроизводить notebook в чистом kernel
+outcomes:
+  - reproduce-analysis
+time:
+  study: 14
+  practice: 21
+  advanced: 10
+---
+
+Notebook может открываться и показывать готовые результаты, хотя текущая
+среда уже не способна выполнить его заново. Причины типичны: пакет установлен
+вручную, Python другой версии, файл лежит в неожиданной папке или ячейки
+запускались не по порядку.
+
+Цель первого Lesson — получить не «работающий у меня» файл, а минимальный
+проект, который можно восстановить по сохранённому описанию.
+
+## Четыре части среды
+
+| Часть | Роль | Проверяемое evidence |
+| --- | --- | --- |
+| Python 3.14.6 | Выполняет код | `python --version` внутри project |
+| `pyproject.toml` | Перечисляет прямые зависимости | Файл читается как список намерений |
+| `uv.lock` | Фиксирует полный набор exact versions | `uv sync --locked` завершается успешно |
+| Jupyter kernel | Выполняет ячейки notebook | Restart + Run All проходит без ручных действий |
+
+[`uv` projects](https://docs.astral.sh/uv/concepts/projects/) связывают
+`pyproject.toml`, virtual environment и lockfile. Команда `uv run` перед
+запуском проверяет, что environment синхронизирован с lockfile.
+
+<Callout kind="key">
+  `pyproject.toml` отвечает «что нужно проекту», `uv.lock` — «какие exact
+  versions установлены». Для повторения анализа нужны оба файла.
+</Callout>
+
+## Установи uv без admin-доступа
+
+Используй один вариант для своей OS. Команды получены из
+[официальной инструкции uv](https://docs.astral.sh/uv/getting-started/installation/).
+
+macOS или Linux:
+
+```sh
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Windows PowerShell:
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+Перезапусти terminal и проверь:
+
+```sh
+uv --version
+```
+
+Если организация блокирует installer, не обходи policy. Используй разрешённый
+способ установки или обратись к администратору. Курс не требует системной
+установки Python: uv может управлять Python внутри пользовательской папки.
+
+## Создай Course project
+
+Выполни команды в папке, где можно создавать файлы:
+
+```sh
+uv init --bare --python 3.14.6 python-analitika
+cd python-analitika
+uv add numpy==2.5.0 pandas==3.0.5 matplotlib==3.11.1 seaborn==0.13.2 openpyxl==3.1.5 jupyterlab==4.6.2
+```
+
+После `uv add` появятся `pyproject.toml`, `.venv` и `uv.lock`. Папка `.venv`
+содержит локальную environment и обычно не передаётся другому человеку.
+`pyproject.toml` и `uv.lock`, наоборот, сохраняются вместе с анализом.
+
+Запусти JupyterLab:
+
+```sh
+uv run jupyter lab
+```
+
+Создай notebook `first-check.ipynb`. В первой code cell:
+
+```python
+import sys
+
+import numpy as np
+import pandas as pd
+
+print(sys.version.split()[0])
+print(np.__version__)
+print(pd.__version__)
+```
+
+Ожидаемые первые три значения: `3.14.6`, `2.5.0`, `3.0.5`.
+
+Во второй code cell:
+
+```python
+amounts = np.array([1200, 850, 950])
+amounts.sum()
+```
+
+Ожидаемый результат — `3000`.
+
+## Kernel — отдельное состояние
+
+Jupyter хранит переменные в памяти kernel. Если выполнить вторую ячейку,
+удалить первую и продолжить работу, `amounts` ещё может существовать. Другой
+человек откроет notebook с чистым kernel и получит `NameError`.
+
+Проверка воспроизводимости:
+
+1. сохрани notebook;
+2. выбери Restart Kernel;
+3. выполни Run All Cells;
+4. убедись, что номера execution идут сверху вниз без ошибок;
+5. закрой JupyterLab;
+6. запусти его снова через `uv run jupyter lab`.
+
+<KnowledgeCheck
+  type="ordering"
+  prompt="Расположи действия для проверки проекта на чистом компьютере."
+  outcomes={["reproduce-analysis"]}
+  items={[
+    {
+      id: "restore-environment",
+      text: "Восстановить зависимости командой uv sync --locked",
+    },
+    {
+      id: "launch-project-tool",
+      text: "Запустить JupyterLab через uv run",
+    },
+    {
+      id: "restart-kernel",
+      text: "Перезапустить kernel",
+    },
+    {
+      id: "execute-top-down",
+      text: "Выполнить все ячейки сверху вниз",
+    },
+    {
+      id: "compare-result",
+      text: "Сравнить контрольный результат с ожидаемым",
+    },
+  ]}
+  explanation="Сначала восстанавливается locked environment, затем notebook запускается внутри неё и проверяется в чистом kernel."
+/>
+
+<PracticeTask
+  title="Собери доказательство воспроизводимости"
+  level="core"
+  estimatedMinutes={21}
+  goal="Создать минимальный аналитический проект, который восстанавливается по сохранённым файлам"
+  outcomes={["reproduce-analysis"]}
+  constraints={[
+    "Используй Python 3.14.6 и exact dependencies из Lesson",
+    "Запускай JupyterLab только через uv run",
+    "Не добавляй рабочие или персональные данные",
+  ]}
+  criteria={[
+    "В project есть pyproject.toml и uv.lock",
+    "Notebook выводит версии Python, NumPy и pandas",
+    "Контрольная сумма равна 3000",
+    "Restart Kernel and Run All завершается без ошибки",
+    "Записано, какие файлы нужно передать для восстановления анализа",
+  ]}
+>
+  Создай `python-analitika`, notebook `first-check.ipynb` и короткую Markdown
+  cell «Как воспроизвести». После clean run закрой JupyterLab, выполни
+  `uv sync --locked`, открой notebook снова и повтори проверку.
+
+  <TaskRubric
+    criteria={[
+      {
+        "criterion": "Environment описана",
+        "evidence": "pyproject.toml содержит прямые dependencies, а uv.lock фиксирует resolved versions",
+      },
+      {
+        "criterion": "Запуск принадлежит project",
+        "evidence": "JupyterLab запущен через uv run, а version cell показывает reference stack",
+      },
+      {
+        "criterion": "Скрытое состояние исключено",
+        "evidence": "После Restart and Run All сумма 3000 получена без ручного изменения порядка",
+      },
+      {
+        "criterion": "Передача понятна",
+        "evidence": "Markdown cell называет uv sync --locked, uv run jupyter lab, notebook, pyproject.toml и uv.lock",
+      },
+    ]}
+  />
+</PracticeTask>
+
+## Необязательное углубление
+
+<Callout kind="advanced">
+  Если предпочитаешь VS Code, установи Jupyter extension, открой project folder
+  и выбери interpreter из `.venv`. Затем повтори Restart and Run All. VS Code —
+  другая оболочка, но evidence остаётся тем же: locked dependencies, project
+  interpreter и clean execution.
+</Callout>
+
+<Reflection
+  prompt="Какой файл или шаг чаще всего отсутствует, когда коллега передаёт тебе анализ?"
+  outcomes={["reproduce-analysis"]}
+  guidance={[
+    "Назови наблюдаемый сбой",
+    "Свяжи его с environment, данными или порядком ячеек",
+    "Сформулируй один контроль перед передачей",
+  ]}
+/>

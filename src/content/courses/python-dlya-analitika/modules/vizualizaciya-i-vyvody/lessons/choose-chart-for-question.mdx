@@ -1,0 +1,222 @@
+---
+title: График начинается с вопроса
+order: 1
+revision: 1
+capability: Выбирать базовый график по типу сравнения и структуре evidence table
+outcomes:
+  - communicate-findings
+  - answer-with-transformations
+time:
+  study: 14
+  practice: 21
+  advanced: 15
+---
+
+Один dataset допускает десятки графиков. Выбор сокращается, если сначала
+назвать relationship, который должен увидеть читатель.
+
+| Аналитический вопрос | Структура данных | Базовый chart |
+| --- | --- | --- |
+| Какая категория больше? | category + measure | bar |
+| Как показатель меняется во времени? | ordered time + measure | line |
+| Как распределены отдельные наблюдения? | one numeric variable | histogram или boxplot |
+| Связаны ли два числовых показателя? | x + y на grain наблюдения | scatter |
+
+Chart type не доказывает причинность и не исправляет aggregation. Сначала нужна
+evidence table на правильном grain.
+
+## Начни с готовой таблицы
+
+```python
+import pandas as pd
+
+summary = pd.DataFrame(
+    {
+        "month": ["2026-06", "2026-06", "2026-07", "2026-07"],
+        "channel": ["chat", "email", "chat", "email"],
+        "tickets": [120, 80, 140, 95],
+        "median_hours": [4.0, 12.0, 5.0, 14.0],
+    }
+)
+
+assert not summary.duplicated(["month", "channel"]).any()
+```
+
+Grain — `month × channel`. Возможны разные вопросы:
+
+- «Как изменилась median resolution time по каналам?» → line;
+- «Как каналы сравниваются в июле?» → grouped bar или две простые bars;
+- «Как распределено время отдельных tickets?» → эта summary не подходит:
+  отдельные наблюдения уже потеряны.
+
+<Callout kind="warning">
+  Нельзя построить честный histogram из четырёх групповых median и назвать его
+  распределением tickets. После aggregation исходное distribution недоступно.
+</Callout>
+
+## Bar показывает category comparison
+
+```python
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+july = summary.loc[summary["month"].eq("2026-07")].copy()
+
+fig, ax = plt.subplots(figsize=(7, 4))
+sns.barplot(
+    data=july,
+    x="channel",
+    y="median_hours",
+    errorbar=None,
+    ax=ax,
+)
+ax.set(
+    title="Медианное время решения обращений в июле",
+    xlabel="Канал",
+    ylabel="Медианное время, часы",
+)
+fig.tight_layout()
+```
+
+Мы передаём уже aggregated table и отключаем statistical error bars.
+Seaborn умеет агрегировать raw data автоматически, но скрытая aggregation
+затрудняет проверку. В core analysis summary создаётся отдельно.
+
+## Line показывает ordered change
+
+```python
+trend = summary.sort_values(["channel", "month"])
+
+fig, ax = plt.subplots(figsize=(7, 4))
+sns.lineplot(
+    data=trend,
+    x="month",
+    y="median_hours",
+    hue="channel",
+    style="channel",
+    markers=True,
+    dashes=False,
+    ax=ax,
+)
+ax.set(
+    title="Медианное время решения обращений по месяцам",
+    xlabel="Месяц",
+    ylabel="Медианное время, часы",
+)
+fig.tight_layout()
+```
+
+`style` и markers добавляют различие кроме цвета. Две точки на series ещё не
+показывают устойчивый trend; chart только сравнивает June и July.
+
+[`Matplotlib quick start`](https://matplotlib.org/stable/users/explain/quick_start.html)
+объясняет Figure/Axes model, а
+[`Seaborn tutorial`](https://seaborn.pydata.org/tutorial.html) — high-level
+statistical plotting API.
+
+<KnowledgeCheck
+  type="matching"
+  prompt="Сопоставь вопрос и базовый chart."
+  outcomes={["communicate-findings"]}
+  pairs={[
+    {
+      id: "category-comparison",
+      left: "Сравнить выручку пяти категорий",
+      right: "Bar chart",
+      feedback: "Bar поддерживает сравнение категорий по общей шкале.",
+    },
+    {
+      id: "time-change",
+      left: "Показать месячную динамику за год",
+      right: "Line chart",
+      feedback: "Line сохраняет ordered time и подчёркивает изменение.",
+    },
+    {
+      id: "numeric-distribution",
+      left: "Увидеть распределение времени отдельных обращений",
+      right: "Histogram",
+      feedback: "Histogram группирует отдельные числовые наблюдения по intervals.",
+    },
+    {
+      id: "numeric-relationship",
+      left: "Сравнить стоимость и длительность каждой доставки",
+      right: "Scatter plot",
+      feedback: "Scatter сохраняет пары x/y на grain отдельной доставки.",
+    },
+  ]}
+  explanation="Chart type следует relationship и grain данных, а не декоративному предпочтению."
+/>
+
+<PracticeTask
+  title="Выбери chart и защити выбор"
+  level="core"
+  estimatedMinutes={21}
+  goal="Связать вопрос, grain evidence table и chart type"
+  outcomes={["communicate-findings", "answer-with-transformations"]}
+  constraints={[
+    "Не изменяй aggregation внутри plotting call",
+    "Каждый выбор объясни через relationship",
+    "Не используй pie или 3D chart",
+  ]}
+  criteria={[
+    "Для category comparison выбран bar",
+    "Для monthly change выбран line",
+    "Для distribution требуется raw-grain dataset",
+    "Один выбранный chart построен из отдельной evidence table",
+    "Title, axes и units следуют вопросу",
+  ]}
+>
+  Рассмотри три задачи:
+
+  1. Сравнить total revenue четырёх regions за July.
+  2. Показать weekly order count за 12 недель.
+  3. Проверить distribution individual order values.
+
+  Для каждой назови требуемый grain, columns и chart type. Затем создай малую
+  synthetic evidence table для одной задачи и построй chart через
+  Matplotlib/Seaborn. Рядом сохрани exact values как Markdown table или DataFrame
+  output.
+
+  <TaskRubric
+    criteria={[
+      {
+        "criterion": "Chart отвечает вопросу",
+        "evidence": "Выбор bar, line или histogram объяснён relationship, а не внешним видом",
+      },
+      {
+        "criterion": "Grain достаточен",
+        "evidence": "Category/time comparison использует summary, distribution — individual rows",
+      },
+      {
+        "criterion": "Aggregation проверяема",
+        "evidence": "Evidence table создана до plotting call и сохраняет expected totals",
+      },
+      {
+        "criterion": "Контекст читаем",
+        "evidence": "Title, axes labels и units позволяют понять chart без чтения code cell",
+      },
+    ]}
+  />
+</PracticeTask>
+
+## Необязательное углубление: Plotly
+
+<Callout kind="advanced">
+  Plotly добавляет hover, zoom и interactive selection. Это полезно для
+  exploration и web-sharing, но interaction не исправляет неверный grain и
+  создаёт дополнительные требования к export/accessibility. Сравни
+  [Plotly Express](https://plotly.com/python/plotly-express/) с текущим static
+  chart по задаче читателя. Не добавляй dependency в core project без
+  конкретной потребности.
+</Callout>
+
+<Reflection
+  prompt="Какой график в твоём отчёте выбран по привычке, а не по аналитическому вопросу?"
+  outcomes={["communicate-findings"]}
+  guidance={[
+    "Назови relationship",
+    "Назови grain источника",
+    "Предложи самый простой подходящий chart",
+  ]}
+/>
+

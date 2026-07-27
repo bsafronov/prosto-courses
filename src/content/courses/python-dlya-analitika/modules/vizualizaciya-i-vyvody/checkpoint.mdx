@@ -1,0 +1,97 @@
+---
+title: Короткое аналитическое сообщение
+outcomes:
+  - communicate-findings
+  - answer-with-transformations
+  - reproduce-analysis
+time: 30
+---
+
+Ты получаешь готовую evidence table. Задача — не пересчитать её с нуля, а
+передать comparison без visual и causal ошибок.
+
+```python
+import pandas as pd
+
+summary = pd.DataFrame(
+    {
+        "month": ["June", "June", "June", "July", "July", "July"],
+        "channel": ["chat", "email", "phone", "chat", "email", "phone"],
+        "median_hours": [4.0, 12.0, 8.0, 5.0, 14.0, 7.0],
+        "tickets": [120, 80, 60, 140, 95, 70],
+    }
+)
+```
+
+<PracticeTask
+  title="Собери сообщение для руководителя поддержки"
+  level="core"
+  estimatedMinutes={30}
+  goal="Создать evidence-linked chart и текст, воспроизводимые в clean notebook"
+  outcomes={["communicate-findings", "answer-with-transformations", "reproduce-analysis"]}
+  constraints={[
+    "Не используй causal language",
+    "Не скрывай exact values",
+    "Series различаются не только цветом",
+    "Bar axis начинается с нуля",
+  ]}
+  criteria={[
+    "Question называет median resolution time, channels и два месяца",
+    "Evidence table проверена на unique month × channel",
+    "Chart имеет title, labels, hours, legend и redundant series cues",
+    "Finding 1 сравнивает channels в July",
+    "Finding 2 описывает June/July change одного channel",
+    "Limitation называет synthetic data и две временные точки",
+    "Next question проверяет case mix или более длинный период",
+    "Restart and Run All проходит с reference stack",
+  ]}
+>
+  Построй grouped bar или line chart. Выбери форму и объясни relationship.
+  Сформулируй два findings и одно limitation.
+
+  Перед передачей намеренно выполни final chart cell первой после restart и
+  зафиксируй error. Затем выполни Run All в правильном порядке и объясни, какое
+  скрытое состояние обнаружила проверка.
+
+  <TaskRubric
+    criteria={[
+      {
+        "criterion": "Evidence сохраняет grain",
+        "evidence": "Есть шесть unique month × channel rows, plotting не выполняет новую скрытую aggregation",
+      },
+      {
+        "criterion": "Visual честен",
+        "evidence": "Scale, title, labels, unit и redundant cues соответствуют данным",
+      },
+      {
+        "criterion": "Findings ограничены",
+        "evidence": "July values и одно within-channel change названы точно, causal claim отсутствует",
+      },
+      {
+        "criterion": "Limit и next question полезны",
+        "evidence": "Boundary объясняет две synthetic точки, next question предлагает проверяемое расширение",
+      },
+      {
+        "criterion": "Notebook воспроизводим",
+        "evidence": "После обнаружения hidden state clean run пересоздаёт DataFrame, chart и текстовые controls",
+      },
+    ]}
+  />
+</PracticeTask>
+
+## Review guidance
+
+- Chart выбран по привычке → `choose-chart-for-question`.
+- Scale, units или color несут misleading meaning → `build-honest-chart`.
+- Finding звучит как причина или notebook не воспроизводится →
+  `state-findings-and-limits`.
+
+<Reflection
+  prompt="Какое одно изменение сильнее всего повысило доверие к твоему сообщению?"
+  outcomes={["communicate-findings", "reproduce-analysis"]}
+  guidance={[
+    "Назови evidence, visual или reproduction change",
+    "Опиши сбой, который оно предотвращает",
+    "Перенеси контроль в Capstone",
+  ]}
+/>

@@ -79,12 +79,12 @@ async function withChangedValidCourse(changes, run, options) {
   }
 }
 
-test("accepts the canonical Russian Course through the public contract", async () => {
+test("accepts the canonical Russian Courses through the public contract", async () => {
   const result = await validateContent(canonicalCoursePath);
   assert.equal(result.exitCode, 0, result.output);
   assert.match(
     result.output,
-    /Validated 1 Course, 3 Modules, 6 Lessons, 3 Module Checkpoints, and 1 Capstone Demonstration/,
+    /Validated 2 Courses, 7 Modules, 20 Lessons, 7 Module Checkpoints, and 2 Capstone Demonstrations/,
   );
 });
 

@@ -1,0 +1,249 @@
+---
+title: Загрузка и первый осмотр
+order: 1
+revision: 1
+capability: Загружать CSV и XLSX и проверять структуру, типы и диапазоны до анализа
+outcomes:
+  - prepare-tabular-data
+  - reproduce-analysis
+time:
+  study: 14
+  practice: 21
+  advanced: 15
+---
+
+Файл открылся без ошибки — это ещё не доказательство правильной загрузки.
+Разделитель мог определиться неверно, идентификатор — превратиться в число,
+дата — остаться строкой, а первые пять строк — скрыть редкую категорию.
+
+Первый осмотр отвечает не «какие выводы в данных», а «что именно загружено».
+
+## Создай два локальных источника
+
+Bootstrap cell создаёт одну синтетическую выгрузку в CSV и XLSX:
+
+```python
+from pathlib import Path
+
+import pandas as pd
+
+data_dir = Path("data")
+data_dir.mkdir(exist_ok=True)
+
+orders_source = pd.DataFrame(
+    {
+        "order_id": ["00101", "00102", "00103", "00104", "00105", "00106"],
+        "order_date": [
+            "2026-07-01",
+            "2026-07-01",
+            "2026-07-02",
+            "2026-07-03",
+            "not-recorded",
+            "2026-07-04",
+        ],
+        "region": ["north", "south", "north", "east", "south", "north"],
+        "units": [2, 1, 4, None, 3, 2],
+        "unit_price": [500.0, 1200.0, 450.0, 800.0, 600.0, 750.0],
+        "status": ["paid", "paid", "paid", "paid", "cancelled", "paid"],
+    }
+)
+
+orders_source.to_csv(data_dir / "orders.csv", index=False)
+orders_source.to_excel(data_dir / "orders.xlsx", index=False)
+```
+
+`Path` создаёт путь без ручной склейки `/` и `\`, поэтому тот же код работает
+на Windows, macOS и Linux. pandas использует openpyxl как engine для этого XLSX.
+
+## Прочитай файл с явной границей
+
+```python
+orders_csv = pd.read_csv(
+    data_dir / "orders.csv",
+    dtype={"order_id": "string"},
+)
+
+orders_xlsx = pd.read_excel(
+    data_dir / "orders.xlsx",
+    dtype={"order_id": "string"},
+)
+```
+
+Явный `dtype` сохраняет ведущие нули идентификатора. Без него CSV-reader может
+превратить `"00101"` в число `101`. Для арифметики это не мешает, но для join и
+сопоставления с другой системой меняет ключ.
+
+[`read_csv`](https://pandas.pydata.org/docs/reference/api/pandas.read_csv.html)
+и
+[`read_excel`](https://pandas.pydata.org/docs/reference/api/pandas.read_excel.html)
+поддерживают много параметров. В core route мы добавляем параметр только тогда,
+когда он выражает известный контракт источника.
+
+<Callout kind="warning">
+  Не задавай `dtype`, `parse_dates` или `na_values` наугад только ради красивого
+  результата. Сначала узнай ожидаемый смысл столбца и проверь реальные
+  значения.
+</Callout>
+
+## Пять проходов inspection
+
+### 1. Размер и имена
+
+```python
+orders_csv.shape
+orders_csv.columns.tolist()
+```
+
+Ожидается 6 строк и 6 столбцов. Если shape неожиданна, не переходи к расчётам.
+
+### 2. Типы
+
+```python
+orders_csv.dtypes
+orders_csv.info()
+```
+
+`order_date` пока будет текстом, а `units` — float из-за пропуска. Это
+наблюдение, не ошибка само по себе.
+
+### 3. Разные части таблицы
+
+```python
+orders_csv.head(3)
+orders_csv.tail(3)
+orders_csv.sample(3, random_state=42)
+```
+
+`head()` показывает начало, но не гарантирует представительность. Фиксированный
+`random_state` делает sample воспроизводимым.
+
+### 4. Числовые диапазоны
+
+```python
+orders_csv[["units", "unit_price"]].describe()
+```
+
+Минимум, максимум и count помогают заметить пропуск или невозможную границу,
+но не объясняют причину.
+
+### 5. Категории и пропуски
+
+```python
+orders_csv["status"].value_counts(dropna=False)
+orders_csv["region"].value_counts(dropna=False)
+orders_csv.isna().sum()
+```
+
+Теперь видно, какие категории реально встречаются и где есть пропуски.
+
+<KnowledgeCheck
+  type="multiple"
+  prompt="Какие действия нужны для первого осмотра новой выгрузки?"
+  outcomes={["prepare-tabular-data"]}
+  options={[
+    {
+      id: "inspect-shape-columns",
+      text: "Проверить shape и названия столбцов",
+      feedback: "Да. Это подтверждает базовую структуру источника.",
+    },
+    {
+      id: "inspect-types-ranges",
+      text: "Проверить dtypes, пропуски, диапазоны и категории",
+      feedback: "Да. Эти признаки обнаруживают разные классы проблем.",
+    },
+    {
+      id: "inspect-more-than-head",
+      text: "Посмотреть не только head, но и другие части данных",
+      feedback: "Да. Первые строки могут скрывать редкие значения.",
+    },
+    {
+      id: "drop-missing-immediately",
+      text: "Сразу удалить все строки с пропусками",
+      feedback: "Нет. До диагностики неизвестно, допустим ли пропуск и как удаление изменит результат.",
+    },
+  ]}
+  answer={["inspect-shape-columns", "inspect-types-ranges", "inspect-more-than-head"]}
+  explanation="Inspection измеряет структуру, типы, распределения и coverage до любых необратимых решений."
+/>
+
+<PracticeTask
+  title="Составь паспорт новой выгрузки"
+  level="core"
+  estimatedMinutes={21}
+  goal="Проверить загрузку до очистки и сформулировать наблюдаемые риски"
+  outcomes={["prepare-tabular-data", "reproduce-analysis"]}
+  constraints={[
+    "Не изменяй DataFrame",
+    "Не делай вывод только по head",
+    "Используй fixed random_state для sample",
+  ]}
+  criteria={[
+    "Зафиксированы путь, формат и shape",
+    "Перечислены столбцы и dtypes",
+    "Показаны пропуски, диапазоны и категории",
+    "Идентификатор сохранён как string",
+    "Названы минимум два риска без преждевременного исправления",
+    "Inspection повторяется после Restart and Run All",
+  ]}
+>
+  Создай `inventory.csv` bootstrap cell:
+
+  ```python
+  inventory_source = pd.DataFrame(
+      {
+          "sku": ["0007", "0008", "0009", "0010", "0011"],
+          "warehouse": ["north", "south", "north", "east", "south"],
+          "stock": [12, 0, None, 7, 400],
+          "reserved": [2, 0, 1, 9, 20],
+      }
+  )
+  inventory_source.to_csv(data_dir / "inventory.csv", index=False)
+  ```
+
+  Загрузи `sku` как string и создай Markdown-паспорт: путь, format, shape,
+  columns, dtypes, пропуски, min/max и категории. Не исправляй `stock = 400`
+  или `reserved > stock`: пока это наблюдаемые риски, а не доказанные ошибки.
+
+  <TaskRubric
+    criteria={[
+      {
+        "criterion": "Загрузка проверена",
+        "evidence": "Путь, format, shape и список columns записаны рядом с code output",
+      },
+      {
+        "criterion": "Семантический тип сохранён",
+        "evidence": "SKU остаётся string и ведущие нули видны",
+      },
+      {
+        "criterion": "Inspection не сводится к head",
+        "evidence": "Есть dtypes, isna, describe или эквивалентные диапазоны и value_counts",
+      },
+      {
+        "criterion": "Риски отделены от решений",
+        "evidence": "Пропуск, stock 400 и reserved > stock названы как вопросы к контракту, данные не изменены",
+      },
+    ]}
+  />
+</PracticeTask>
+
+## Необязательное углубление: почему существует Parquet
+
+<Callout kind="advanced">
+  CSV хранит текст и заново выводит типы при чтении. Parquet — колоночный
+  format, который сохраняет схему и удобен для выборочного чтения столбцов.
+  pandas читает его через дополнительный engine, например pyarrow. В core
+  project мы не добавляем новую dependency: сначала сравни формат, размер,
+  сохранённые dtypes и требования системы-получателя. См.
+  [pandas IO guide](https://pandas.pydata.org/docs/user_guide/io.html).
+</Callout>
+
+<Reflection
+  prompt="Какой риск твоей реальной выгрузки не обнаружит head()?"
+  outcomes={["prepare-tabular-data"]}
+  guidance={[
+    "Назови редкое значение или конец периода",
+    "Выбери дополнительный inspection method",
+    "Укажи ожидаемый сигнал",
+  ]}
+/>
+

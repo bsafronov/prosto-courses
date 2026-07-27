@@ -1,0 +1,190 @@
+---
+title: Сравнение групп и периодов
+order: 2
+revision: 1
+capability: Получать проверяемое сравнение через GroupBy, агрегацию и pivot table
+outcomes:
+  - answer-with-transformations
+  - calculate-with-arrays
+time:
+  study: 15
+  practice: 20
+  advanced: 10
+---
+
+Фильтр определяет, какие строки участвуют. GroupBy определяет grain ответа.
+Вопрос «какова выручка по месяцу и региону?» означает одну итоговую строку на
+комбинацию `month × region`.
+
+## Назови grain до groupby
+
+```python
+import pandas as pd
+
+orders = pd.DataFrame(
+    {
+        "order_id": ["O-1", "O-2", "O-3", "O-4", "O-5", "O-6"],
+        "month": ["2026-06", "2026-06", "2026-06", "2026-07", "2026-07", "2026-07"],
+        "region": ["north", "north", "south", "north", "south", "south"],
+        "net_revenue": [1000.0, 1500.0, 900.0, 1200.0, 1300.0, 1700.0],
+    }
+)
+```
+
+Одна строка исходника — заказ. Итоговая строка — месяц и регион:
+
+```python
+summary = (
+    orders.groupby(["month", "region"], as_index=False)
+    .agg(
+        orders=("order_id", "nunique"),
+        revenue=("net_revenue", "sum"),
+        average_order=("net_revenue", "mean"),
+    )
+    .sort_values(["month", "region"])
+)
+```
+
+Named aggregation показывает column и функцию рядом с именем результата.
+Официальное руководство называет модель
+[`split-apply-combine`](https://pandas.pydata.org/docs/user_guide/groupby.html):
+разделить на группы, применить aggregation, объединить результаты.
+
+Проверь:
+
+```python
+assert len(summary) == 4
+assert summary["revenue"].sum() == orders["net_revenue"].sum()
+```
+
+В исходнике 6 заказов, но summary имеет 4 combinations. Сумма выручки до и
+после должна совпасть, потому что каждая строка входит ровно в одну группу.
+
+## Функция агрегации следует вопросу
+
+| Вопрос | Aggregation |
+| --- | --- |
+| Сколько уникальных заказов? | `nunique` по `order_id` |
+| Какова общая выручка? | `sum` |
+| Каков средний заказ? | `mean` на grain заказа |
+| Каково типичное время при выбросах? | возможно `median` |
+
+Среднее средних без учёта размеров групп обычно неверно. Если north имеет 2
+заказа, а south — 100, их average orders нельзя усреднить с одинаковым весом
+для общего показателя. Возвращайся к исходному grain или сохраняй numerator и
+denominator.
+
+<KnowledgeCheck
+  type="single"
+  prompt="Как посчитать общую среднюю выручку заказа из summary с группами разного размера?"
+  outcomes={["answer-with-transformations"]}
+  options={[
+    {
+      id: "weighted-from-total",
+      text: "Разделить сумму revenue всех групп на сумму orders всех групп",
+      feedback: "Да. Revenue и orders сохраняют numerator и denominator на исходном grain заказа.",
+    },
+    {
+      id: "mean-of-means",
+      text: "Взять обычное среднее столбца average_order",
+      feedback: "Группы разного размера получат одинаковый вес, поэтому результат может быть искажён.",
+    },
+    {
+      id: "largest-group-only",
+      text: "Использовать average_order только самой большой группы",
+      feedback: "Это отвечает на вопрос о большой группе, а не обо всех заказах.",
+    },
+  ]}
+  answer="weighted-from-total"
+  explanation="Общая средняя восстанавливается из общего numerator и denominator, а не из невзвешенного среднего групповых средних."
+/>
+
+## Pivot меняет форму, не смысл
+
+```python
+revenue_pivot = summary.pivot(
+    index="month",
+    columns="region",
+    values="revenue",
+)
+```
+
+Строки — месяцы, columns — регионы, cells — revenue. Pivot удобна для сравнения
+и будущего графика, но она не должна выполнять скрытую aggregation. Поэтому
+сначала создаётся summary с уникальным grain, затем вызывается `pivot`.
+
+Проверка по NumPy-модели:
+
+```python
+assert revenue_pivot.shape == (2, 2)
+assert revenue_pivot.to_numpy().sum() == orders["net_revenue"].sum()
+```
+
+<PracticeTask
+  title="Сравни время обращений по каналам"
+  level="core"
+  estimatedMinutes={20}
+  goal="Построить summary и pivot с явно выбранными aggregation functions"
+  outcomes={["answer-with-transformations", "calculate-with-arrays"]}
+  constraints={[
+    "Grain исходника — одно закрытое обращение",
+    "Count должен использовать unique ticket_id",
+    "Не усредняй групповые median для общего вывода",
+  ]}
+  criteria={[
+    "Summary имеет grain month × channel",
+    "Содержит unique tickets, median_hours и total_hours",
+    "Сумма total_hours совпадает с исходником",
+    "Pivot показывает median_hours по месяцам и каналам",
+    "Общий mean рассчитан из исходных строк или total/count",
+  ]}
+>
+  ```python
+  tickets = pd.DataFrame(
+      {
+          "ticket_id": ["T1", "T2", "T3", "T4", "T5", "T6", "T7"],
+          "month": [
+              "2026-06",
+              "2026-06",
+              "2026-06",
+              "2026-07",
+              "2026-07",
+              "2026-07",
+              "2026-07",
+          ],
+          "channel": ["chat", "email", "email", "chat", "chat", "email", "email"],
+          "resolution_hours": [2.0, 10.0, 14.0, 3.0, 5.0, 8.0, 20.0],
+      }
+  )
+  ```
+
+  Построй summary и pivot. Определи, в какой combination median максимальна.
+  Рассчитай общий mean resolution hours и объясни, почему mean групповых
+  medians не является тем же показателем.
+
+  <TaskSolution
+    reasoning="Summary содержит четыре month × channel combinations. Medians: June chat 2, June email 12, July chat 4, July email 14; максимум у July email. Total hours равны 62 и сохраняются после grouping. Общий mean равен 62 / 7 ≈ 8.857. Среднее четырёх medians равно 8, но это другой показатель: группы и их distributions имеют разный размер."
+    alternatives={["Для поиска maximum отсортировать summary по median_hours descending или использовать idxmax."]}
+    likelyErrors={["Использовать count строк вместо nunique при возможных дублях ticket_id.", "Потерять total control после pivot.", "Назвать среднее medians общим средним.", "Вызвать pivot на неуникальном grain до aggregation."]}
+  />
+</PracticeTask>
+
+## Необязательное углубление
+
+<Callout kind="advanced">
+  `pd.crosstab()` быстро строит counts по двум категориям, а `pivot_table()`
+  совмещает aggregation и reshape. Сравни их с явным `groupby().agg()` +
+  `pivot()`. Для core analysis оставляй тот вариант, где grain и aggregation
+  легче проверить.
+</Callout>
+
+<Reflection
+  prompt="Каков grain одной строки в итоговой таблице твоего регулярного отчёта?"
+  outcomes={["answer-with-transformations"]}
+  guidance={[
+    "Назови grouping keys",
+    "Назови measure и aggregation",
+    "Предложи total control",
+  ]}
+/>
+

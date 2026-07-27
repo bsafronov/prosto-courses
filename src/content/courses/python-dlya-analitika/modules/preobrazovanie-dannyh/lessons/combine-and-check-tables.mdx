@@ -1,0 +1,201 @@
+---
+title: Объединение без потерянных строк
+order: 3
+revision: 1
+capability: Объединять таблицы по ключу и проверять кардинальность, совпадения и потери
+outcomes:
+  - answer-with-transformations
+  - prepare-tabular-data
+time:
+  study: 16
+  practice: 19
+  advanced: 20
+---
+
+`merge` может выполниться без ошибки и удвоить выручку. Причина — не синтаксис,
+а неверное ожидание о ключах. До объединения назови grain обеих таблиц и
+ожидаемую cardinality.
+
+## Many-to-one: много заказов, один товар
+
+```python
+import pandas as pd
+
+orders = pd.DataFrame(
+    {
+        "order_id": ["O1", "O2", "O3", "O4"],
+        "product_id": ["P1", "P2", "P2", "P3"],
+        "revenue": [1000.0, 1200.0, 800.0, 1500.0],
+    }
+)
+
+products = pd.DataFrame(
+    {
+        "product_id": ["P1", "P2", "P3"],
+        "category": ["basic", "standard", "premium"],
+    }
+)
+```
+
+Grain:
+
+- `orders`: одна строка — заказ;
+- `products`: одна строка — товар;
+- ожидание: много orders соответствуют одному product.
+
+До merge:
+
+```python
+assert orders["order_id"].is_unique
+assert products["product_id"].is_unique
+rows_before = len(orders)
+revenue_before = orders["revenue"].sum()
+```
+
+Объединение:
+
+```python
+combined = orders.merge(
+    products,
+    on="product_id",
+    how="left",
+    validate="many_to_one",
+    indicator=True,
+)
+```
+
+`validate="many_to_one"` заставит pandas проверить ожидаемую cardinality.
+`indicator=True` добавляет `_merge` со значениями `both`, `left_only` и
+`right_only`.
+
+После merge:
+
+```python
+assert len(combined) == rows_before
+assert combined["revenue"].sum() == revenue_before
+assert combined["_merge"].eq("both").all()
+```
+
+Документация
+[`pandas.merge`](https://pandas.pydata.org/docs/reference/api/pandas.merge.html)
+описывает типы join, validation и indicator. Для аналитика критичны не все
+параметры, а три evidence: cardinality, row count и unmatched keys.
+
+<Callout kind="key">
+  Safe merge начинается с проверки уникальности lookup key и заканчивается
+  сравнением row count, totals и `_merge`.
+</Callout>
+
+## Как many-to-many размножает строки
+
+Представь ошибочный справочник:
+
+```python
+bad_products = pd.DataFrame(
+    {
+        "product_id": ["P1", "P2", "P2", "P3"],
+        "category": ["basic", "standard", "standard-copy", "premium"],
+    }
+)
+```
+
+Два заказа P2 совпадут с двумя строками lookup: вместо двух строк появятся
+четыре. Merge без `validate` создаст 6 строк и завысит revenue.
+
+<KnowledgeCheck
+  type="numeric"
+  prompt="Сколько строк получится при left merge четырёх orders с bad_products без validate?"
+  outcomes={["answer-with-transformations", "prepare-tabular-data"]}
+  answer={6}
+  tolerance={0}
+  unit="строк"
+  explanation="P1 и P3 дают по одной строке, а два заказа P2 совпадают с двумя lookup rows каждый: 1 + 4 + 1 = 6."
+/>
+
+Не лечи это `drop_duplicates()` после merge. Сначала исправь lookup grain или
+явно сформулируй many-to-many business relationship.
+
+## Unmatched keys — отдельный результат
+
+```python
+unmatched = combined.loc[
+    combined["_merge"].eq("left_only"),
+    ["order_id", "product_id"],
+]
+```
+
+Left join сохраняет заказы без справочника и позволяет измерить gap. Inner join
+молча удалил бы их, если не сравнить число строк.
+
+<PracticeTask
+  title="Добавь справочник складов без размножения"
+  level="core"
+  estimatedMinutes={19}
+  goal="Проверить many-to-one merge и объяснить unmatched key"
+  outcomes={["answer-with-transformations", "prepare-tabular-data"]}
+  constraints={[
+    "Основная таблица shipments должна сохранить grain одной строки на отправление",
+    "Не удаляй unmatched shipment",
+    "Используй validate и indicator",
+  ]}
+  criteria={[
+    "Проверена уникальность shipment_id и warehouse_id в lookup",
+    "До merge зафиксированы 5 строк и total weight 56",
+    "После left merge остаётся 5 строк и тот же total weight",
+    "Warehouse W4 обнаружен как left_only",
+    "Summary по region не включает unmatched в известный регион",
+  ]}
+>
+  ```python
+  shipments = pd.DataFrame(
+      {
+          "shipment_id": ["S1", "S2", "S3", "S4", "S5"],
+          "warehouse_id": ["W1", "W2", "W1", "W3", "W4"],
+          "weight_kg": [10.0, 12.0, 8.0, 20.0, 6.0],
+      }
+  )
+
+  warehouses = pd.DataFrame(
+      {
+          "warehouse_id": ["W1", "W2", "W3"],
+          "region": ["north", "south", "east"],
+      }
+  )
+  ```
+
+  Выполни left many-to-one merge. Создай `unmatched` и summary total weight по
+  известным регионам. Докажи, куда делись все 56 кг: известные regions содержат
+  50 кг, unmatched W4 — 6 кг.
+
+  <TaskSolution
+    reasoning="Warehouses уникален по warehouse_id, поэтому ожидается many-to-one. Left merge сохраняет пять shipments и total 56. S5 с W4 получает left_only и не должен случайно попасть в известный region. Grouped known total равен 50, unmatched total — 6; вместе они восстанавливают 56."
+    alternatives={["Перед groupby заполнить region специальной категорией unknown только если отчёт явно требует отдельную группу и это решение записано."]}
+    likelyErrors={["Использовать inner join и потерять S5.", "Удалить S5 как грязную строку.", "Не проверить lookup uniqueness.", "Считать сумму по регионам 50 полной без reconciliation с исходными 56."]}
+  />
+</PracticeTask>
+
+## Необязательное углубление: Polars и DuckDB
+
+<Callout kind="advanced">
+  pandas остаётся core tool для in-memory notebook и богатой работы с
+  DataFrame. [Polars](https://docs.pola.rs/user-guide/) предлагает expression
+  API, lazy execution и Arrow-oriented engine.
+  [DuckDB](https://duckdb.org/docs/stable/) выполняет SQL прямо по локальным
+  CSV/Parquet и удобен, когда вопрос естественно выражается запросом.
+
+  Не меняй инструмент из-за моды. Сравни: объём и format данных, знакомый язык
+  команды, необходимость lazy plan/SQL, memory limit и способ проверки
+  результата. Grain, keys, cardinality и reconciliation нужны во всех трёх
+  инструментах.
+</Callout>
+
+<Reflection
+  prompt="Какой merge в твоём анализе может размножить строки незаметно?"
+  outcomes={["answer-with-transformations", "prepare-tabular-data"]}
+  guidance={[
+    "Назови grain левой и правой таблиц",
+    "Сформулируй ожидаемую cardinality",
+    "Выбери row-count и total controls",
+  ]}
+/>
+

@@ -1,0 +1,191 @@
+---
+title: Читаемый график без визуальных ловушек
+order: 2
+revision: 1
+capability: Строить Matplotlib/Seaborn-график с ясными осями, единицами и доступным различением series
+outcomes:
+  - communicate-findings
+time:
+  study: 14
+  practice: 21
+  advanced: 0
+---
+
+Подходящий chart type всё ещё может вводить в заблуждение. Bar с осью от 11 до
+14 визуально превращает небольшую разницу в пропасть. Две линии, различимые
+только красным и зелёным, теряют смысл без цветового восприятия.
+
+Честный chart сохраняет пропорцию, называет единицы и остаётся читаемым вместе
+с текстовым evidence.
+
+## Figure и Axes разделяют контейнер и данные
+
+```python
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+summary = pd.DataFrame(
+    {
+        "month": ["June", "June", "July", "July"],
+        "channel": ["chat", "email", "chat", "email"],
+        "median_hours": [4.0, 12.0, 5.0, 14.0],
+    }
+)
+
+fig, ax = plt.subplots(figsize=(8, 4))
+```
+
+`fig` — весь output, `ax` — область с axes. Seaborn рисует data marks, а Axes
+получает title, labels и scale:
+
+```python
+sns.barplot(
+    data=summary,
+    x="channel",
+    y="median_hours",
+    hue="month",
+    errorbar=None,
+    ax=ax,
+)
+
+ax.set(
+    title="Медианное время решения обращений",
+    xlabel="Канал",
+    ylabel="Медианное время, часы",
+    ylim=(0, 16),
+)
+ax.legend(title="Месяц")
+fig.tight_layout()
+```
+
+Для bar baseline `0` важен: длина bar кодирует величину. Upper limit 16 немного
+выше maximum 14 и не обрезает marks.
+
+## Добавь различие кроме цвета
+
+```python
+hatches = ["//", ".."]
+
+for container, hatch in zip(ax.containers, hatches):
+    for bar in container:
+        bar.set_hatch(hatch)
+```
+
+Legend names и разные hatch patterns дополняют color. Для line chart используй
+`style`, markers и line dashes. Не кодируй series только цветом или только
+позицией legend.
+
+## Текст рядом ограничивает трактовку
+
+Exact evidence:
+
+| Month | Chat, hours | Email, hours |
+| --- | ---: | ---: |
+| June | 4 | 12 |
+| July | 5 | 14 |
+
+Допустимое описание:
+
+> В synthetic dataset median выросла с 4 до 5 часов для chat и с 12 до 14
+> часов для email. Email остаётся медленнее в обоих месяцах.
+
+Недопустимый causal claim:
+
+> Новый процесс ухудшил скорость email.
+
+Dataset показывает comparison, но не содержит process intervention или
+контроль альтернативных причин.
+
+<KnowledgeCheck
+  type="multiple"
+  prompt="Какие изменения делают chart проверяемее и доступнее?"
+  outcomes={["communicate-findings"]}
+  options={[
+    {
+      id: "name-units",
+      text: "Добавить title, labels и unit часов",
+      feedback: "Да. Контекст становится понятен без чтения кода.",
+    },
+    {
+      id: "zero-bar-baseline",
+      text: "Начать количественную bar axis с нуля",
+      feedback: "Да. Длина bar сохраняет пропорцию величин.",
+    },
+    {
+      id: "redundant-series-cues",
+      text: "Различать series legend text и pattern, а не только цветом",
+      feedback: "Да. Redundant cues уменьшают зависимость от цветового восприятия.",
+    },
+    {
+      id: "remove-evidence",
+      text: "Удалить exact table, чтобы читатель смотрел только на картинку",
+      feedback: "Нет. Exact table помогает проверить значения и служит текстовой альтернативой.",
+    },
+  ]}
+  answer={["name-units", "zero-bar-baseline", "redundant-series-cues"]}
+  explanation="Контекст, пропорциональная scale, redundant cues и exact values вместе делают chart понятным и проверяемым."
+/>
+
+## Диагностируй anti-example
+
+```python
+fig, ax = plt.subplots()
+sns.barplot(
+    data=summary.loc[summary["channel"].eq("email")],
+    x="month",
+    y="median_hours",
+    errorbar=None,
+    ax=ax,
+)
+ax.set_ylim(11, 15)
+```
+
+Проблемы:
+
+- title, axes labels и unit отсутствуют;
+- bar baseline обрезан;
+- exact values не показаны;
+- маленький synthetic dataset может выглядеть как устойчивый trend.
+
+<PracticeTask
+  title="Исправь визуальную ловушку"
+  level="core"
+  estimatedMinutes={21}
+  goal="Перестроить anti-example и сформулировать ограниченный evidence-based вывод"
+  outcomes={["communicate-findings"]}
+  constraints={[
+    "Сохрани исходные значения summary",
+    "Bar axis начинается с нуля",
+    "Смысл series не кодируется только цветом",
+  ]}
+  criteria={[
+    "Chart имеет содержательный title",
+    "Axes подписаны, часы указаны",
+    "Scale не преувеличивает difference",
+    "Exact values доступны рядом",
+    "Text описывает June/July comparison без causal claim",
+  ]}
+>
+  Исправь anti-example для email и расширь его до сравнения обоих channels.
+  Используй grouped bar с legend и hatch patterns либо два небольших bar
+  charts с общей scale. Добавь Markdown table и два предложения: наблюдение и
+  limitation.
+
+  <TaskSolution
+    reasoning="Grouped bar с baseline 0, title, labels, hours, legend и patterns сохраняет пропорции и series identity. Exact table показывает 4/12 часов в June и 5/14 в July. Допустимый вывод описывает рост median и difference channels; limitation указывает две точки времени и synthetic data, поэтому trend и причина не установлены."
+    alternatives={["Использовать два aligned small-multiple charts с одинаковой y scale и прямыми channel titles."]}
+    likelyErrors={["Оставить ylim 11–15.", "Удалить units.", "Различать months только цветом.", "Назвать observed change эффектом процесса."]}
+  />
+</PracticeTask>
+
+<Reflection
+  prompt="Какая visual decision в твоём текущем отчёте сильнее всего влияет на восприятие magnitude?"
+  outcomes={["communicate-findings"]}
+  guidance={[
+    "Назови axis или encoding",
+    "Опиши возможное искажение",
+    "Предложи exact-value control",
+  ]}
+/>
+

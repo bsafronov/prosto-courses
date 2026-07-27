@@ -1,0 +1,191 @@
+---
+title: Маски, оси и векторные расчёты
+order: 5
+revision: 1
+capability: Выполнять расчёты, фильтрацию и агрегации NumPy без ручного обхода каждого значения
+outcomes:
+  - calculate-with-arrays
+time:
+  study: 16
+  practice: 19
+  advanced: 10
+---
+
+В предыдущем Lesson форма объясняла расположение значений. Теперь она
+объясняет действие операции. Вместо цикла по каждой ячейке NumPy применяет
+выражение к совместимым arrays.
+
+## Broadcasting связывает разные формы
+
+Количество товаров по двум регионам:
+
+```python
+import numpy as np
+
+units = np.array(
+    [
+        [12, 15, 11],
+        [8, 7, 10],
+    ],
+    dtype=np.int64,
+)
+
+prices = np.array([500.0, 800.0, 1200.0])
+```
+
+`units.shape == (2, 3)`, а `prices.shape == (3,)`. Последняя длина совпадает:
+каждая цена относится к своему столбцу. NumPy растягивает 1D array цен по
+строкам:
+
+```python
+revenue = units * prices
+```
+
+Результат:
+
+```text
+[[ 6000. 12000. 13200.]
+ [ 4000.  5600. 12000.]]
+```
+
+Механизм называется
+[`broadcasting`](https://numpy.org/doc/stable/user/basics.broadcasting.html).
+Он работает только для совместимых dimensions. Совпадение числа элементов
+само по себе недостаточно: важна позиция каждой оси.
+
+## Маска выбирает значения по условию
+
+```python
+large_units = units >= 10
+selected_revenue = revenue[large_units]
+```
+
+`large_units` — boolean array той же формы. `selected_revenue` становится
+одномерным array значений, где mask равна `True`.
+
+Маска сохраняет правило выбора в коде. Сравни:
+
+```python
+paid = np.array([True, False, True])
+amounts = np.array([900.0, 1200.0, 1350.0])
+
+paid_revenue = amounts[paid].sum()
+```
+
+Результат — `2250.0`.
+
+## Axis определяет, что сворачивается
+
+```python
+by_product = revenue.sum(axis=0)
+by_region = revenue.sum(axis=1)
+total = revenue.sum()
+```
+
+- `axis=0` сворачивает строки и оставляет один итог на столбец: по товару;
+- `axis=1` сворачивает столбцы и оставляет один итог на строку: по региону;
+- без `axis` сворачиваются все значения.
+
+Результаты:
+
+```text
+by_product = [10000., 17600., 25200.]
+by_region  = [31200., 21600.]
+total      = 52800.
+```
+
+<Callout kind="key">
+  Не запоминай axis как «0 — столбцы». Спроси: какую ось операция сворачивает и
+  какая ось остаётся в результате?
+</Callout>
+
+<KnowledgeCheck
+  type="numeric"
+  prompt="Какова выручка первого региона после revenue.sum(axis=1)?"
+  outcomes={["calculate-with-arrays"]}
+  answer={31200}
+  tolerance={0}
+  unit="₽"
+  explanation="Axis 1 сворачивает три товарных столбца внутри каждой строки: 6000 + 12000 + 13200 = 31200."
+/>
+
+## Проверяй форму результата
+
+```python
+assert revenue.shape == units.shape
+assert by_product.shape == (3,)
+assert by_region.shape == (2,)
+assert total == 52800
+```
+
+Эти проверки ловят неверную ось раньше, чем массив с правдоподобными числами
+попадёт в вывод.
+
+<PracticeTask
+  title="Рассчитай net revenue по регионам и товарам"
+  level="core"
+  estimatedMinutes={19}
+  goal="Применить broadcasting, boolean mask и агрегации по двум осям"
+  outcomes={["calculate-with-arrays"]}
+  constraints={[
+    "Не используй for",
+    "Сохрани форму 3 × 3 для net_revenue",
+    "Проверь формы итогов через assert",
+  ]}
+  criteria={[
+    "Net revenue рассчитана одним векторным выражением",
+    "Итоги по регионам равны 10720, 12300 и 14660",
+    "Итоги по товарам равны 15000, 11880 и 10800",
+    "Определён регион с максимальной выручкой",
+    "Маска находит шесть ячеек net revenue не меньше 4000",
+  ]}
+  hints={[
+    "Net revenue = units * prices * (1 - discounts).",
+    "Prices и discounts имеют shape (3,) и относятся к столбцам.",
+    "Для региона сворачивай товарную ось.",
+  ]}
+>
+  Используй arrays:
+
+  ```python
+  units = np.array(
+      [
+          [4, 8, 2],
+          [6, 5, 3],
+          [5, 9, 4],
+      ]
+  )
+  prices = np.array([1000.0, 600.0, 1500.0])
+  discounts = np.array([0.0, 0.1, 0.2])
+  ```
+
+  Рассчитай `net_revenue`, итоги по регионам и товарам. Найди индекс региона с
+  максимальной выручкой через `argmax`. Создай mask для ячеек не меньше 4 000 ₽
+  и посчитай число `True`.
+
+  <TaskSolution
+    reasoning="Broadcasting применяет цены и скидки к соответствующим столбцам. Net revenue по строкам суммируется в [10720, 12300, 14660], поэтому argmax возвращает индекс 2. Суммы по столбцам — [15000, 11880, 10800]. Сравнение net_revenue >= 4000 создаёт boolean mask с шестью True."
+    alternatives={["Сначала рассчитать net_prices = prices * (1 - discounts), затем умножить units * net_prices."]}
+    likelyErrors={["Суммировать axis=0 и назвать результат регионами.", "Записать discounts как [0, 10, 20].", "Использовать цикл и потерять связь с формой.", "Не проверить shape после broadcasting."]}
+  />
+</PracticeTask>
+
+## Необязательное углубление: пропуски
+
+<Callout kind="advanced">
+  Обычный `mean()` вернёт `nan`, если array содержит `np.nan`.
+  `np.nanmean()` пропускает такие значения, но это решение нужно объяснить:
+  пропуск исключается из знаменателя. Сравни `mean` и `nanmean` на копии
+  `net_revenue` с одним `np.nan` и запиши, почему итог изменился.
+</Callout>
+
+<Reflection
+  prompt="В каком своём расчёте ты рискуешь перепутать ось агрегации?"
+  outcomes={["calculate-with-arrays"]}
+  guidance={[
+    "Назови смысл строк и столбцов",
+    "Укажи, какая ось должна исчезнуть",
+    "Предскажи shape результата",
+  ]}
+/>
+

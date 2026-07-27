@@ -1,0 +1,145 @@
+---
+title: Проверенная выгрузка заказов
+outcomes:
+  - prepare-tabular-data
+  - reproduce-analysis
+time: 30
+---
+
+Module Checkpoint объединяет три действия: загрузить файл с явным контрактом,
+диагностировать symptoms и очистить только то, что можно обосновать. Результат
+должен оставлять audit trail.
+
+Запусти bootstrap cell:
+
+```python
+from pathlib import Path
+
+import pandas as pd
+
+data_dir = Path("data")
+data_dir.mkdir(exist_ok=True)
+
+orders_source = pd.DataFrame(
+    {
+        "order_id": ["7001", "7002", "7002", "7003", "7004", "7005", "7006"],
+        "order_date": [
+            "2026-07-01",
+            "2026-07-02",
+            "2026-07-02",
+            "bad-date",
+            "2026-07-04",
+            "2026-07-05",
+            "2026-07-06",
+        ],
+        "units": [2, 1, 1, 3, None, 0, 4],
+        "unit_price": [500.0, 1200.0, 1200.0, 450.0, 800.0, 1000.0, 600.0],
+        "status": ["paid", "paid", "paid", "paid", "paid", "cancelled", "paid"],
+        "region": ["north", "south", "south", "north", "south", "north", " SOUTH "],
+    }
+)
+
+orders_source.to_csv(data_dir / "module-2-orders.csv", index=False)
+```
+
+<KnowledgeCheck
+  type="multiple"
+  prompt="Какие изменения можно обосновать из условия Checkpoint?"
+  outcomes={["prepare-tabular-data"]}
+  options={[
+    {
+      id: "remove-exact-repeat",
+      text: "Удалить одну полностью одинаковую строку 7002 и зафиксировать count",
+      feedback: "Да. Повтор доказан по всем полям.",
+    },
+    {
+      id: "normalize-region-contract",
+      text: "После принятого правила trim + lowercase нормализовать region и проверить категории",
+      feedback: "Да. Условие явно задаёт правило справочника регионов.",
+    },
+    {
+      id: "invent-missing-units",
+      text: "Заполнить отсутствующее units средним количеством",
+      feedback: "Нет. Источник не даёт основания придумывать количество и выручку.",
+    },
+    {
+      id: "change-bad-date",
+      text: "Заменить bad-date на 2026-07-03 по соседней строке",
+      feedback: "Нет. Положение строки не доказывает дату заказа.",
+    },
+  ]}
+  answer={["remove-exact-repeat", "normalize-region-contract"]}
+  explanation="Допустимы только изменения с явным evidence: точный повтор и заданное правило нормализации. Неизвестные значения изолируются."
+/>
+
+<PracticeTask
+  title="Подготовь оплаченные заказы для расчёта"
+  level="core"
+  estimatedMinutes={30}
+  goal="Создать проверенный CSV оплаченных заказов с audit trail"
+  outcomes={["prepare-tabular-data", "reproduce-analysis"]}
+  constraints={[
+    "Grain — одна строка на один заказ",
+    "Допустимые region после strip + lowercase: north и south",
+    "Не восстанавливай неизвестную дату или units",
+    "Cancelled order исключается по scope вопроса, но не считается ошибкой",
+  ]}
+  criteria={[
+    "order_id загружен как string, raw сохранён",
+    "Baseline показывает 7 строк и один точный повтор",
+    "После удаления повтора working содержит 6 строк",
+    "Invalid date и missing units изолированы",
+    "Region нормализован и содержит north/south",
+    "Ready содержит 3 заказа и выручку 4600",
+    "Результат сохранён в module-2-orders-ready.csv",
+    "Restart and Run All воспроизводит controls",
+  ]}
+>
+  Подготовь данные для вопроса: «Какова выручка оплаченных заказов по дню и
+  региону?» Создай `raw`, `working`, `quality_issues`, `ready`, quality report
+  и controls. Рассчитай revenue только после отбора готовых строк.
+
+  Сохрани ready-data через `to_csv(..., index=False)`, затем прочитай файл
+  заново и проверь shape, уникальность `order_id` и сумму revenue.
+
+  <TaskRubric
+    criteria={[
+      {
+        "criterion": "Диагностика предшествует очистке",
+        "evidence": "Baseline и quality report созданы по raw до изменений",
+      },
+      {
+        "criterion": "Изменения объяснены",
+        "evidence": "Удалён только exact duplicate, region нормализован по заданному правилу, неизвестные значения изолированы",
+      },
+      {
+        "criterion": "Scope не смешан с качеством",
+        "evidence": "Cancelled order исключён из paid question, но не помечен ошибочной строкой",
+      },
+      {
+        "criterion": "Результат проверен",
+        "evidence": "Ready имеет 3 unique orders, revenue 4600; повторно прочитанный CSV сохраняет эти controls",
+      },
+      {
+        "criterion": "Notebook воспроизводим",
+        "evidence": "Restart and Run All заново создаёт source, report, ready CSV и те же controls",
+      },
+    ]}
+  />
+</PracticeTask>
+
+## Review guidance
+
+- Ошибка чтения или потеря ведущих нулей → `load-and-inspect-data`.
+- Symptom сразу превращается в исправление → `diagnose-data-quality`.
+- Не объясняется изменение числа строк → `clean-and-validate-data`.
+
+<Reflection
+  prompt="Какое изменение в Checkpoint было cleaning rule, а какое — scope аналитического вопроса?"
+  outcomes={["prepare-tabular-data"]}
+  guidance={[
+    "Назови точный symptom",
+    "Назови принятое правило",
+    "Покажи отдельный control для scope",
+  ]}
+/>
