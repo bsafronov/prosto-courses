@@ -14,12 +14,16 @@ import {
   lessonMinutes,
   moduleSlug,
 } from "../lib/courses";
+import type {
+  HomeCatalogCourse,
+  HomeCatalogDestination,
+} from "../lib/home-catalog";
 
 const courses = await getCourses();
 const catalog = await Promise.all(
   courses.map(async (course) => {
     const tree = await getCourseTree(course.id);
-    const destinations = tree.modules.flatMap(
+    const destinations: HomeCatalogDestination[] = tree.modules.flatMap(
       ({ module, lessons, checkpoint }) => [
         ...lessons.map((lesson) => ({
           ...lessonDestinationLink(course.id, lesson),
@@ -41,7 +45,6 @@ const catalog = await Promise.all(
       ...capstoneDestinationLink(course.id),
       title: tree.capstone.data.title,
       capability: course.data.summary,
-      moduleTitle: "Итоговая работа",
       minutes: tree.capstone.data.time,
     });
     return {
@@ -55,11 +58,13 @@ const catalog = await Promise.all(
     };
   }),
 );
-const progressCatalog = catalog.map(({ course, destinations }) => ({
-  id: course.id,
-  title: course.data.title,
-  destinations,
-}));
+const progressCatalog: HomeCatalogCourse[] = catalog.map(
+  ({ course, destinations }) => ({
+    id: course.id,
+    title: course.data.title,
+    destinations,
+  }),
+);
 ---
 <BaseLayout title="Каталог курсов | Prosto.Courses">
   <div data-home-progress data-course-catalog={JSON.stringify(progressCatalog)}>
@@ -76,7 +81,7 @@ const progressCatalog = catalog.map(({ course, destinations }) => ({
       <h1 data-resume-title></h1>
       <p class="resume-capability" data-resume-capability></p>
       <p class="resume-context">
-        <span data-resume-module></span>
+        <span data-resume-module hidden></span>
         <span data-resume-position></span>
         <span data-resume-time></span>
         <span data-resume-progress></span>
@@ -213,7 +218,7 @@ const progressCatalog = catalog.map(({ course, destinations }) => ({
     font-family: var(--font-mono);
     font-size: .75rem;
   }
-  .resume-context span + span::before {
+  .resume-context span:not([hidden]) + span:not([hidden])::before {
     margin-right: 1.25rem;
     content: "·";
   }

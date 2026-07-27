@@ -3,23 +3,10 @@ import {
   readProgress,
   type StoredDestination,
 } from "./progress-store";
-
-type CatalogDestination = {
-  id: string;
-  href: string;
-  kind: "lesson" | "checkpoint" | "capstone";
-  title: string;
-  capability: string;
-  moduleTitle: string;
-  minutes: number;
-  revision?: number;
-};
-
-type CatalogCourse = {
-  id: string;
-  title: string;
-  destinations: CatalogDestination[];
-};
+import type {
+  HomeCatalogCourse,
+  HomeCatalogDestination,
+} from "../lib/home-catalog";
 
 function setText(root: ParentNode, selector: string, value: string) {
   const element = root.querySelector<HTMLElement>(selector);
@@ -27,18 +14,18 @@ function setText(root: ParentNode, selector: string, value: string) {
 }
 
 function refreshHome(root: HTMLElement) {
-  let catalog: CatalogCourse[] = [];
+  let catalog: HomeCatalogCourse[] = [];
   try {
     const value: unknown = JSON.parse(root.dataset.courseCatalog ?? "[]");
-    if (Array.isArray(value)) catalog = value as CatalogCourse[];
+    if (Array.isArray(value)) catalog = value as HomeCatalogCourse[];
   } catch {
     // The static Course Catalog remains available if enhancement data is invalid.
   }
 
   const progress = readProgress();
   const resumeCandidates: Array<{
-    course: CatalogCourse;
-    destination: CatalogDestination;
+    course: HomeCatalogCourse;
+    destination: HomeCatalogDestination;
     stored: StoredDestination;
     position: number;
     completed: number;
@@ -155,20 +142,32 @@ function refreshHome(root: HTMLElement) {
 
   if (resumeSection) resumeSection.hidden = false;
   if (noProgress) noProgress.hidden = true;
-  setText(root, "[data-resume-course]", resume.course.title);
+  setText(root, "[data-resume-course]", `Курс: ${resume.course.title}`);
   setText(root, "[data-resume-title]", resume.destination.title);
   setText(root, "[data-resume-capability]", resume.destination.capability);
-  setText(root, "[data-resume-module]", resume.destination.moduleTitle);
+  const moduleContext = root.querySelector<HTMLElement>(
+    "[data-resume-module]",
+  );
+  if (moduleContext) {
+    moduleContext.hidden = !resume.destination.moduleTitle;
+    moduleContext.textContent = resume.destination.moduleTitle
+      ? `Модуль: ${resume.destination.moduleTitle}`
+      : "";
+  }
   setText(
     root,
     "[data-resume-position]",
-    `${resume.position} из ${resume.course.destinations.length}`,
+    `Маршрут: ${resume.position} из ${resume.course.destinations.length}`,
   );
-  setText(root, "[data-resume-time]", `${resume.destination.minutes} мин`);
+  setText(
+    root,
+    "[data-resume-time]",
+    `Время: ${resume.destination.minutes} мин`,
+  );
   setText(
     root,
     "[data-resume-progress]",
-    `${resume.completed} из ${resume.course.destinations.length} завершено`,
+    `Завершено: ${resume.completed} из ${resume.course.destinations.length}`,
   );
 
   const action = root.querySelector<HTMLAnchorElement>("[data-resume-link]");

@@ -651,31 +651,104 @@ test("Home keeps the static Course Catalog usable when local progress is unusabl
   ).toBeVisible();
 });
 
-test("Home resumes Lesson and Capstone destinations with a direct action", async ({
+test("Home shows completed-only progress without inventing a Resume Destination", async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    const destinationIds = [
+      "lesson:vvedenie",
+      "lesson:source-render",
+      "checkpoint:osnovy",
+      "lesson:formatting",
+      "lesson:links-code",
+      "checkpoint:struktura",
+      "lesson:portability",
+      "lesson:review",
+      "checkpoint:proverka",
+      "capstone:capstone",
+    ];
+    localStorage.setItem(
+      "prosto-courses:progress:v1",
+      JSON.stringify({
+        courses: {
+          markdown: {
+            destinations: Object.fromEntries(
+              destinationIds.map((id, index) => [
+                id,
+                { state: "completed", visitedAt: index + 1 },
+              ]),
+            ),
+          },
+        },
+      }),
+    );
+  });
+  await page.reload();
+
+  await expect(
+    page.getByRole("heading", {
+      level: 1,
+      name: "Выбери Курс и начни с первого Урока.",
+    }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("list", { name: "Каталог курсов" })
+      .getByRole("listitem")
+      .filter({ hasText: "Основы Markdown" }),
+  ).toContainText("✓ Курс завершён · 10 из 10 завершено");
+});
+
+test("Home names and navigates directly to every Resume Destination kind", async ({
   page,
 }) => {
   const destinations = [
     {
+      course: "markdown",
+      courseTitle: "Основы Markdown",
       id: "lesson:formatting",
       title: "Заголовки, выделение и списки",
+      module: "Структура рабочей инструкции",
+      position: 4,
+      total: 10,
+      minutes: 20,
       action: "Продолжить Урок",
       href: /\/courses\/markdown\/lessons\/formatting\/$/,
     },
     {
+      course: "accessible-images",
+      courseTitle: "Writing useful alt text",
+      id: "checkpoint:alt-text",
+      title: "Review an image description",
+      module: "Purposeful image descriptions",
+      position: 3,
+      total: 4,
+      minutes: 10,
+      action: "Продолжить проверку",
+      href:
+        /\/courses\/accessible-images\/modules\/alt-text\/checkpoint\/$/,
+    },
+    {
+      course: "markdown",
+      courseTitle: "Основы Markdown",
       id: "capstone:capstone",
       title: "Понятная инструкция в Markdown",
+      module: null,
+      position: 10,
+      total: 10,
+      minutes: 45,
       action: "Продолжить итоговую работу",
       href: /\/courses\/markdown\/capstone\/$/,
     },
   ] as const;
 
   for (const destination of destinations) {
-    await page.evaluate((id) => {
+    await page.evaluate(({ course, id }) => {
       localStorage.setItem(
         "prosto-courses:progress:v1",
         JSON.stringify({
           courses: {
-            markdown: {
+            [course]: {
               destinations: {
                 [id]: { state: "started", visitedAt: 10 },
               },
@@ -683,8 +756,8 @@ test("Home resumes Lesson and Capstone destinations with a direct action", async
           },
         }),
       );
-    }, destination.id);
-    await page.reload();
+    }, destination);
+    await page.goto("./");
     const resume = page.getByRole("region", {
       name: "Продолжить обучение",
     });
@@ -694,9 +767,22 @@ test("Home resumes Lesson and Capstone destinations with a direct action", async
         name: destination.title,
       }),
     ).toBeVisible();
-    await expect(
-      resume.getByRole("link", { name: destination.action }),
-    ).toHaveAttribute("href", destination.href);
+    await expect(resume).toContainText(`Курс: ${destination.courseTitle}`);
+    if (destination.module) {
+      await expect(resume).toContainText(`Модуль: ${destination.module}`);
+    } else {
+      await expect(resume).not.toContainText("Модуль:");
+    }
+    await expect(resume).toContainText(
+      `Маршрут: ${destination.position} из ${destination.total}`,
+    );
+    await expect(resume).toContainText(`Время: ${destination.minutes} мин`);
+    await expect(resume).toContainText(
+      `Завершено: 0 из ${destination.total}`,
+    );
+
+    await resume.getByRole("link", { name: destination.action }).click();
+    await expect(page).toHaveURL(destination.href);
   }
 });
 
