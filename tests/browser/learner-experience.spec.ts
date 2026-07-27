@@ -959,6 +959,10 @@ test("Home names and navigates directly to every Resume Destination kind", async
 
     await resume.getByRole("link", { name: destination.action }).click();
     await expect(page).toHaveURL(destination.href);
+    await expect(page.locator("[data-progress-root]")).toHaveAttribute(
+      "data-progress-ready",
+      "true",
+    );
   }
 });
 
