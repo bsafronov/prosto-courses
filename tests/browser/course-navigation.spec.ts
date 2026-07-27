@@ -21,9 +21,7 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
-test("learner traverses the complete Course tree from Catalog to Capstone", async ({
-  page,
-}) => {
+async function expectLearnerTraversesCompleteCourseSequence(page: Page) {
   await page
     .getByRole("article", { name: "Основы Markdown" })
     .getByRole("link", { name: "Основы Markdown", exact: true })
@@ -81,6 +79,47 @@ test("learner traverses the complete Course tree from Catalog to Capstone", asyn
     "Ссылки и команды записаны однозначно",
     "Целевая среда названа",
   ]);
+}
+
+for (const viewport of [
+  { name: "desktop", width: 1280, height: 900 },
+  { name: "narrow", width: 390, height: 844 },
+] as const) {
+  test(`learner traverses every destination kind to Capstone Demonstration at ${viewport.name} width`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await expectLearnerTraversesCompleteCourseSequence(page);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(viewport.width);
+  });
+}
+
+test("Module Overview bridges the previous Module Checkpoint to its first Lesson", async ({
+  page,
+}) => {
+  await page.goto("./courses/markdown/modules/struktura/");
+
+  const sequence = page.getByRole("navigation", {
+    name: "Последовательность курса",
+  });
+  await expect(
+    sequence.getByRole("link", {
+      name: /Предыдущая проверка Модуля: Объясни путь от исходника к документу/,
+    }),
+  ).toHaveAttribute(
+    "href",
+    /\/courses\/markdown\/modules\/osnovy\/checkpoint\/$/,
+  );
+  await expect(
+    sequence.getByRole("link", {
+      name: /Следующий урок: Заголовки, выделение и списки/,
+    }),
+  ).toHaveAttribute(
+    "href",
+    /\/courses\/markdown\/lessons\/formatting\/$/,
+  );
 });
 
 test("learner reads the first Lesson from the Course Catalog", async (

@@ -552,11 +552,69 @@ test("every learning destination shares the same Course route semantics", async 
     await expect(
       route.getByRole("link", { name: destination.current }),
     ).toHaveAttribute("aria-current", "page");
+    const desktopGeometry = await page.evaluate(() => {
+      const routePanel = document
+        .querySelector("[data-course-route-panel]")!
+        .getBoundingClientRect();
+      const article = document.querySelector("main article")!.getBoundingClientRect();
+      return {
+        routeWidth: routePanel.width,
+        routeRight: routePanel.right,
+        articleLeft: article.left,
+      };
+    });
+    expect(desktopGeometry.routeWidth).toBeGreaterThanOrEqual(270);
+    expect(desktopGeometry.routeWidth).toBeLessThanOrEqual(310);
+    expect(desktopGeometry.articleLeft).toBeGreaterThan(
+      desktopGeometry.routeRight,
+    );
 
     await page.setViewportSize({ width: 390, height: 844 });
+    const toggle = page.getByRole("button", {
+      name: "Открыть маршрут курса",
+    });
+    await expect(toggle).toBeVisible();
+    await expect(route).toBeHidden();
+    await toggle.click();
+
+    const drawer = page.getByRole("dialog", { name: "Маршрут курса" });
     await expect(
-      page.getByRole("button", { name: "Открыть маршрут курса" }),
-    ).toBeVisible();
+      drawer.getByRole("button", { name: "Закрыть маршрут курса" }),
+    ).toBeFocused();
+    await expect(
+      drawer.getByRole("link", { name: destination.current }),
+    ).toHaveAttribute("aria-current", "page");
+    await page.keyboard.press("Escape");
+    await expect(toggle).toBeFocused();
+    await expect(route).toBeHidden();
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(390);
+  }
+});
+
+test("Module Checkpoint and Capstone Demonstration sequence actions stack at narrow widths", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+
+  for (const path of [
+    "./courses/markdown/modules/struktura/checkpoint/",
+    "./courses/markdown/capstone/",
+  ]) {
+    await page.goto(path);
+    const actionBoxes = await page
+      .getByRole("navigation", { name: "Последовательность курса" })
+      .getByRole("link")
+      .evaluateAll((links) =>
+        links.map((link) => {
+          const box = link.getBoundingClientRect();
+          return { top: box.top, bottom: box.bottom };
+        }),
+      );
+
+    expect(actionBoxes).toHaveLength(2);
+    expect(actionBoxes[1].top).toBeGreaterThanOrEqual(actionBoxes[0].bottom);
   }
 });
 

@@ -110,4 +110,8 @@ const { Content } = await render(capstone);
   .sequence { display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--color-border); margin-top: 2.5rem; padding-top: 1.5rem; }
   .plain-sequence-link { margin-left: auto; text-align: right; font-weight: 750; }
   @media (max-width: 52rem) { .assessment-content { width: 100%; padding-block: 2.5rem 6.5rem; } }
+  @media (max-width: 36rem) {
+    .sequence { flex-direction: column; }
+    .plain-sequence-link { align-self: flex-end; }
+  }
 </style>
