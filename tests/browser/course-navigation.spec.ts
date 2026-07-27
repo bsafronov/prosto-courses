@@ -35,8 +35,10 @@ async function expectLearnerTraversesCompleteCourseSequence(page: Page) {
 
   await page.getByRole("link", { name: /Знакомство с Markdown/ }).first().click();
   await expect(page).toHaveURL(/\/courses\/markdown\/lessons\/vvedenie\/$/);
+  await page.getByRole("button", { name: "Завершить урок" }).click();
 
   await page.getByRole("link", { name: /Следующий урок: Как читать/ }).click();
+  await page.getByRole("button", { name: "Завершить урок" }).click();
   await page.getByRole("link", { name: /Перейти к проверке Модуля/ }).click();
   await expect(page).toHaveURL(
     /\/courses\/markdown\/modules\/osnovy\/checkpoint\/$/,
@@ -47,17 +49,30 @@ async function expectLearnerTraversesCompleteCourseSequence(page: Page) {
       name: "Объясни путь от исходника к документу",
     }),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Завершить проверку Модуля" })
+    .click();
 
   await page.getByRole("link", { name: /Перейти к следующему Модулю/ }).click();
   await page.getByRole("link", { name: "Начать Модуль" }).click();
+  await page.getByRole("button", { name: "Завершить урок" }).click();
   await page.getByRole("link", { name: /Следующий урок: Ссылки и код/ }).click();
+  await page.getByRole("button", { name: "Завершить урок" }).click();
   await page.getByRole("link", { name: /Перейти к проверке Модуля/ }).click();
+  await page
+    .getByRole("button", { name: "Завершить проверку Модуля" })
+    .click();
   await page.getByRole("link", { name: /Перейти к следующему Модулю/ }).click();
   await page.getByRole("link", { name: "Начать Модуль" }).click();
+  await page.getByRole("button", { name: "Завершить урок" }).click();
   await page
     .getByRole("link", { name: /Следующий урок: Проверка инструкции/ })
     .click();
+  await page.getByRole("button", { name: "Завершить урок" }).click();
   await page.getByRole("link", { name: /Перейти к проверке Модуля/ }).click();
+  await page
+    .getByRole("button", { name: "Завершить проверку Модуля" })
+    .click();
   await page.getByRole("link", { name: /Перейти к итоговой работе/ }).click();
   await expect(page).toHaveURL(/\/courses\/markdown\/capstone\/$/);
   await expect(
@@ -79,13 +94,20 @@ async function expectLearnerTraversesCompleteCourseSequence(page: Page) {
     "Ссылки и команды записаны однозначно",
     "Целевая среда названа",
   ]);
+  await page
+    .getByRole("button", { name: "Завершить итоговую работу" })
+    .click();
+  await page.getByRole("link", { name: /Вернуться к обзору курса/ }).click();
+  await expect(page.getByRole("status", { name: "Прогресс курса" })).toHaveText(
+    "✓ Курс завершён · 10 из 10 завершено",
+  );
 }
 
 for (const viewport of [
   { name: "desktop", width: 1280, height: 900 },
   { name: "narrow", width: 390, height: 844 },
 ] as const) {
-  test(`learner traverses every destination kind to Capstone Demonstration at ${viewport.name} width`, async ({
+  test(`learner completes every core destination at ${viewport.name} width`, async ({
     page,
   }) => {
     await page.setViewportSize(viewport);
