@@ -1,10 +1,49 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("./courses/markdown/lessons/vvedenie/");
   await page.evaluate(() => localStorage.clear());
   await page.reload();
 });
+
+async function moveOrderingItem(
+  page: Page,
+  list: Locator,
+  text: string,
+  desiredIndex: number,
+) {
+  const row = list.locator("[data-ordering-item]").filter({ hasText: text });
+  let currentIndex = await row.evaluate((item) =>
+    [...(item.parentElement?.children ?? [])].indexOf(item),
+  );
+  if (currentIndex === desiredIndex) return;
+
+  await row.locator("[data-ordering-handle]").focus();
+  await page.keyboard.press("Enter");
+  await expect(row.locator("[data-ordering-handle]")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  const direction = currentIndex > desiredIndex ? "ArrowUp" : "ArrowDown";
+  const step = currentIndex > desiredIndex ? -1 : 1;
+  while (currentIndex !== desiredIndex) {
+    await page.keyboard.press(direction);
+    currentIndex += step;
+    await expect
+      .poll(() =>
+        row.evaluate((item) =>
+          [...(item.parentElement?.children ?? [])].indexOf(item),
+        ),
+      )
+      .toBe(currentIndex);
+  }
+  await page.keyboard.press("Enter");
+  await expect(row.locator("[data-ordering-handle]")).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  await expect(row.locator("[data-ordering-handle]")).toBeFocused();
+}
 
 test("Knowledge Check uses one bounded work area with internally ruled options", async ({
   page,
@@ -24,7 +63,7 @@ test("Knowledge Check uses one bounded work area with internally ruled options",
   }
 });
 
-test("Knowledge Check feedback and disabled controls stay explicit in both themes", async ({
+test("Knowledge Check feedback and ordering handles stay explicit in both themes", async ({
   page,
 }) => {
   const check = page.locator("[data-knowledge-check]");
@@ -57,14 +96,21 @@ test("Knowledge Check feedback and disabled controls stay explicit in both theme
   await expect(feedback).toHaveCSS("color", "rgb(155, 212, 171)");
 
   await page.goto("./courses/markdown/lessons/formatting/");
-  const disabledMove = page
+  const handle = page
     .locator("[data-ordering-item]")
     .first()
-    .getByRole("button", { name: /Переместить .+ выше/ });
-  await expect(disabledMove).toBeDisabled();
-  await expect(disabledMove).toHaveCSS("cursor", "not-allowed");
-  await expect(disabledMove).toHaveCSS("opacity", "1");
-  await expect(disabledMove).toHaveCSS("border-left-width", "1px");
+    .locator("[data-ordering-handle]");
+  const handleBox = await handle.boundingBox();
+  expect(handleBox).not.toBeNull();
+  expect(handleBox!.width).toBeGreaterThanOrEqual(48);
+  expect(handleBox!.height).toBeGreaterThanOrEqual(48);
+  await expect(handle).toHaveCSS("cursor", "grab");
+  await expect(handle).toHaveCSS("touch-action", "none");
+  await expect(handle).toHaveCSS("border-left-width", "1px");
+  await expect(handle).toHaveAttribute(
+    "aria-roledescription",
+    "рукоятка сортировки",
+  );
 });
 
 test("single-choice Knowledge Check announces response-specific feedback and allows keyboard retries", async ({
@@ -328,6 +374,19 @@ test("ordering Knowledge Check announces keyboard moves and allows retries", asy
     "identify-purpose",
     "write-equivalent",
   ]);
+  await expect(
+    check.getByText(
+      "Перетащи шаги за рукоятку. Клавиатура: Enter или пробел — поднять, ↑/↓ — переместить, Enter или пробел — положить, Esc — отменить.",
+    ),
+  ).toBeVisible();
+  await expect(list.locator("[data-ordering-position]")).toHaveText([
+    "01",
+    "02",
+    "03",
+  ]);
+  await expect(
+    check.getByRole("button", { name: /выше|ниже/i }),
+  ).toHaveCount(0);
 
   await check.getByRole("button", { name: "Проверить ответ" }).press("Enter");
   await expect(feedback).toContainText("Почти! Попробуй ещё раз.");
@@ -341,33 +400,14 @@ test("ordering Knowledge Check announces keyboard moves and allows retries", asy
   const boundaryRow = list
     .locator("[data-ordering-item]")
     .filter({ hasText: boundaryText ?? "" });
-  await boundaryRow
-    .getByRole("button", {
-      name: `Переместить «${boundaryText}» выше`,
-    })
-    .press("Enter");
-  await expect(
-    boundaryRow.getByRole("button", {
-      name: `Переместить «${boundaryText}» ниже`,
-    }),
-  ).toBeFocused();
+  await moveOrderingItem(page, list, boundaryText ?? "", 0);
+  await expect(boundaryRow.locator("[data-ordering-handle]")).toBeFocused();
 
   for (const [desiredIndex, text] of authoredOrder.entries()) {
-    const row = list
-      .locator("[data-ordering-item]")
-      .filter({ hasText: text });
-    let currentIndex = await row.evaluate((item) =>
-      [...(item.parentElement?.children ?? [])].indexOf(item),
-    );
-    while (currentIndex > desiredIndex) {
-      await row
-        .getByRole("button", { name: `Переместить «${text}» выше` })
-        .press("Enter");
-      currentIndex -= 1;
-    }
+    await moveOrderingItem(page, list, text, desiredIndex);
   }
   await expect(check.locator("[data-ordering-announcement]")).toContainText(
-    /позиция \d из 3/,
+    /Позиция \d из 3/,
   );
   await expect(list.locator("[data-ordering-text]")).toHaveText(authoredOrder);
 
@@ -392,6 +432,231 @@ test("ordering Knowledge Check announces keyboard moves and allows retries", asy
       rows.map((row) => (row as HTMLElement).dataset.orderKey),
     ),
   ).toEqual(initialRows.map((row) => row.key));
+});
+
+test("ordering Knowledge Check preserves scrolling and supports live touch reordering", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("./courses/markdown/lessons/formatting/");
+  const list = page.locator(
+    '[data-knowledge-check][data-type="ordering"] [data-ordering-list]',
+  );
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Emulation.setTouchEmulationEnabled", {
+    enabled: true,
+    maxTouchPoints: 1,
+  });
+
+  await list.evaluate((element) =>
+    element.scrollIntoView({ block: "center", behavior: "instant" }),
+  );
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
+  const textBox = await list
+    .locator("[data-ordering-text]")
+    .first()
+    .boundingBox();
+  expect(textBox).not.toBeNull();
+  const textTouch = {
+    x: textBox!.x + textBox!.width / 2,
+    y: textBox!.y + textBox!.height / 2,
+  };
+  const scrollBefore = await page.evaluate(() => ({
+    maximum: document.documentElement.scrollHeight - window.innerHeight,
+    position: window.scrollY,
+  }));
+  const scrollDirection =
+    scrollBefore.position < scrollBefore.maximum ? -1 : 1;
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [textTouch],
+  });
+  for (let step = 1; step <= 4; step += 1) {
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [
+        {
+          x: textTouch.x,
+          y: textTouch.y + scrollDirection * step * 20,
+        },
+      ],
+    });
+  }
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchEnd",
+    touchPoints: [],
+  });
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .not.toBe(scrollBefore.position);
+  await expect(page.locator("[data-ordering-item][data-dnd-dragging]")).toHaveCount(
+    0,
+  );
+
+  await list.evaluate((element) =>
+    element.scrollIntoView({ block: "center", behavior: "instant" }),
+  );
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
+  const originalOrder = await list
+    .locator("[data-ordering-text]")
+    .allTextContents();
+  const sourceHandle = list
+    .locator("[data-ordering-item]")
+    .first()
+    .locator("[data-ordering-handle]");
+  const targetRow = list.locator("[data-ordering-item]").last();
+  const [sourceBox, targetBox] = await Promise.all([
+    sourceHandle.boundingBox(),
+    targetRow.boundingBox(),
+  ]);
+  expect(sourceBox).not.toBeNull();
+  expect(targetBox).not.toBeNull();
+
+  const source = {
+    x: sourceBox!.x + sourceBox!.width / 2,
+    y: sourceBox!.y + sourceBox!.height / 2,
+  };
+  const target = {
+    x: targetBox!.x + targetBox!.width / 2,
+    y: targetBox!.y + targetBox!.height / 2,
+  };
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: [source],
+  });
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchMove",
+    touchPoints: [{ x: source.x, y: source.y + 5 }],
+  });
+  await expect(page.locator("[data-ordering-item][data-dnd-dragging]")).toHaveCount(
+    0,
+  );
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchMove",
+    touchPoints: [{ x: source.x, y: source.y + 8 }],
+  });
+  await expect(page.locator("[data-ordering-item][data-dnd-dragging]")).toHaveCount(
+    1,
+  );
+
+  for (let step = 1; step <= 6; step += 1) {
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [
+        {
+          x: source.x + ((target.x - source.x) * step) / 6,
+          y: source.y + ((target.y - source.y) * step) / 6,
+        },
+      ],
+    });
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => resolve());
+        }),
+    );
+  }
+
+  await expect
+    .poll(() =>
+      list
+        .locator(
+          "[data-ordering-item]:not([data-dnd-dragging]) [data-ordering-text]",
+        )
+        .allTextContents(),
+    )
+    .not.toEqual(originalOrder);
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchEnd",
+    touchPoints: [],
+  });
+  await expect(page.locator("[data-ordering-item][data-dnd-dragging]")).toHaveCount(
+    0,
+  );
+  await expect(list.locator("[data-ordering-text]")).not.toHaveText(
+    originalOrder,
+  );
+  await cdp.detach();
+});
+
+test("ordering Knowledge Check cancels keyboard moves without motion when requested", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("./courses/markdown/lessons/formatting/");
+  const check = page.locator(
+    '[data-knowledge-check][data-type="ordering"]',
+  );
+  const list = check.locator("[data-ordering-list]");
+  const initialOrder = await list
+    .locator("[data-ordering-text]")
+    .allTextContents();
+  const rowText = initialOrder[1];
+  const row = list
+    .locator("[data-ordering-item]")
+    .filter({ hasText: rowText });
+  const handle = row.locator("[data-ordering-handle]");
+
+  await handle.focus();
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("ArrowUp");
+  expect(
+    await list
+      .locator("[data-ordering-item]")
+      .evaluateAll((rows) =>
+        rows.reduce((total, item) => total + item.getAnimations().length, 0),
+      ),
+  ).toBe(0);
+  await page.keyboard.press("Escape");
+
+  await expect(list.locator("[data-ordering-text]")).toHaveText(initialOrder);
+  await expect(check.locator("[data-ordering-announcement]")).toContainText(
+    "Перемещение отменено.",
+  );
+  await expect(handle).toBeFocused();
+});
+
+test("ordering Knowledge Check requires an explicit keyboard drop or cancellation", async ({
+  page,
+}) => {
+  await page.goto("./courses/markdown/lessons/formatting/");
+  const check = page.locator(
+    '[data-knowledge-check][data-type="ordering"]',
+  );
+  const list = check.locator("[data-ordering-list]");
+  const initialOrder = await list
+    .locator("[data-ordering-text]")
+    .allTextContents();
+  const rowText = initialOrder[1];
+  const row = list
+    .locator("[data-ordering-item]")
+    .filter({ hasText: rowText });
+  const handle = row.locator("[data-ordering-handle]");
+
+  await handle.focus();
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("ArrowUp");
+  await page.keyboard.press("Tab");
+
+  await expect(handle).toHaveAttribute("aria-pressed", "true");
+  await expect(list.locator("[data-ordering-text]")).not.toHaveText(
+    initialOrder,
+  );
+
+  await handle.focus();
+  await page.keyboard.press("Escape");
+  await expect(handle).toHaveAttribute("aria-pressed", "false");
+  await expect(list.locator("[data-ordering-text]")).toHaveText(initialOrder);
 });
 
 test("exact Knowledge Check applies declared normalization and clears on reload", async ({
@@ -600,21 +865,9 @@ test("canonical matching focus plus keyboard ordering and exact response paths w
     "Назначить группам уровни заголовков",
     "Прочитать только заголовки и проверить логику",
   ];
+  const orderingList = ordering.locator("[data-ordering-list]");
   for (const [desiredIndex, itemText] of orderedTexts.entries()) {
-    const row = ordering
-      .locator("[data-ordering-item]")
-      .filter({ hasText: itemText });
-    let currentIndex = await row.evaluate((item) =>
-      [...(item.parentElement?.children ?? [])].indexOf(item),
-    );
-    while (currentIndex > desiredIndex) {
-      await row
-        .getByRole("button", {
-          name: `Переместить «${itemText}» выше`,
-        })
-        .press("Enter");
-      currentIndex -= 1;
-    }
+    await moveOrderingItem(page, orderingList, itemText, desiredIndex);
   }
   await ordering
     .getByRole("button", { name: "Проверить ответ" })

@@ -80,6 +80,8 @@ function opaqueResponseKey(kind: "matching" | "ordering", authoredId: string) {
 const props = Astro.props;
 const { type, prompt, explanation } = props;
 const inputName = `knowledge-check-${crypto.randomUUID()}`;
+const orderingListId = `${inputName}-ordering-list`;
+const orderingInstructionsId = `${inputName}-ordering-instructions`;
 const options = "options" in props ? props.options : [];
 const matchingRows =
   type === "matching"
@@ -168,31 +170,47 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
     {
       type === "ordering" && (
         <>
-          <ol class="ordering-list" data-ordering-list>
+          <p class="ordering-instructions" id={orderingInstructionsId}>
+            Перетащи шаги за рукоятку. Клавиатура: Enter или пробел — поднять,
+            ↑/↓ — переместить, Enter или пробел — положить, Esc — отменить.
+          </p>
+          <ol
+            class="ordering-list"
+            id={orderingListId}
+            data-ordering-list
+            aria-describedby={orderingInstructionsId}
+          >
             {orderingRows.map((row, index) => (
               <li data-ordering-item data-order-key={row.answerKey}>
+                <span
+                  class="ordering-position"
+                  data-ordering-position
+                  aria-hidden="true"
+                >
+                  {String(index + 1).padStart(2, "0")}
+                </span>
                 <span data-ordering-text>{row.text}</span>
-                <span class="ordering-position" data-ordering-position>
-                  Позиция {index + 1} из {orderingRows.length}
-                </span>
-                <span class="ordering-controls">
-                  <button
-                    type="button"
-                    data-ordering-move="up"
-                    aria-label={`Переместить «${row.text}» выше`}
-                    disabled={index === 0}
+                <button
+                  class="ordering-handle"
+                  type="button"
+                  data-ordering-handle
+                  aria-label={`Переместить «${row.text}». Позиция ${index + 1} из ${orderingRows.length}`}
+                  aria-roledescription="рукоятка сортировки"
+                >
+                  <svg
+                    viewBox="0 0 16 24"
+                    width="16"
+                    height="24"
+                    aria-hidden="true"
                   >
-                    Выше
-                  </button>
-                  <button
-                    type="button"
-                    data-ordering-move="down"
-                    aria-label={`Переместить «${row.text}» ниже`}
-                    disabled={index === orderingRows.length - 1}
-                  >
-                    Ниже
-                  </button>
-                </span>
+                    <circle cx="5" cy="5" r="1.5" />
+                    <circle cx="11" cy="5" r="1.5" />
+                    <circle cx="5" cy="12" r="1.5" />
+                    <circle cx="11" cy="12" r="1.5" />
+                    <circle cx="5" cy="19" r="1.5" />
+                    <circle cx="11" cy="19" r="1.5" />
+                  </svg>
+                </button>
               </li>
             ))}
           </ol>
@@ -251,6 +269,59 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
 </form>
 
 <script>
+  import {
+    Accessibility,
+    DragDropManager,
+    Feedback,
+    KeyboardSensor,
+    PointerActivationConstraints,
+    PointerSensor,
+    type DragEndEvent,
+    type DragOverEvent,
+    type DragStartEvent,
+  } from "@dnd-kit/dom";
+  import {
+    OptimisticSortingPlugin,
+    Sortable,
+    isSortable,
+  } from "@dnd-kit/dom/sortable";
+
+  function getOrderingMotion() {
+    return {
+      duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? 0
+        : 180,
+      easing: "cubic-bezier(0.25, 1, 0.5, 1)",
+    };
+  }
+
+  function describeOrderingPickup(
+    text: string,
+    position: number,
+    total: number,
+  ) {
+    return `«${text}» поднят. Позиция ${position + 1} из ${total}.`;
+  }
+
+  function describeOrderingPosition(
+    text: string,
+    position: number,
+    total: number,
+  ) {
+    return `«${text}»: позиция ${position + 1} из ${total}.`;
+  }
+
+  function describeOrderingFinish(
+    text: string,
+    position: number,
+    total: number,
+    canceled: boolean,
+  ) {
+    return canceled
+      ? `Перемещение отменено. ${describeOrderingPosition(text, position, total)}`
+      : `«${text}» перемещён. Позиция ${position + 1} из ${total}.`;
+  }
+
   function showFeedback(
     feedback: HTMLElement,
     correct: boolean,
@@ -283,62 +354,344 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
     if (form.dataset.ready) return;
     form.dataset.ready = "true";
 
-    function updateOrderingPositions(movedItem?: HTMLElement) {
+    function updateOrderingPositions() {
       const rows = [
-        ...form.querySelectorAll<HTMLElement>("[data-ordering-item]"),
+        ...form.querySelectorAll<HTMLElement>(
+          "[data-ordering-item]:not([data-dnd-dragging])",
+        ),
       ];
-      for (const [index, row] of rows.entries()) {
+      const updateRow = (row: HTMLElement, index: number) => {
         const text =
           row.querySelector<HTMLElement>("[data-ordering-text]")?.textContent ??
           "";
         const position = row.querySelector<HTMLElement>(
           "[data-ordering-position]",
         );
-        const up = row.querySelector<HTMLButtonElement>(
-          '[data-ordering-move="up"]',
+        const handle = row.querySelector<HTMLButtonElement>(
+          "[data-ordering-handle]",
         );
-        const down = row.querySelector<HTMLButtonElement>(
-          '[data-ordering-move="down"]',
-        );
-        if (position) position.textContent = `Позиция ${index + 1} из ${rows.length}`;
-        if (up) up.disabled = index === 0;
-        if (down) down.disabled = index === rows.length - 1;
-        if (row === movedItem) {
-          const announcement = form.querySelector<HTMLElement>(
-            "[data-ordering-announcement]",
+        if (position) {
+          position.textContent = String(index + 1).padStart(2, "0");
+        }
+        if (handle) {
+          handle.setAttribute(
+            "aria-label",
+            `Переместить «${text}». Позиция ${index + 1} из ${rows.length}`,
           );
-          if (announcement) {
-            announcement.textContent = `«${text}»: позиция ${index + 1} из ${rows.length}.`;
-          }
+        }
+      };
+      for (const [index, row] of rows.entries()) {
+        updateRow(row, index);
+      }
+      const activeRow = form.querySelector<HTMLElement>(
+        "[data-ordering-item][data-dnd-dragging]",
+      );
+      if (activeRow) {
+        const activeIndex = rows.findIndex(
+          (row) => row.dataset.orderKey === activeRow.dataset.orderKey,
+        );
+        if (activeIndex >= 0) {
+          updateRow(activeRow, activeIndex);
         }
       }
     }
 
-    form.addEventListener("click", (event) => {
-      const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
-        "[data-ordering-move]",
-      );
-      if (!button) return;
-      const item = button.closest<HTMLElement>("[data-ordering-item]");
-      if (!item) return;
-      if (button.dataset.orderingMove === "up" && item.previousElementSibling) {
-        item.parentElement?.insertBefore(item, item.previousElementSibling);
-      } else if (
-        button.dataset.orderingMove === "down" &&
-        item.nextElementSibling
-      ) {
-        item.parentElement?.insertBefore(item.nextElementSibling, item);
+    const orderingList =
+      form.querySelector<HTMLOListElement>("[data-ordering-list]");
+    if (orderingList) {
+      const rows = [
+        ...orderingList.querySelectorAll<HTMLElement>("[data-ordering-item]"),
+      ];
+      const total = rows.length;
+      const manager = new DragDropManager({
+        sensors: (defaults) => [
+          ...defaults.filter(
+            (sensor) =>
+              sensor !== PointerSensor && sensor !== KeyboardSensor,
+          ),
+          PointerSensor.configure({
+            activationConstraints: (event) => [
+              new PointerActivationConstraints.Distance({
+                value: event.pointerType === "touch" ? 6 : 4,
+              }),
+            ],
+          }),
+        ],
+        plugins: (defaults) => [
+          ...defaults.filter(
+            (plugin) => plugin !== Accessibility && plugin !== Feedback,
+          ),
+          OptimisticSortingPlugin,
+          Accessibility.configure({
+            id: orderingList.id,
+            debounce: 120,
+            screenReaderInstructions: {
+              draggable:
+                "Чтобы изменить порядок, нажми Enter или пробел. Используй стрелки вверх и вниз. Нажми Enter или пробел ещё раз, чтобы положить шаг, либо Escape, чтобы отменить.",
+            },
+            announcements: {
+              dragstart({ operation: { source } }: DragStartEvent) {
+                if (!source || !isSortable(source)) return;
+                const text = String(source.data.text ?? source.id);
+                return describeOrderingPickup(
+                  text,
+                  source.sortable.initialIndex,
+                  total,
+                );
+              },
+              dragover({
+                operation: { source, target },
+              }: DragOverEvent) {
+                if (
+                  !source ||
+                  !target ||
+                  source.id === target.id ||
+                  !isSortable(target)
+                ) {
+                  return;
+                }
+                const text = String(source.data.text ?? source.id);
+                return describeOrderingPosition(
+                  text,
+                  target.sortable.index,
+                  total,
+                );
+              },
+              dragend({
+                operation: { source },
+                canceled,
+              }: DragEndEvent) {
+                if (!source || !isSortable(source)) return;
+                const text = String(source.data.text ?? source.id);
+                const position = canceled
+                  ? source.sortable.initialIndex
+                  : source.sortable.index;
+                return describeOrderingFinish(
+                  text,
+                  position,
+                  total,
+                  canceled,
+                );
+              },
+            },
+          }),
+          Feedback.configure({
+            dropAnimation: getOrderingMotion(),
+          }),
+        ],
+      });
+
+      for (const [index, row] of rows.entries()) {
+        const handle =
+          row.querySelector<HTMLButtonElement>("[data-ordering-handle]");
+        const text =
+          row.querySelector<HTMLElement>("[data-ordering-text]")?.textContent ??
+          "";
+        const id = row.dataset.orderKey;
+        if (!handle || !id) continue;
+        new Sortable(
+          {
+            id,
+            index,
+            group: orderingList.id,
+            element: row,
+            handle,
+            data: { text },
+            plugins: [OptimisticSortingPlugin],
+            transition: getOrderingMotion(),
+          },
+          manager,
+        );
       }
-      updateOrderingPositions(item);
-      const focusTarget = button.disabled
-        ? item.querySelector<HTMLButtonElement>(
-            button.dataset.orderingMove === "up"
-              ? '[data-ordering-move="down"]'
-              : '[data-ordering-move="up"]',
-          )
-        : button;
-      focusTarget?.focus();
-    });
+
+      const schedulePositionUpdate = () => {
+        queueMicrotask(() => {
+          void manager.renderer.rendering.then(updateOrderingPositions);
+        });
+      };
+      manager.monitor.addEventListener("dragstart", () => {
+        orderingList.dataset.orderingDragging = "";
+      });
+      manager.monitor.addEventListener("dragover", schedulePositionUpdate);
+      manager.monitor.addEventListener("dragend", () => {
+        schedulePositionUpdate();
+        delete orderingList.dataset.orderingDragging;
+      });
+
+      const orderingAnnouncement = form.querySelector<HTMLElement>(
+        "[data-ordering-announcement]",
+      );
+      const announceOrdering = (message: string) => {
+        if (!orderingAnnouncement) return;
+        orderingAnnouncement.textContent = "";
+        queueMicrotask(() => {
+          orderingAnnouncement.textContent = message;
+        });
+      };
+      const getKeyboardRows = () =>
+        [...orderingList.children].filter(
+          (child): child is HTMLElement =>
+            child instanceof HTMLElement &&
+            child.matches("[data-ordering-item]") &&
+            !child.hasAttribute("data-dnd-dragging") &&
+            !child.hasAttribute("data-dnd-placeholder"),
+        );
+      const captureOrderingPositions = () => {
+        const rows = getKeyboardRows();
+        for (const row of rows) {
+          row.getAnimations().forEach((animation) => animation.cancel());
+        }
+        return new Map(
+          rows.map((row) => [row, row.getBoundingClientRect().top]),
+        );
+      };
+      const animateOrderingRows = (
+        previousPositions: Map<HTMLElement, number>,
+      ) => {
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          return;
+        }
+        for (const row of getKeyboardRows()) {
+          const previousTop = previousPositions.get(row);
+          if (previousTop === undefined) continue;
+          const delta = previousTop - row.getBoundingClientRect().top;
+          if (!delta) continue;
+          row.animate(
+            [
+              { transform: `translateY(${delta}px)` },
+              { transform: "translateY(0)" },
+            ],
+            getOrderingMotion(),
+          );
+        }
+      };
+      const moveKeyboardRowToIndex = (
+        item: HTMLElement,
+        desiredIndex: number,
+      ) => {
+        const previousPositions = captureOrderingPositions();
+        const activeElement =
+          item.contains(document.activeElement) &&
+          document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : undefined;
+        const remainingRows = getKeyboardRows().filter((row) => row !== item);
+        if (desiredIndex >= remainingRows.length) {
+          orderingList.append(item);
+        } else {
+          orderingList.insertBefore(item, remainingRows[desiredIndex]);
+        }
+        updateOrderingPositions();
+        animateOrderingRows(previousPositions);
+        activeElement?.focus({ preventScroll: true });
+      };
+      let keyboardOrdering:
+        | {
+            handle: HTMLButtonElement;
+            initialIndex: number;
+            item: HTMLElement;
+          }
+        | undefined;
+      const finishKeyboardOrdering = (canceled: boolean) => {
+        if (!keyboardOrdering) return;
+        const { handle, initialIndex, item } = keyboardOrdering;
+        if (canceled) {
+          moveKeyboardRowToIndex(item, initialIndex);
+        }
+        const rows = getKeyboardRows();
+        const position = rows.indexOf(item);
+        const text =
+          item.querySelector<HTMLElement>("[data-ordering-text]")?.textContent ??
+          "";
+        handle.setAttribute("aria-pressed", "false");
+        handle.setAttribute("aria-grabbed", "false");
+        delete item.dataset.orderingKeyboardActive;
+        keyboardOrdering = undefined;
+        announceOrdering(
+          describeOrderingFinish(
+            text,
+            position,
+            rows.length,
+            canceled,
+          ),
+        );
+      };
+
+      orderingList.addEventListener("keydown", (event) => {
+        const handle = (event.target as HTMLElement).closest<HTMLButtonElement>(
+          "[data-ordering-handle]",
+        );
+        if (!handle) return;
+        const item = handle.closest<HTMLElement>("[data-ordering-item]");
+        if (!item) return;
+        const toggle =
+          event.code === "Enter" ||
+          event.code === "NumpadEnter" ||
+          event.code === "Space";
+
+        if (!keyboardOrdering) {
+          if (!toggle) return;
+          event.preventDefault();
+          event.stopPropagation();
+          const rows = getKeyboardRows();
+          const initialIndex = rows.indexOf(item);
+          if (initialIndex < 0) return;
+          keyboardOrdering = { handle, initialIndex, item };
+          item.dataset.orderingKeyboardActive = "";
+          handle.setAttribute("aria-pressed", "true");
+          handle.setAttribute("aria-grabbed", "true");
+          const text =
+            item.querySelector<HTMLElement>("[data-ordering-text]")
+              ?.textContent ?? "";
+          announceOrdering(
+            describeOrderingPickup(text, initialIndex, rows.length),
+          );
+          return;
+        }
+
+        if (keyboardOrdering.item !== item) return;
+        if (toggle) {
+          event.preventDefault();
+          event.stopPropagation();
+          finishKeyboardOrdering(false);
+          return;
+        }
+        if (event.code === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          finishKeyboardOrdering(true);
+          return;
+        }
+        const direction =
+          event.code === "ArrowUp"
+            ? -1
+            : event.code === "ArrowDown"
+              ? 1
+              : 0;
+        if (!direction) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const rows = getKeyboardRows();
+        const currentIndex = rows.indexOf(item);
+        const targetIndex = Math.max(
+          0,
+          Math.min(rows.length - 1, currentIndex + direction),
+        );
+        const text =
+          item.querySelector<HTMLElement>("[data-ordering-text]")?.textContent ??
+          "";
+        if (targetIndex === currentIndex) {
+          announceOrdering(
+            `«${text}» уже на позиции ${currentIndex + 1} из ${rows.length}.`,
+          );
+          return;
+        }
+        moveKeyboardRowToIndex(item, targetIndex);
+        announceOrdering(
+          describeOrderingPosition(text, targetIndex, rows.length),
+        );
+      });
+    }
 
     form.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -521,23 +874,98 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
   .matching-row + .matching-row { border-top: 1px solid var(--color-border); }
   .matching-row span { font-weight: 700; }
   select { width: 100%; border: 1px solid var(--color-border); border-radius: var(--radius); padding: .55rem; background: var(--color-canvas); color: inherit; font: inherit; }
+  .ordering-instructions {
+    margin: .8rem 0 0;
+    color: var(--color-muted);
+    font-size: .85rem;
+    line-height: 1.5;
+  }
   .ordering-list { list-style: none; padding: 0; }
-  .ordering-list li {
+  [data-ordering-item] {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: .35rem .75rem;
+    grid-template-columns: 2.25rem minmax(0, 1fr) 3rem;
+    gap: .75rem;
     align-items: center;
+    position: relative;
     border: 0;
     border-radius: 0;
-    padding: .8rem .15rem;
-    background: transparent;
+    padding: .75rem .15rem;
+    background: var(--color-surface);
   }
-  .ordering-list li + li { border-top: 1px solid var(--color-border); }
+  .ordering-list > [data-ordering-item] + [data-ordering-item] {
+    border-top: 1px solid var(--color-border);
+  }
+  .ordering-list > [data-ordering-item]::before {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    top: 0;
+    bottom: 0;
+    left: 1.2rem;
+    width: 1px;
+    background: var(--color-border);
+  }
+  .ordering-list > [data-ordering-item]:first-child::before { top: 50%; }
+  .ordering-list > [data-ordering-item]:last-child::before { bottom: 50%; }
   .ordering-list [data-ordering-text] { font-weight: 700; }
-  .ordering-position { grid-column: 1; color: var(--color-muted); font-size: .85rem; }
-  .ordering-controls { grid-column: 2; grid-row: 1 / span 2; display: flex; gap: .35rem; }
-  .ordering-controls button { padding: .4rem .55rem; }
-  .ordering-announcement { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+  .ordering-position {
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 2.1rem;
+    aspect-ratio: 1;
+    border: 1px solid var(--color-border);
+    border-radius: 50%;
+    background: var(--color-surface);
+    color: var(--color-muted);
+    font: 600 .72rem/1 var(--font-mono);
+    letter-spacing: .03em;
+  }
+  .ordering-handle {
+    width: 3rem;
+    min-height: 3rem;
+    border: 1px solid var(--color-border);
+    border-radius: .55rem;
+    padding: 0;
+    background: var(--color-canvas);
+    color: var(--color-muted);
+    cursor: grab;
+    touch-action: none;
+  }
+  .ordering-handle:hover {
+    border-color: var(--color-muted);
+    background: var(--color-surface);
+    color: var(--color-ink);
+  }
+  .ordering-handle:active,
+  .ordering-handle[aria-pressed="true"] {
+    cursor: grabbing;
+  }
+  .ordering-handle svg { fill: currentColor; }
+  [data-ordering-item][data-dnd-dragging],
+  [data-ordering-item][data-dnd-dropping],
+  [data-ordering-item][data-ordering-keyboard-active] {
+    border-radius: .65rem;
+    background: var(--color-surface);
+    box-shadow: var(--shadow);
+  }
+  [data-ordering-item][data-dnd-dragging] .ordering-position,
+  [data-ordering-item][data-dnd-dropping] .ordering-position,
+  [data-ordering-item][data-ordering-keyboard-active] .ordering-position {
+    border-color: var(--color-focus);
+    color: var(--color-ink);
+  }
+  .ordering-announcement {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    border: 0;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
   .knowledge-check > button { margin: 1.25rem; }
   .feedback {
     margin: 0;
@@ -560,13 +988,11 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
       width: calc(100% - 2rem);
       margin-inline: 1rem;
     }
-    .ordering-list li { grid-template-columns: minmax(0, 1fr); }
-    .ordering-position { grid-column: 1; }
-    .ordering-controls {
-      grid-column: 1;
-      grid-row: auto;
-      flex-wrap: wrap;
+    [data-ordering-item] {
+      grid-template-columns: 2.1rem minmax(0, 1fr) 3rem;
+      gap: .6rem;
     }
+    .ordering-list > [data-ordering-item]::before { left: 1.12rem; }
     .feedback { padding-inline: 1rem; }
   }
 </style>

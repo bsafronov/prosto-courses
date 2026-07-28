@@ -423,7 +423,7 @@ Response-specific props are:
 
 IDs are unique and never derived from learner-facing display text. Option-specific feedback diagnoses why that response is or is not appropriate. Do not expose correct ordering or matching through IDs or initial presentation.
 
-Matching uses labelled native selection controls. Ordering exposes labelled move-up and move-down buttons and announces each new position. Exact and numeric fields have explicit labels; a numeric unit is both visible and included in the field's accessible name.
+Matching uses labelled native selection controls. Ordering exposes a labelled drag handle for each step: pointer and touch users drag the handle, while keyboard users press Enter or Space, move with the arrow keys, then press Enter or Space again to drop (Escape cancels). The platform announces each new position. Exact and numeric fields have explicit labels; a numeric unit is both visible and included in the field's accessible name.
 
 Example:
 
