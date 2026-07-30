@@ -1093,7 +1093,10 @@ test("External References are marked, blocked offline, and restored online", asy
       await expect(reference).toHaveAttribute("target", "_blank");
       await expect(reference).toHaveAttribute("rel", /noopener/);
       await expect(reference).toHaveAttribute("rel", /noreferrer/);
-      await expect(reference).toContainText("требуется интернет");
+      await expect(
+        reference.locator("sup.external-reference-marker"),
+      ).toHaveText("↗");
+      await expect(reference).not.toContainText("требуется интернет");
     }
   }
   expect(referenceCount).toBeGreaterThan(1);
@@ -1109,10 +1112,13 @@ test("External References are marked, blocked offline, and restored online", asy
   );
   await expect(internalReference).not.toHaveAttribute("target", "_blank");
   await expect(internalReference).not.toHaveAttribute("rel", /noopener/);
-  await expect(internalReference).not.toContainText("требуется интернет");
+  await expect(
+    internalReference.locator("sup.external-reference-marker"),
+  ).toHaveCount(0);
 
   const sameOriginExternalReference = page.getByRole("link", {
-    name: /Внешняя ссылка с общего домена.*требуется интернет/,
+    name: "Внешняя ссылка с общего домена",
+    exact: true,
   });
   await expect(sameOriginExternalReference).toHaveAttribute(
     "data-external-reference",
@@ -1132,7 +1138,7 @@ test("External References are marked, blocked offline, and restored online", asy
   await page.goto("./courses/markdown/lessons/links-code/");
 
   const reference = page.getByRole("link", {
-    name: /разбор критерия 2\.4\.4.*требуется интернет/,
+    name: /разбор критерия 2\.4\.4/,
   });
   await expect(reference).toHaveAttribute("target", "_blank");
   await expect(reference).toHaveAttribute("rel", /noopener/);

@@ -38,17 +38,15 @@ function visit(node, platformRoot) {
       rel: ["noopener", "noreferrer"],
       target: "_blank",
     };
-    node.children.push(
-      { type: "text", value: " " },
-      {
-        type: "element",
-        tagName: "span",
-        properties: {
-          className: ["external-reference-badge"],
-        },
-        children: [{ type: "text", value: "↗ требуется интернет" }],
+    node.children.push({
+      type: "element",
+      tagName: "sup",
+      properties: {
+        "aria-hidden": "true",
+        className: ["external-reference-marker"],
       },
-    );
+      children: [{ type: "text", value: "↗" }],
+    });
   }
 
   for (const child of node?.children ?? []) visit(child, platformRoot);
