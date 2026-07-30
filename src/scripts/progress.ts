@@ -265,7 +265,6 @@ function refresh(root: HTMLElement, course: StoredCourse) {
 
 function initialiseProgress(root: HTMLElement) {
   if (root.dataset.progressReady) return;
-  root.dataset.progressReady = "true";
   const courseSlug = root.dataset.courseSlug ?? "";
   if (!courseSlug) return;
   let progress = readProgress();
@@ -317,7 +316,10 @@ function initialiseProgress(root: HTMLElement) {
     if (event.persisted) recordCurrentVisit();
   });
 
-  root.querySelector<HTMLButtonElement>("[data-completion-toggle]")?.addEventListener("click", () => {
+  const toggle = root.querySelector<HTMLButtonElement>(
+    "[data-completion-toggle]",
+  );
+  toggle?.addEventListener("click", () => {
     if (!current) return;
     progress = readProgress();
     course = ensureCourse(progress, courseSlug);
@@ -342,6 +344,8 @@ function initialiseProgress(root: HTMLElement) {
     writeProgress(progress);
     refresh(root, course);
   });
+  if (toggle) toggle.disabled = false;
+  root.dataset.progressReady = "true";
 }
 
 document.querySelectorAll<HTMLElement>("[data-progress-root]").forEach(initialiseProgress);

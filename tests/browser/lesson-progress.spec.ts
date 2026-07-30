@@ -86,6 +86,34 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+test("Completion control waits for progress readiness before accepting input", async ({
+  page,
+}) => {
+  let allowScripts = () => {};
+  const scriptsAllowed = new Promise<void>((resolve) => {
+    allowScripts = resolve;
+  });
+  await page.route("**/*.js", async (route) => {
+    await scriptsAllowed;
+    await route.continue();
+  });
+
+  await page.goto("./courses/markdown/lessons/vvedenie/", {
+    waitUntil: "commit",
+  });
+
+  const toggle = page
+    .getByRole("region", { name: "Завершение урока" })
+    .getByRole("button");
+  await expect(toggle).toBeDisabled();
+
+  allowScripts();
+  await page.waitForLoadState("load");
+  await expect(toggle).toBeEnabled();
+  await toggle.click();
+  await expect(toggle).toHaveAccessibleName("Вернуть в работу");
+});
+
 test("Completion control presents a clear reversible local action boundary", async ({
   page,
 }) => {
