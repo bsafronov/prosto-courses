@@ -38,23 +38,25 @@ test("Home keeps its primary header controls clear on a narrow screen", async ({
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
 
-  const offline = page.getByRole("group", { name: "Офлайн-доступ" });
+  const pwaControl = page.getByRole("group", {
+    name: "Приложение и офлайн-доступ",
+  });
   const brand = page.getByRole("link", { name: "Prosto.Courses" });
   const theme = page.getByRole("combobox", { name: "Тема оформления" });
-  await expect(offline).toBeVisible();
+  await expect(pwaControl).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Каталог", exact: true }),
   ).toBeHidden();
   await expect(brand).toBeVisible();
   await expect(theme).toBeVisible();
 
-  const [brandBox, themeBox, offlineBox] = await Promise.all([
+  const [brandBox, themeBox, pwaBox] = await Promise.all([
     brand.boundingBox(),
     theme.boundingBox(),
-    offline.boundingBox(),
+    pwaControl.boundingBox(),
   ]);
   expect(brandBox!.x + brandBox!.width).toBeLessThanOrEqual(themeBox!.x);
-  expect(offlineBox!.y).toBeGreaterThanOrEqual(
+  expect(pwaBox!.y).toBeGreaterThanOrEqual(
     Math.max(brandBox!.y + brandBox!.height, themeBox!.y + themeBox!.height),
   );
   expect(
@@ -230,7 +232,9 @@ test("visual foundation uses the exact palettes and typography roles", async ({
   ]);
 
   const brand = page.getByRole("link", { name: "Prosto.Courses" });
-  const offlineState = page.getByRole("group", { name: "Офлайн-доступ" });
+  const pwaControl = page.getByRole("group", {
+    name: "Приложение и офлайн-доступ",
+  });
   const lessonPosition = page.getByText("Урок 1 из 2", { exact: true });
   const code = page.locator("main code").first();
 
@@ -265,16 +269,16 @@ test("visual foundation uses the exact palettes and typography roles", async ({
 
     const presentation = await brand.evaluate((brandElement) => {
       const body = getComputedStyle(document.body);
-      const offline = getComputedStyle(
-        document.querySelector('[aria-label="Офлайн-доступ"]')!,
+      const pwaStyle = getComputedStyle(
+        document.querySelector('[aria-label="Приложение и офлайн-доступ"]')!,
       );
       const brandStyle = getComputedStyle(brandElement);
       return {
         canvas: body.backgroundColor,
-        surface: offline.backgroundColor,
+        surface: pwaStyle.backgroundColor,
         ink: body.color,
-        muted: offline.color,
-        border: offline.borderTopColor,
+        muted: pwaStyle.color,
+        border: pwaStyle.borderTopColor,
         focus: brandStyle.outlineColor,
       };
     });
@@ -292,7 +296,7 @@ test("visual foundation uses the exact palettes and typography roles", async ({
   await expect(page.locator("body")).toHaveCSS("font-family", /Onest/);
   await expect(code).toHaveCSS("font-family", /IBM Plex Mono/);
   await expect(lessonPosition).toHaveCSS("font-family", /IBM Plex Mono/);
-  await expect(offlineState).toHaveCSS("font-family", /IBM Plex Mono/);
+  await expect(pwaControl).toHaveCSS("font-family", /IBM Plex Mono/);
 });
 
 test("thin learner Header exposes shared controls on every learner route", async ({
@@ -327,7 +331,7 @@ test("thin learner Header exposes shared controls on every learner route", async
       header.getByRole("combobox", { name: "Тема оформления" }),
     ).toHaveValue("dark");
     await expect(
-      header.getByRole("group", { name: "Офлайн-доступ" }),
+      header.getByRole("group", { name: "Приложение и офлайн-доступ" }),
     ).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute(
       "data-theme-mode",

@@ -47,6 +47,35 @@ async function expectControlledRelease(page: Page, scopeUrl: string) {
     });
 }
 
+async function expectActiveRelease(page: Page) {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(async () => {
+          const registration =
+            await navigator.serviceWorker.getRegistration();
+          return registration?.active?.state;
+        }),
+      { timeout: 20_000 },
+    )
+    .toBe("activated");
+}
+
+async function expectQuietInstall(page: Page) {
+  await expectActiveRelease(page);
+  const control = page.getByRole("group", {
+    name: "Приложение и офлайн-доступ",
+  });
+  await expect(
+    control.getByText("Подготовка офлайн", { exact: true }),
+  ).toBeHidden();
+  await expect(
+    control.getByRole("button", { name: "Установить", exact: true }),
+  ).toBeVisible();
+  await expect(control).not.toContainText("Доступно офлайн");
+  return control;
+}
+
 async function unavailableReleaseUrls(page: Page, releaseUrls: string[]) {
   return page.evaluate(async (urls) => {
     const results = await Promise.all(
@@ -355,10 +384,7 @@ test("the root-deployed release remains complete and scoped offline", async ({
   const offlinePage = await offlineContext.newPage();
   try {
     await offlinePage.goto(rootUrl);
-    const status = offlinePage
-      .getByRole("group", { name: "Офлайн-доступ" })
-      .locator("[data-pwa-status]");
-    await expect(status).toHaveText("Доступно офлайн", { timeout: 20_000 });
+    await expectActiveRelease(offlinePage);
     await expectControlledRelease(offlinePage, rootUrl);
     await offlineContext.setOffline(true);
 
@@ -412,34 +438,26 @@ test("the header reports complete Offline Availability and recovers unknown rout
   });
   await page.goto("./");
 
-  const control = page.getByRole("group", { name: "Офлайн-доступ" });
-  const status = control.locator("[data-pwa-status]");
+  const control = page.getByRole("group", {
+    name: "Приложение и офлайн-доступ",
+  });
+  const status = control.locator('[aria-live="polite"]');
   await expect(control).toBeVisible();
-  await expect(status).toHaveAttribute("aria-live", "polite");
   await expect(status).toHaveAttribute("aria-atomic", "true");
-  await expect
-    .poll(
-      async () => ({
-        status: await status.textContent(),
-        workerErrors,
-      }),
-      { timeout: 20_000 },
-    )
-    .toEqual({ status: "Доступно офлайн", workerErrors: [] });
+  await expectQuietInstall(page);
+  expect(workerErrors).toEqual([]);
 
   await expectControlledRelease(page, expectedScope);
 
   await context.setOffline(true);
-  await expect(status).toHaveText("Сейчас офлайн");
+  await expect(control).toBeHidden();
 
   for (const route of release.routes) {
     await page.goto(route);
     await expect(page.locator("main")).not.toBeEmpty();
     await expect(
-      page
-        .getByRole("group", { name: "Офлайн-доступ" })
-        .locator("[data-pwa-status]"),
-    ).toHaveText("Сейчас офлайн");
+      page.getByRole("group", { name: "Приложение и офлайн-доступ" }),
+    ).toBeHidden();
   }
 
   await expect(unavailableReleaseUrls(page, release.releaseUrls)).resolves.toEqual(
@@ -487,6 +505,34 @@ test("the header reports complete Offline Availability and recovers unknown rout
   );
 });
 
+test("the global PWA control stays quiet when connectivity disappears", async ({
+  baseURL,
+  context,
+  page,
+  request,
+}) => {
+  const heldRelease = await request.post(
+    fixtureServerUrl(baseURL, "/__test__/release/1?hold=1"),
+  );
+  expect(heldRelease.ok()).toBe(true);
+  await page.goto("./");
+
+  const control = page.getByRole("group", { name: "Приложение и офлайн-доступ" });
+  await expect(
+    control.getByText("Подготовка офлайн", { exact: true }),
+  ).toBeVisible();
+
+  await context.setOffline(true);
+  await expect(control).toBeHidden();
+
+  const released = await request.post(
+    fixtureServerUrl(baseURL, "/__test__/release/1"),
+  );
+  expect(released.ok()).toBe(true);
+  await context.setOffline(false);
+  await expectQuietInstall(page);
+});
+
 test("preparing Offline Availability keeps focus stable through completion", async ({
   baseURL,
   page,
@@ -498,9 +544,9 @@ test("preparing Offline Availability keeps focus stable through completion", asy
   expect(heldRelease.ok()).toBe(true);
   await page.goto("./");
 
-  const control = page.getByRole("group", { name: "Офлайн-доступ" });
-  const status = control.locator("[data-pwa-status]");
-  await expect(status).toHaveText("Подготовка офлайн");
+  const control = page.getByRole("group", { name: "Приложение и офлайн-доступ" });
+  const preparing = control.getByText("Подготовка офлайн", { exact: true });
+  await expect(preparing).toBeVisible();
   const catalogLink = page.getByRole("link", { name: "Каталог" });
   await catalogLink.focus();
   await expect(catalogLink).toBeFocused();
@@ -509,9 +555,8 @@ test("preparing Offline Availability keeps focus stable through completion", asy
     fixtureServerUrl(baseURL, "/__test__/release/1"),
   );
   expect(released.ok()).toBe(true);
-  await expect(status).toHaveText("Доступно офлайн", {
-    timeout: 20_000,
-  });
+  await expectQuietInstall(page);
+  await expect(preparing).toBeHidden();
   await expect(catalogLink).toBeFocused();
 });
 
@@ -529,10 +574,10 @@ test("data saving defers preparation until the learner accepts the measured rele
   });
   await page.goto("./");
 
-  const control = page.getByRole("group", { name: "Офлайн-доступ" });
-  await expect(control.locator("[data-pwa-status]")).toHaveText(
-    "Офлайн по запросу",
-  );
+  const control = page.getByRole("group", { name: "Приложение и офлайн-доступ" });
+  await expect(
+    control.getByText("Офлайн по запросу", { exact: true }),
+  ).toBeVisible();
   await expect(control).toContainText(
     /Экономия трафика включена.*Полный Каталог: \d+(?:[,.]\d)? МБ/,
   );
@@ -567,10 +612,7 @@ test("data saving defers preparation until the learner accepts the measured rele
   );
 
   await control.getByRole("button", { name: "Скачать" }).click();
-  await expect(control.locator("[data-pwa-status]")).toHaveText(
-    "Доступно офлайн",
-    { timeout: 20_000 },
-  );
+  await expectQuietInstall(page);
 });
 
 test("failed initial preparation never claims readiness and can be retried", async ({
@@ -584,11 +626,10 @@ test("failed initial preparation never claims readiness and can be retried", asy
   expect(failedRelease.ok()).toBe(true);
   await page.goto("./");
 
-  const control = page.getByRole("group", { name: "Офлайн-доступ" });
-  await expect(control.locator("[data-pwa-status]")).toHaveText(
-    "Офлайн не подготовлен",
-    { timeout: 20_000 },
-  );
+  const control = page.getByRole("group", { name: "Приложение и офлайн-доступ" });
+  await expect(
+    control.getByText("Офлайн не подготовлен", { exact: true }),
+  ).toBeVisible({ timeout: 20_000 });
   await expect(control).not.toContainText("Доступно офлайн");
   await expect(
     control.getByRole("button", { name: "Повторить" }),
@@ -607,20 +648,16 @@ test("failed initial preparation never claims readiness and can be retried", asy
   await expect(
     page.getByRole("heading", { level: 1, name: "Основы Markdown" }),
   ).toBeVisible();
-  await expect(control.locator("[data-pwa-status]")).toHaveText(
-    "Офлайн не подготовлен",
-    { timeout: 20_000 },
-  );
+  await expect(
+    control.getByText("Офлайн не подготовлен", { exact: true }),
+  ).toBeVisible({ timeout: 20_000 });
 
   const healthyRelease = await request.post(
     fixtureServerUrl(baseURL, "/__test__/release/1"),
   );
   expect(healthyRelease.ok()).toBe(true);
   await control.getByRole("button", { name: "Повторить" }).click();
-  await expect(control.locator("[data-pwa-status]")).toHaveText(
-    "Доступно офлайн",
-    { timeout: 20_000 },
-  );
+  await expectQuietInstall(page);
 });
 
 test("a Catalog Update survives a failed attempt, waits for consent, and preserves learner data offline", async ({
@@ -638,11 +675,8 @@ test("a Catalog Update survives a failed attempt, waits for consent, and preserv
 
   await page.goto(lessonPath);
 
-  const control = page.getByRole("group", { name: "Офлайн-доступ" });
-  await expect(control.locator("[data-pwa-status]")).toHaveText(
-    "Доступно офлайн",
-    { timeout: 20_000 },
-  );
+  const control = page.getByRole("group", { name: "Приложение и офлайн-доступ" });
+  await expectQuietInstall(page);
   await page.reload();
   await expect
     .poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller)))
@@ -677,9 +711,7 @@ test("a Catalog Update survives a failed attempt, waits for consent, and preserv
   await expect(
     control.getByRole("button", { name: "Обновить" }),
   ).toHaveCount(0);
-  await expect(control.locator("[data-pwa-status]")).toHaveText(
-    "Доступно офлайн",
-  );
+  await expectQuietInstall(page);
   await expect(
     page.getByRole("heading", { level: 1, name: firstTitle, exact: true }),
   ).toBeVisible();
@@ -706,13 +738,13 @@ test("a Catalog Update survives a failed attempt, waits for consent, and preserv
   await context.setOffline(false);
 
   const refreshedControl = page.getByRole("group", {
-    name: "Офлайн-доступ",
+    name: "Приложение и офлайн-доступ",
   });
   const update = refreshedControl.getByRole("button", { name: "Обновить" });
   await expect(update).toBeVisible({ timeout: 20_000 });
-  await expect(refreshedControl.locator("[data-pwa-status]")).toHaveText(
-    "Доступно обновление",
-  );
+  await expect(
+    refreshedControl.getByText("Доступно обновление", { exact: true }),
+  ).toBeVisible();
   await expect(update).toHaveAccessibleDescription(
     "Текущие несохранённые действия могут быть потеряны. После обновления откроется Каталог курсов.",
   );
@@ -731,7 +763,7 @@ test("a Catalog Update survives a failed attempt, waits for consent, and preserv
   ).toBeVisible();
   await expect(
     siblingPage
-      .getByRole("group", { name: "Офлайн-доступ" })
+      .getByRole("group", { name: "Приложение и офлайн-доступ" })
       .getByRole("button", { name: "Обновить" }),
   ).toBeVisible();
 
@@ -741,15 +773,14 @@ test("a Catalog Update survives a failed attempt, waits for consent, and preserv
     page.getByRole("heading", { level: 1, name: firstTitle, exact: true }),
   ).toBeVisible();
   const offlineControl = page.getByRole("group", {
-    name: "Офлайн-доступ",
+    name: "Приложение и офлайн-доступ",
   });
   const offlineUpdate = offlineControl.getByRole("button", {
     name: "Обновить",
   });
-  await expect(offlineControl.locator("[data-pwa-status]")).toHaveText(
-    "Обновление готово офлайн",
-    { timeout: 20_000 },
-  );
+  await expect(
+    offlineControl.getByText("Обновление готово офлайн", { exact: true }),
+  ).toBeVisible({ timeout: 20_000 });
   await expect(offlineUpdate).toBeEnabled();
   await offlineUpdate.click();
   await expect(page).toHaveURL(/\/prosto-courses\/$/, { timeout: 20_000 });
@@ -812,12 +843,15 @@ test("the quiet install action is keyboard-operable and follows installation lif
   });
 
   expect(defaultPrevented).toBe(true);
-  const control = page.getByRole("group", { name: "Офлайн-доступ" });
+  const control = page.getByRole("group", { name: "Приложение и офлайн-доступ" });
   const install = control.getByRole("button", {
     name: "Установить",
     exact: true,
   });
   await expect(install).toBeVisible();
+  await expectQuietInstall(page);
+  await expect(control.locator(":scope > :visible")).toHaveCount(1);
+  await expect(control).toHaveCSS("border-top-width", "0px");
   await install.focus();
   await expect(install).toBeFocused();
   await page.keyboard.press("Enter");
@@ -828,15 +862,16 @@ test("the quiet install action is keyboard-operable and follows installation lif
           .installPromptCalls,
     ),
   ).toBe(1);
-  await expect(install).toBeHidden();
-  await expect(
-    control.getByRole("button", { name: "Как установить" }),
-  ).toBeVisible();
+  await expect(install).toBeVisible();
+  await expect(install).toHaveAttribute("aria-expanded", "false");
+  await install.click();
+  await expect(install).toHaveAttribute("aria-expanded", "true");
+  await expect(control).toContainText(
+    "Открой меню браузера и выбери «Установить приложение».",
+  );
 
   await page.evaluate(() => window.dispatchEvent(new Event("appinstalled")));
-  await expect(
-    control.getByRole("button", { name: "Как установить" }),
-  ).toBeHidden();
+  await expect(control).toBeHidden();
 });
 
 test("accepted native prompt waits for installation confirmation", async ({
@@ -854,7 +889,7 @@ test("accepted native prompt waits for installation confirmation", async ({
     window.dispatchEvent(event);
   });
 
-  const control = page.getByRole("group", { name: "Офлайн-доступ" });
+  const control = page.getByRole("group", { name: "Приложение и офлайн-доступ" });
   const install = control.getByRole("button", {
     name: "Установить",
     exact: true,
@@ -872,11 +907,24 @@ test("manual installation guidance stays in the compact control", async ({
 }) => {
   await page.goto("./");
 
-  const control = page.getByRole("group", { name: "Офлайн-доступ" });
-  await control.getByRole("button", { name: "Как установить" }).click();
-  await expect(control).toContainText(
+  const control = page.getByRole("group", {
+    name: "Приложение и офлайн-доступ",
+  });
+  const install = control.getByRole("button", {
+    name: "Установить",
+    exact: true,
+  });
+  await expect(install).toHaveAttribute("aria-expanded", "false");
+  await install.click();
+  await expect(install).toHaveAttribute("aria-expanded", "true");
+  const instructions = control.getByText(
     "Открой меню браузера и выбери «Установить приложение».",
+    { exact: true },
   );
+  await expect(instructions).toBeVisible();
+  await install.click();
+  await expect(install).toHaveAttribute("aria-expanded", "false");
+  await expect(instructions).toBeHidden();
 });
 
 test("iPad desktop-mode Safari receives add-to-home-screen guidance", async ({
@@ -895,8 +943,10 @@ test("iPad desktop-mode Safari receives add-to-home-screen guidance", async ({
   });
   await page.goto("./");
 
-  const control = page.getByRole("group", { name: "Офлайн-доступ" });
-  await control.getByRole("button", { name: "Как установить" }).click();
+  const control = page.getByRole("group", { name: "Приложение и офлайн-доступ" });
+  await control
+    .getByRole("button", { name: "Установить", exact: true })
+    .click();
   await expect(control).toContainText(
     "Safari: «Поделиться» → «На экран Домой».",
   );
@@ -924,8 +974,10 @@ test("Chrome on iPhone receives add-to-home-screen guidance", async ({
   });
   await page.goto("./");
 
-  const control = page.getByRole("group", { name: "Офлайн-доступ" });
-  await control.getByRole("button", { name: "Как установить" }).click();
+  const control = page.getByRole("group", { name: "Приложение и офлайн-доступ" });
+  await control
+    .getByRole("button", { name: "Установить", exact: true })
+    .click();
   await expect(control).toContainText(
     "«Поделиться» → «На экран Домой».",
   );
@@ -944,14 +996,12 @@ test("standalone launch hides installation actions", async ({
   });
   await page.goto("./");
 
-  const control = page.getByRole("group", { name: "Офлайн-доступ" });
-  await expect(control).toBeVisible();
-  await expect(
-    control.getByRole("button", { name: "Установить", exact: true }),
-  ).toHaveCount(0);
-  await expect(
-    control.getByRole("button", { name: "Как установить", exact: true }),
-  ).toHaveCount(0);
+  const control = page.getByRole("group", {
+    name: "Приложение и офлайн-доступ",
+    includeHidden: true,
+  });
+  await expectActiveRelease(page);
+  await expect(control).toBeHidden();
 });
 
 test("a browser without an agreed installation surface gets no install action", async ({
@@ -976,14 +1026,12 @@ test("a browser without an agreed installation surface gets no install action", 
   });
   await page.goto("./");
 
-  const control = page.getByRole("group", { name: "Офлайн-доступ" });
-  await expect(control).toBeVisible();
-  await expect(
-    control.getByRole("button", { name: "Установить", exact: true }),
-  ).toHaveCount(0);
-  await expect(
-    control.getByRole("button", { name: "Как установить", exact: true }),
-  ).toHaveCount(0);
+  const control = page.getByRole("group", {
+    name: "Приложение и офлайн-доступ",
+    includeHidden: true,
+  });
+  await expectActiveRelease(page);
+  await expect(control).toBeHidden();
 });
 
 test("an unsupported browser keeps the ordinary site quiet", async ({
@@ -1007,7 +1055,7 @@ test("an unsupported browser keeps the ordinary site quiet", async ({
     }),
   ).toBeVisible();
   await expect(
-    page.getByRole("group", { name: "Офлайн-доступ" }),
+    page.getByRole("group", { name: "Приложение и офлайн-доступ" }),
   ).toBeHidden();
   expect(pageErrors).toEqual([]);
 });

@@ -32,12 +32,16 @@ interface ControllerState {
 
 interface ViewState {
   supported: boolean;
+  visible?: boolean;
   status: "preparing" | "ready" | "deferred" | "offline" | "failure";
   statusText: string;
+  showStatus?: boolean;
+  quiet?: boolean;
   detail?: string;
   action?: Action;
   actionText?: string;
   actionDisabled?: boolean;
+  actionExpanded?: boolean;
 }
 
 export interface PwaController {
@@ -101,6 +105,7 @@ function createController(config: {
   const listeners = new Set<(view: ViewState) => void>();
   let registration: ServiceWorkerRegistration | undefined;
   let registrationStarted = false;
+  let registrationAttempt = 0;
   let updateServiceWorker: (() => Promise<void>) | undefined;
   let currentAction: Action | undefined;
   let catalogNavigationStarted = false;
@@ -115,16 +120,19 @@ function createController(config: {
       supported: state.supported,
       status,
       statusText:
-        status === "offline"
-          ? "Сейчас офлайн"
-          : status === "ready"
-            ? "Доступно офлайн"
-            : status === "failure"
-              ? "Офлайн не подготовлен"
-              : status === "deferred"
-                ? "Офлайн по запросу"
-                : "Подготовка офлайн",
+        status === "offline" || status === "ready"
+          ? ""
+          : status === "failure"
+            ? "Офлайн не подготовлен"
+            : status === "deferred"
+              ? "Офлайн по запросу"
+              : "Подготовка офлайн",
     };
+    const installPresentation = {
+      showStatus: status !== "ready",
+      quiet: status === "ready",
+      actionText: "Установить",
+    } as const;
 
     if (state.updateReady) {
       return {
@@ -138,37 +146,44 @@ function createController(config: {
         actionText: "Обновить",
       };
     }
-    if (state.readiness === "deferred") {
-      return {
-        ...result,
-        detail: `Экономия трафика включена. ${formatReleaseSize(state.releaseBytes)}`,
-        action: "prepare",
-        actionText: "Скачать",
-        actionDisabled: !state.online,
-      };
-    }
     if (state.readiness === "failure") {
       return {
         ...result,
+        statusText: "Офлайн не подготовлен",
         detail: "Не удалось сохранить полный Каталог.",
         action: "retry",
         actionText: "Повторить",
         actionDisabled: !state.online,
       };
     }
+    if (!state.online) {
+      return {
+        ...result,
+        visible: false,
+        showStatus: false,
+      };
+    }
+    if (state.readiness === "deferred") {
+      return {
+        ...result,
+        detail: `Экономия трафика включена. ${formatReleaseSize(state.releaseBytes)}`,
+        action: "prepare",
+        actionText: "Скачать",
+      };
+    }
     if (!state.installed && state.installPending) {
       return {
         ...result,
+        ...installPresentation,
         action: "install",
-        actionText: "Установить",
         actionDisabled: true,
       };
     }
     if (!state.installed && state.installPrompt) {
       return {
         ...result,
+        ...installPresentation,
         action: "install",
-        actionText: "Установить",
         actionDisabled: !state.online,
       };
     }
@@ -176,9 +191,18 @@ function createController(config: {
     if (!state.installed && instructions) {
       return {
         ...result,
+        ...installPresentation,
+        quiet: installPresentation.quiet && !state.instructionsOpen,
         detail: state.instructionsOpen ? instructions : undefined,
         action: "instructions",
-        actionText: "Как установить",
+        actionExpanded: state.instructionsOpen,
+      };
+    }
+    if (status === "ready") {
+      return {
+        ...result,
+        visible: false,
+        showStatus: false,
       };
     }
     return result;
@@ -190,9 +214,17 @@ function createController(config: {
     for (const listener of listeners) listener(next);
   }
 
+  function invalidateRegistrationAttempt() {
+    registrationStarted = false;
+    registrationAttempt += 1;
+  }
+
   function preparationFailed() {
     if (navigator.serviceWorker.controller || registration?.active) {
       state.readiness = "ready";
+    } else if (!state.online) {
+      state.readiness = "preparing";
+      invalidateRegistrationAttempt();
     } else {
       state.readiness = "failure";
       registrationStarted = false;
@@ -200,9 +232,10 @@ function createController(config: {
     emit();
   }
 
-  function observeInstall(worker: ServiceWorker | null) {
+  function observeInstall(worker: ServiceWorker | null, attempt: number) {
     if (!worker) return;
     worker.addEventListener("statechange", () => {
+      if (attempt !== registrationAttempt) return;
       if (worker.state === "redundant") preparationFailed();
     });
   }
@@ -218,9 +251,12 @@ function createController(config: {
     window.location.assign(config.catalogUrl);
   }
 
-  function rememberRegistration(nextRegistration: ServiceWorkerRegistration) {
+  function rememberRegistration(
+    nextRegistration: ServiceWorkerRegistration,
+    attempt = registrationAttempt,
+  ) {
     registration = nextRegistration;
-    observeInstall(registration.installing);
+    observeInstall(registration.installing, attempt);
     if (registration.waiting) {
       state.updateReady = true;
       emit();
@@ -230,30 +266,35 @@ function createController(config: {
   async function registerRelease() {
     if (registrationStarted || !state.online) return;
     registrationStarted = true;
+    const attempt = ++registrationAttempt;
     if (!navigator.serviceWorker.controller) state.readiness = "preparing";
     emit();
 
     updateServiceWorker = registerSW({
       immediate: true,
       onOfflineReady() {
+        if (attempt !== registrationAttempt) return;
         state.readiness = "ready";
         emit();
       },
       onNeedRefresh() {
+        if (attempt !== registrationAttempt) return;
         state.updateReady = true;
         emit();
       },
       onNeedReload() {
+        if (attempt !== registrationAttempt) return;
         returnToCatalogAfterUpdate();
       },
       onRegisteredSW(_scriptUrl, nextRegistration) {
+        if (attempt !== registrationAttempt) return;
         if (!nextRegistration) {
           preparationFailed();
           return;
         }
-        rememberRegistration(nextRegistration);
+        rememberRegistration(nextRegistration, attempt);
         nextRegistration.addEventListener("updatefound", () => {
-          observeInstall(registration?.installing ?? null);
+          observeInstall(registration?.installing ?? null, attempt);
         });
         if (navigator.serviceWorker.controller) {
           state.readiness = "ready";
@@ -262,6 +303,7 @@ function createController(config: {
         }
       },
       onRegisterError() {
+        if (attempt !== registrationAttempt) return;
         preparationFailed();
       },
     });
@@ -307,6 +349,13 @@ function createController(config: {
       });
       window.addEventListener("offline", () => {
         state.online = false;
+        if (
+          state.readiness === "preparing" &&
+          !navigator.serviceWorker.controller &&
+          !registration?.active
+        ) {
+          invalidateRegistrationAttempt();
+        }
         emit();
       });
       window.addEventListener("online", () => {
@@ -372,19 +421,28 @@ function createController(config: {
 }
 
 function renderControl(root: HTMLElement, state: ViewState) {
+  const indicator = root.querySelector<HTMLElement>(".pwa-indicator");
   const status = root.querySelector<HTMLElement>("[data-pwa-status]");
   const detail = root.querySelector<HTMLElement>("[data-pwa-detail]");
   const action = root.querySelector<HTMLButtonElement>("[data-pwa-action]");
-  if (!status || !detail || !action) return;
+  if (!indicator || !status || !detail || !action) return;
 
-  root.hidden = !state.supported;
+  root.hidden = !state.supported || state.visible === false;
   root.dataset.status = state.status;
+  root.dataset.quiet = String(state.quiet ?? false);
+  indicator.hidden = state.showStatus === false;
   status.textContent = state.statusText;
+  status.hidden = state.showStatus === false;
   detail.textContent = state.detail ?? "";
   detail.hidden = !state.detail;
   action.textContent = state.actionText ?? "";
   action.hidden = !state.action;
   action.disabled = state.actionDisabled ?? false;
+  if (state.actionExpanded === undefined) {
+    action.removeAttribute("aria-expanded");
+  } else {
+    action.setAttribute("aria-expanded", String(state.actionExpanded));
+  }
 }
 
 function initialisePwaControl(root: HTMLElement) {

@@ -8,7 +8,7 @@ import { sitePath } from "../lib/courses";
   data-catalog-url={sitePath()}
   data-release-url={sitePath("offline-release.json")}
   role="group"
-  aria-label="Офлайн-доступ"
+  aria-label="Приложение и офлайн-доступ"
   hidden
 >
   <span class="pwa-indicator" aria-hidden="true"></span>
@@ -56,6 +56,12 @@ import { sitePath } from "../lib/courses";
     line-height: 1.25;
   }
   .pwa-control[hidden] { display: none; }
+  .pwa-control[data-quiet="true"] {
+    min-height: auto;
+    border: 0;
+    padding: 0;
+    background: transparent;
+  }
   .pwa-indicator {
     width: .55rem;
     height: .55rem;
@@ -64,14 +70,11 @@ import { sitePath } from "../lib/courses";
     border-radius: 50%;
     background: var(--color-canvas);
   }
+  .pwa-indicator[hidden] { display: none; }
   .pwa-control[data-status="preparing"] .pwa-indicator,
   .pwa-control[data-status="deferred"] .pwa-indicator {
     border-color: var(--color-warning);
     background: var(--color-started);
-  }
-  .pwa-control[data-status="ready"] .pwa-indicator {
-    border-color: var(--color-completed-ink);
-    background: var(--color-completed-ink);
   }
   .pwa-control[data-status="offline"] .pwa-indicator,
   .pwa-control[data-status="failure"] .pwa-indicator {
@@ -79,6 +82,7 @@ import { sitePath } from "../lib/courses";
     background: var(--color-error);
   }
   .pwa-status { color: var(--color-ink); font-weight: 750; white-space: nowrap; }
+  .pwa-status[hidden] { display: none; }
   .pwa-detail { max-width: 24rem; }
   .pwa-action {
     min-height: 1.75rem;
