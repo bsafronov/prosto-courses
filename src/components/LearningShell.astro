@@ -256,10 +256,15 @@ const destinations = getCoreDestinationLinks(course.id, tree);
       background: var(--color-canvas);
       box-shadow: var(--shadow);
       transform: translateX(-105%);
-      transition: transform 180ms ease-out;
+      visibility: hidden;
+      transition:
+        transform 180ms ease-out,
+        visibility 0s linear 180ms;
     }
     body[data-course-route-open="true"] .course-route-panel {
       transform: translateX(0);
+      visibility: visible;
+      transition-delay: 0s;
     }
     body[data-course-route-open="true"] { overflow: hidden; }
     .route-mobile-head {

@@ -33,7 +33,10 @@ async function expectLearnerTraversesCompleteCourseSequence(page: Page) {
     page.getByRole("heading", { level: 1, name: "От исходника к структуре" }),
   ).toBeVisible();
 
-  await page.getByRole("link", { name: /Знакомство с Markdown/ }).first().click();
+  await page
+    .getByRole("list", { name: "Уроки Модуля" })
+    .getByRole("link", { name: /Знакомство с Markdown/ })
+    .click();
   await expect(page).toHaveURL(/\/courses\/markdown\/lessons\/vvedenie\/$/);
   await page.getByRole("button", { name: "Завершить урок" }).click();
 
@@ -117,6 +120,31 @@ for (const viewport of [
     ).toBeLessThanOrEqual(viewport.width);
   });
 }
+
+test("server-rendered narrow Module exposes its visible Lesson link", async ({
+  browser,
+}, testInfo) => {
+  const context = await browser.newContext({
+    baseURL: testInfo.project.use.baseURL,
+    javaScriptEnabled: false,
+    serviceWorkers: "block",
+    viewport: { width: 390, height: 844 },
+  });
+  const serverRenderedPage = await context.newPage();
+
+  try {
+    await serverRenderedPage.goto("./courses/markdown/modules/osnovy/");
+    await serverRenderedPage
+      .getByRole("link", { name: /Знакомство с Markdown/ })
+      .first()
+      .click({ timeout: 1_000 });
+    await expect(serverRenderedPage).toHaveURL(
+      /\/courses\/markdown\/lessons\/vvedenie\/$/,
+    );
+  } finally {
+    await context.close();
+  }
+});
 
 test("Module Overview bridges the previous Module Checkpoint to its first Lesson", async ({
   page,
