@@ -5,6 +5,7 @@ const contracts = {
   "brief.md": {
     heading: "# Course Brief",
     marker: "## Learner Profile",
+    status: "Статус: замысел зафиксирован; делегированное создание курса активно",
     sections: [
       ["Learner Profile", "Defined by this focused contract fixture's Course metadata."],
       ["Scope", "Limited to the one validator behavior named by the fixture."],
@@ -14,12 +15,13 @@ const contracts = {
       ["Source Policy", "Repository contract behavior is the primary source."],
       ["Accessibility and safety constraints", "Semantic text remains the required fallback."],
       ["Accepted assumptions and unresolved risks", "No independent expert review was performed."],
-      ["Approval record", "Course Owner approved this focused contract fixture."],
+      ["Decision record", "No unresolved Critical Decision blocks this focused contract fixture."],
     ],
   },
   "blueprint.md": {
     heading: "# Course Blueprint",
     marker: "## Concept map",
+    status: "Статус: проект курса проверен; делегированное создание курса активно",
     sections: [
       ["Concept map", "Represented by the fixture's focused Course tree."],
       ["Sequence", "Lesson, Module Checkpoint, then Capstone Demonstration."],
@@ -34,6 +36,7 @@ const contracts = {
   "quality-report.md": {
     heading: "# Quality report",
     marker: "## Outcome Alignment audit",
+    status: "Статус: независимый ИИ-аудит завершён; критических и существенных замечаний нет",
     sections: [
       ["Outcome Alignment audit", "Result is asserted by the fixture's public-validator test."],
       ["Coverage and dependency checks", "Result is asserted by the fixture's public-validator test."],
@@ -42,14 +45,14 @@ const contracts = {
       ["Source, version, jurisdiction and freshness", "Result is asserted with an injected validation date."],
       ["Accessibility and render-QA scope", "Semantic behavior remains part of fixture acceptance."],
       ["Validation record", "The fixture runs only through the public validation entry point."],
+      ["Independent Course Audit", "A fresh-context audit rechecked this fixture's contract evidence and found no critical findings."],
       ["Remaining limitations", "No independent expert review was performed."],
     ],
   },
 };
 
 const versionPattern = /^(?:Version|Версия)\s*:?\s*[1-9]\d*\b/im;
-const approvalPattern =
-  /^(?:Status|Статус)\s*:\s*(?:(?:approved|одобрен(?:а|о|ы)?)(?=\s|[.;,]|$).*Course Owner|Course Owner approval.*(?:recorded|зафиксирован))/im;
+const statusPattern = /^(?:Status|Статус)\s*:/im;
 
 async function completeArtifact(file, contract) {
   let source;
@@ -73,8 +76,8 @@ async function completeArtifact(file, contract) {
       `${contract.heading}\n\nVersion 1.`,
     );
   }
-  if (!approvalPattern.test(source)) {
-    source = `${source.trimEnd()}\n\nStatus: approved by Course Owner for contract-fixture use.\n`;
+  if (!statusPattern.test(source)) {
+    source = `${source.trimEnd()}\n\n${contract.status}\n`;
   }
   if (!source.includes(contract.marker)) {
     const sections = contract.sections

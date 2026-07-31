@@ -1953,7 +1953,7 @@ const authoringArtifactContracts = {
       ["Source Policy", /^##\s+.*Source Policy/im],
       ["Accessibility and safety constraints", /^##\s+.*Accessibility.*(?:safety|constraints)/im],
       ["assumptions and unresolved risks", /^##\s+.*assumptions.*risks/im],
-      ["Approval record", /^##\s+.*Approval record/im],
+      ["Decision record", /^##\s+.*(?:Decision record|Approval record)/im],
     ],
   },
   blueprint: {
@@ -1986,21 +1986,49 @@ const authoringArtifactContracts = {
   },
 };
 
-function hasApprovedArtifactStatus(source) {
+const delegatedArtifactStatusPatterns = {
+  brief:
+    /(?:intent\s+recorded.*delegated\s+authoring|замысел\s+зафиксирован.*делегированн[а-яё]*\s+создани[а-яё]*\s+курс[а-яё]*)/i,
+  blueprint:
+    /(?:course\s+blueprint\s+verified.*delegated\s+authoring|проект\s+курс[а-яё]*\s+проверен.*делегированн[а-яё]*\s+создани[а-яё]*\s+курс[а-яё]*)/i,
+  qualityReport:
+    /(?:independent\s+AI\s+audit\s+(?:is\s+)?complete(?:d)?.*no\s+unresolved\s+critical\s+or\s+material\s+findings|независим[а-яё]*\s+ИИ-аудит\s+заверш[её]н.*критическ[а-яё]*\s+и\s+существенн[а-яё]*\s+замечани[а-яё]*\s+(?:нет|не\s+выявлено|не\s+осталось))/i,
+};
+
+function getArtifactReadiness(source, contractName) {
   const status = source.match(/^(?:Status|Статус)\s*:\s*(.+)$/im)?.[1].trim();
-  if (!status) return false;
+  if (!status) return undefined;
   if (
-    /\b(?:not|pending|unapproved|disapproved|rejected)\b|не\s+одобрен|ожида/i.test(
-      status,
-    )
+    /\b(?:not|pending|unapproved|disapproved|rejected|blocked|draft)\b|не\s+(?:одобрен|заверш[её]н|готов|проверен)|ожида|отклон|заблок|чернов/i.test(status)
   ) {
-    return false;
+    return undefined;
   }
-  return (
+  if (
     /^(?:approved|одобрен(?:а|о|ы)?)(?=\s|[.;,]|$).*Course Owner/i.test(
       status,
     ) ||
     /Course Owner approval.*(?:recorded|зафиксирован)/i.test(status)
+  ) {
+    return "legacy-owner-approved";
+  }
+  if (delegatedArtifactStatusPatterns[contractName]?.test(status)) {
+    return "delegated-ready";
+  }
+  return undefined;
+}
+
+function hasIndependentCourseAuditSection(source) {
+  const heading = source.match(
+    /^##\s+.*(?:Independent Course Audit|Независим[а-яё]*\s+ИИ-аудит)/im,
+  );
+  if (!heading) return false;
+  const afterHeading = source.slice((heading.index ?? 0) + heading[0].length);
+  const nextSectionIndex = afterHeading.search(/^#{1,2}\s+/m);
+  return Boolean(
+    afterHeading
+      .slice(0, nextSectionIndex === -1 ? afterHeading.length : nextSectionIndex)
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .trim(),
   );
 }
 
@@ -2042,10 +2070,11 @@ async function validateArtifact(
     if (!/^(?:Version|Версия)\s*:?\s*[1-9]\d*\b/im.test(artifactSource)) {
       report(file, `${contract.name} must declare a positive Version`);
     }
-    if (!hasApprovedArtifactStatus(artifactSource)) {
+    const readiness = getArtifactReadiness(artifactSource, contractName);
+    if (!readiness) {
       report(
         file,
-        `${contract.name} must record an explicitly approved Course Owner status`,
+        `${contract.name} must record a ready delegated-authoring or legacy Course Owner status`,
       );
     }
     for (const [section, pattern] of contract.sections) {
@@ -2069,6 +2098,16 @@ async function validateArtifact(
       if (!sectionContent) {
         report(file, `${contract.name} ${section} section must not be empty`);
       }
+    }
+    if (
+      contractName === "qualityReport" &&
+      readiness === "delegated-ready" &&
+      !hasIndependentCourseAuditSection(artifactSource)
+    ) {
+      report(
+        file,
+        "delegated quality report requires a non-empty Independent Course Audit section",
+      );
     }
     if (
       contractName === "qualityReport" &&

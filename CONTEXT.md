@@ -73,7 +73,7 @@ The authentic final performance through which a learner can demonstrate the Cour
 _Avoid_: Final quiz, mandatory project, exam
 
 **Authoring Agent**:
-A provider-independent AI agent that creates or changes versioned course source through the course authoring contract before the platform is built and deployed. It neither owns presentation nor runs for learners.
+A provider-independent AI agent that researches, creates, verifies, or changes versioned course source through the course authoring contract. It owns evidence-based authoring decisions but neither owns presentation nor supplies the Course Owner's product judgments.
 _Avoid_: Runtime agent, learner agent, course generator
 
 **Semantic Course Component**:
@@ -93,20 +93,32 @@ A diagram, chart, table, or image selected because it reduces the effort of unde
 _Avoid_: Decoration, visual quota, unexplained image
 
 **Course Owner**:
-The person who agrees a Course's audience, scope, Learning Outcomes, and quality criteria with the Authoring Agent, then accepts its design. The Course Owner may be a software developer, educator, or subject-matter expert.
+The person who supplies a Course's product intent and makes Critical Decisions that evidence alone cannot resolve. The Course Owner may contribute a lay reading but is not presumed to be a subject-matter expert or the Course's full quality reviewer.
 _Avoid_: Developer, requester, user
 
+**Delegated Authoring**:
+The default collaboration mode in which the Authoring Agent owns researchable factual and instructional decisions while the Course Owner is consulted only for Critical Decisions. It replaces mandatory human approval at every authoring stage without permitting silent changes to scope or Learning Outcomes.
+_Avoid_: Unsupervised generation, AI approval, automatic publication
+
+**Critical Decision**:
+A choice that evidence cannot resolve reliably and whose viable answers materially change the Course's audience, scope, Learning Outcomes, safety, factual risk, cost, jurisdiction, irreversible dependencies, or value trade-offs. It is the only decision type that Delegated Authoring must escalate to the Course Owner.
+_Avoid_: Clarifying question, preference check, fact lookup
+
 **Course Brief**:
-The versioned, non-learner-facing, Course Owner-approved definition of a Course's learner, application context, entry capabilities, scope and exclusions, Learning Outcomes, evidence of learning, time budget, sources, and constraints. The Authoring Agent does not design the Course structure until this shared understanding is confirmed.
+The versioned, non-learner-facing record of a Course's learner, application context, entry capabilities, scope and exclusions, Learning Outcomes, evidence of learning, time budget, sources, constraints, assumptions, and Critical Decisions. It is ready when its intent is coherent and no unresolved Critical Decision blocks design.
 _Avoid_: Prompt, request, topic description
 
 **Course Blueprint**:
-The versioned, non-learner-facing, Course Owner-approved map from concepts and dependencies to Modules, Lessons, checks, Cumulative Retrieval, time estimates, and the Capstone Demonstration. It demonstrates coverage and sequence before Lesson content is authored.
+The versioned, non-learner-facing map from concepts and dependencies to Modules, Lessons, checks, Cumulative Retrieval, time estimates, and the Capstone Demonstration. The Authoring Agent verifies its coverage, sequence, and constraints before Lesson content is authored.
 _Avoid_: Table of contents, draft Course, lesson list
 
 **Reference Lesson**:
-A representative Lesson approved after the Course Blueprint to calibrate depth, pacing, voice, examples, interactions, and visuals before the remaining content is authored. The Course Owner may explicitly skip it for a small Course.
+A representative Lesson used after the Course Blueprint to calibrate depth, pacing, voice, examples, interactions, and visuals before the remaining content is authored. Calibration uses Authoring Agent review and target-learner evidence when practical; Course Owner approval is optional.
 _Avoid_: First lesson, template, prototype Course
+
+**Independent Course Audit**:
+A fresh-context AI review that starts from the Course requirements and authoritative sources, then independently checks the completed draft's facts, learning design, answers, Russian, safety, and accessibility. It is neither Authoring Agent self-review nor independent expert review.
+_Avoid_: AI approval, expert review, final proof
 
 **Source Policy**:
 The Course Brief's hierarchy of acceptable evidence, jurisdiction, version and freshness requirements, and citation placement. It distinguishes primary authority from commentary and verified fact from simplification, opinion, and simulated cases.

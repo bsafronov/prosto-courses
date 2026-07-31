@@ -2073,7 +2073,7 @@ for (const [fixture, example] of fencedExamples) {
   });
 }
 
-test("requires versioned, approved, structurally complete authoring artifacts", async () => {
+test("requires versioned, ready, structurally complete authoring artifacts", async () => {
   await withChangedValidCourse(
     {
       "_authoring/brief.md": (source) => source.replace("Version 1.", ""),
@@ -2114,7 +2114,7 @@ test("rejects empty artifact sections and ignores headings inside examples", asy
 \`\`\`md
 ## Outcome Alignment
 
-Example content is not an approved Blueprint section.
+Example content is not a valid Blueprint section.
 \`\`\`
 `,
     },
@@ -2132,49 +2132,49 @@ Example content is not an approved Blueprint section.
   );
 });
 
-test("rejects negated, disapproved, or pending artifact statuses", async () => {
+test("rejects negated or pending delegated-authoring statuses", async () => {
   await withChangedValidCourse(
     {
       "_authoring/brief.md": (source) =>
         source.replace(
-          "Status: approved by Course Owner for contract-fixture use.",
-          "Status: not approved by Course Owner.",
+          "Статус: замысел зафиксирован; делегированное создание курса активно",
+          "Статус: замысел не зафиксирован; делегированное создание курса активно",
         ),
       "_authoring/blueprint.md": (source) =>
         source.replace(
-          "Status: approved by Course Owner for contract-fixture use.",
-          "Status: disapproved by Course Owner.",
+          "Статус: проект курса проверен; делегированное создание курса активно",
+          "Статус: проект курса не проверен; делегированное создание курса активно",
         ),
       "_authoring/quality-report.md": (source) =>
         source.replace(
-          "Status: approved by Course Owner for contract-fixture use.",
-          "Status: Course Owner approval pending.",
+          "Статус: независимый ИИ-аудит завершён; критических и существенных замечаний нет",
+          "Статус: независимый ИИ-аудит ожидает запуска",
         ),
     },
     (result) => {
       assert.notEqual(result.exitCode, 0);
       assert.match(
         result.output,
-        /brief\.md: Course Brief must record an explicitly approved Course Owner status/i,
+        /brief\.md: Course Brief must record a ready delegated-authoring or legacy Course Owner status/i,
       );
       assert.match(
         result.output,
-        /blueprint\.md: Course Blueprint must record an explicitly approved Course Owner status/i,
+        /blueprint\.md: Course Blueprint must record a ready delegated-authoring or legacy Course Owner status/i,
       );
       assert.match(
         result.output,
-        /quality-report\.md: quality report must record an explicitly approved Course Owner status/i,
+        /quality-report\.md: quality report must record a ready delegated-authoring or legacy Course Owner status/i,
       );
     },
   );
 });
 
-test("requires Course Owner to be the recorded artifact approver", async () => {
+test("rejects Authoring Agent self-approval as an artifact status", async () => {
   await withChangedValidCourse(
     {
       "_authoring/brief.md": (source) =>
         source.replace(
-          "Status: approved by Course Owner for contract-fixture use.",
+          "Статус: замысел зафиксирован; делегированное создание курса активно",
           "Status: approved by Authoring Agent.",
         ),
     },
@@ -2182,7 +2182,51 @@ test("requires Course Owner to be the recorded artifact approver", async () => {
       assert.notEqual(result.exitCode, 0);
       assert.match(
         result.output,
-        /brief\.md: Course Brief must record an explicitly approved Course Owner status/i,
+        /brief\.md: Course Brief must record a ready delegated-authoring or legacy Course Owner status/i,
+      );
+    },
+  );
+});
+
+test("accepts legacy Course Owner approval statuses", async () => {
+  await withChangedValidCourse(
+    {
+      "_authoring/brief.md": (source) =>
+        source.replace(
+          "Статус: замысел зафиксирован; делегированное создание курса активно",
+          "Status: approved by Course Owner for legacy contract use.",
+        ),
+      "_authoring/blueprint.md": (source) =>
+        source.replace(
+          "Статус: проект курса проверен; делегированное создание курса активно",
+          "Status: approved by Course Owner for legacy contract use.",
+        ),
+      "_authoring/quality-report.md": (source) =>
+        source.replace(
+          "Статус: независимый ИИ-аудит завершён; критических и существенных замечаний нет",
+          "Status: approved by Course Owner for legacy contract use.",
+        ),
+    },
+    (result) => {
+      assert.equal(result.exitCode, 0, result.output);
+    },
+  );
+});
+
+test("requires a recorded Independent Course Audit for delegated release", async () => {
+  await withChangedValidCourse(
+    {
+      "_authoring/quality-report.md": (source) =>
+        source.replace(
+          "## Independent Course Audit",
+          "## Secondary review",
+        ),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /delegated quality report requires a non-empty Independent Course Audit section/i,
       );
     },
   );

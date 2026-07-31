@@ -2,11 +2,16 @@
 
 An Authoring Agent creates or changes versioned Course source through this provider-independent contract. It does not import layouts, navigation, progress controls, styles, scripts, or application components. The platform owns presentation and learner-state behavior.
 
-All learner-facing content is Russian. Use the domain language from `CONTEXT.md` consistently.
+All learner-facing content is idiomatic Russian written for the recorded Learner
+Profile. Plain language means that this learner can find the needed idea, understand
+it, and use it; it does not mean deleting necessary precision or writing for an
+imagined universal audience. Write Russian as Russian rather than as a visible
+translation from another language. Use the domain language from `CONTEXT.md`
+consistently.
 
 ## What a complete Course means
 
-A Course is complete relative to its approved Learner Profile, scope, and Learning Outcomes. It is complete when a learner with the stated entry capabilities can:
+A Course is complete relative to its recorded Learner Profile, scope, and Learning Outcomes. It is complete when a learner with the stated entry capabilities can:
 
 - demonstrate every Learning Outcome in a realistic new situation;
 - handle the important normal cases;
@@ -17,19 +22,37 @@ Completeness does not mean exhausting everything known about a topic. If the req
 
 ## Collaboration with the Course Owner
 
-The Course Owner is the only person who approves design decisions. The Authoring Agent must establish shared understanding before authoring content.
+Delegated Authoring is the default collaboration mode. The Course Owner supplies
+the learner's need, product intent, known constraints, and value judgments. The
+Course Owner is not expected to be a subject-matter expert or to verify every fact,
+explanation, or instructional choice. The Authoring Agent owns research, source
+verification, terminology, sequence, pedagogy, examples, assessment alignment,
+plain Russian, and quality control.
 
-For every material decision:
+Do not turn uncertainty into a questionnaire. Inspect the repository, available
+Capability Packs, and authoritative sources first. Resolve evidence-based and
+reversible low-impact choices autonomously, then record the evidence or assumption
+in the Course Brief, Course Blueprint, or quality report.
 
-1. Inspect the repository, available Capability Packs, and authoritative sources first.
-2. Do not ask the Course Owner for facts that can be established reliably.
-3. Ask one decision question at a time.
-4. Recommend an answer and explain its important consequences.
-5. Record the accepted answer immediately in the Course Brief or Course Blueprint.
-6. State any low-impact assumptions explicitly.
-7. Stop when a new decision would contradict or materially expand an approved artifact.
+Escalate a Critical Decision only when the answer cannot be established reliably and
+at least one option would materially change:
 
-The Course Owner may explicitly delegate a decision. Delegation is not permission to change the Course scope or Learning Outcomes silently.
+- the Learner Profile, scope, Learning Outcomes, or evidence required by the Capstone;
+- safety, factual risk, jurisdiction, cost, or an irreversible platform dependency;
+- a value judgment, product preference, or trade-off that belongs to the Course Owner;
+- the treatment of a consequential conflict between authoritative sources.
+
+Ask no more than one Critical Decision at a time. Use a short decision card containing:
+
+1. the question in one sentence;
+2. the Authoring Agent's recommended default;
+3. only the consequences that distinguish the viable options;
+4. the safe fallback that will be used if no answer arrives, when such a fallback exists.
+
+If there is a safe default, proceed and record it as an assumption. If there is no
+safe default, pause only the work that depends on the decision. Never change the
+Course scope or Learning Outcomes silently. The Course Owner may request explicit
+review at any workflow stage, but such review is not a default publication gate.
 
 ## Required authoring workflow
 
@@ -43,7 +66,7 @@ Before asking design questions:
 - confirm which Capability Packs the platform supports;
 - identify safety, accessibility, and factual-risk concerns.
 
-### 2. Agree the Course Brief
+### 2. Record the Course Brief
 
 Create `_authoring/brief.md`. It is versioned but never learner-facing. It must contain:
 
@@ -56,10 +79,18 @@ Create `_authoring/brief.md`. It is versioned but never learner-facing. It must 
 - the total time budget and target Course Depth;
 - required Capability Packs;
 - the Source Policy, jurisdiction, versions, and Content Freshness policy;
+- the Russian register, required terms, and source-language or localization risks;
 - accessibility or safety constraints;
-- accepted assumptions and unresolved risks.
+- accepted assumptions and unresolved risks;
+- Critical Decisions, their answers or safe defaults, and any decisions still blocking
+  dependent work.
 
-Do not design the Course structure until the Course Owner explicitly approves the Course Brief.
+Record the last item in a non-empty `## Decision record` section. The validator also
+accepts the legacy `## Approval record` heading for existing Courses.
+
+Do not design the Course structure until the Brief records a coherent intent and no
+unresolved Critical Decision blocks design. Explicit Course Owner approval is not
+required in Delegated Authoring.
 
 Course Brief frontmatter classifies the Course's factual risk:
 
@@ -78,7 +109,7 @@ classification, not an expert-review claim. Do not add approval or reviewer
 credentials to the Course Brief. When Capability Packs are required, confirm
 the same exact dependencies in Course Brief and Course metadata.
 
-### 3. Agree the Course Blueprint
+### 3. Verify the Course Blueprint
 
 Create `_authoring/blueprint.md`. It is versioned but never learner-facing. It must contain:
 
@@ -90,39 +121,78 @@ Create `_authoring/blueprint.md`. It is versioned but never learner-facing. It m
 - Outcome Alignment from every Learning Outcome to instruction, practice, Module Checkpoints, and Capstone criteria;
 - the Instructional Scaffolding plan;
 - the Cumulative Retrieval plan;
+- the explanation plan for difficult concepts, including concrete cases, causal
+  models, necessary terms, boundaries, and likely misconceptions;
 - study, practice, and optional advanced time estimates;
 - a coverage audit for gaps, duplication, overload, and unnecessary material.
 
 Design backward from the Capstone Demonstration. Do not begin by making a list of topics and adding a final project afterward.
 
-Do not author Lessons until the Course Owner explicitly approves the Course Blueprint.
+Before authoring Lessons, the Authoring Agent verifies that the Blueprint covers every
+Learning Outcome, respects dependencies and workload, and contains no unresolved
+Critical Decision that blocks authoring. Course Owner approval is optional.
 
-### 4. Agree a Reference Lesson
+### 4. Calibrate a Reference Lesson
 
 Author one representative Lesson, preferably from the middle of the Course. It should exercise the planned depth, explanation, practice, feedback, interaction, and visual language.
 
-Ask the Course Owner to approve:
+Audit the Reference Lesson for:
 
 - depth and pacing;
 - Russian voice and terminology;
+- target-learner comprehension evidence, including whether the central explanation
+  can be retold and used without copying its wording;
+- natural Russian localization when sources use another language;
 - example quality;
 - interaction density;
 - visual treatment;
 - the balance between guidance and independent work.
 
-The Course Owner may explicitly skip this gate for a small Course.
+When practical, run the target-learner comprehension probe described below. The
+Course Owner's lay reading may reveal unnatural language or a broken explanation and
+is useful evidence, but it is not the sole quality test. Escalate only a Critical
+Decision. A small Course may record why a separate Reference Lesson was unnecessary.
 
 ### 5. Author the Course Module by Module
 
-After Reference Lesson approval:
+After Reference Lesson calibration:
 
 - author Modules in dependency order;
 - validate and self-review each Module before continuing;
 - update Cumulative Retrieval as earlier material becomes available;
-- continue autonomously unless a new material decision is discovered;
+- continue autonomously unless a new Critical Decision is discovered;
 - never invent a component, source, requirement, or Course Owner decision.
 
-### 6. Complete the quality report
+### 6. Run an Independent Course Audit
+
+After the full draft is complete, start a separate audit in a fresh agent context. Give
+the auditor the Course Brief, Course Blueprint, Course source, Source Policy, and
+platform contract. Do not ask it merely to agree with the Authoring Agent's summary.
+The auditor begins from the requirements and sources, then checks the draft.
+
+The audit must:
+
+- independently verify every consequential or time-sensitive claim and a representative
+  sample of lower-risk claims against authoritative sources;
+- verify every deterministic answer, worked solution, and Capstone rubric by solving
+  or tracing it rather than trusting the authored answer;
+- check Outcome Alignment, prerequisites, coverage, cognitive load, scaffolding, and
+  transfer to a changed case;
+- run the plain-Russian, translation, terminology, and read-aloud audits;
+- check accessibility, safety boundaries, jurisdiction, versions, and freshness;
+- classify findings as `critical`, `material`, or `minor`, cite evidence, and propose
+  a concrete correction.
+
+The Authoring Agent fixes critical and material findings, records the disposition of
+minor findings, and reruns affected checks. A critical finding blocks release. A
+material disagreement between authoritative sources becomes a Critical Decision only
+when research cannot resolve it and product judgment is required.
+
+An Independent Course Audit is stronger than Authoring Agent self-review, but it is
+still an AI audit. It must never be represented as independent expert review, field
+validation, or proof that no error remains.
+
+### 7. Complete the quality report
 
 Create `_authoring/quality-report.md` with:
 
@@ -130,21 +200,38 @@ Create `_authoring/quality-report.md` with:
 - coverage and dependency checks;
 - checks of every deterministic answer and every worked solution;
 - a practice-solvability review;
+- the plain-Russian audit and any target-learner comprehension findings;
 - source, version, jurisdiction, and Content Freshness checks;
 - accessibility and render-QA findings;
 - validator and build results;
+- the Independent Course Audit method, fresh-context auditor, sources rechecked,
+  findings by severity, corrections, and rerun results;
 - remaining limitations and the absence of independent expert review, when relevant.
 
-The Course Owner approves the completed Course after reviewing this report.
+Record the audit in a non-empty `## Independent Course Audit` or
+`## Независимый ИИ-аудит` section.
+
+Release the Course when validation passes, the Independent Course Audit has no
+unresolved critical or material findings, and no Critical Decision remains blocked.
+Give the Course Owner a concise release summary: what the Course now teaches, audit
+result, remaining high-risk limitations, and only the Critical Decisions that still
+need an answer. Full Course Owner approval is optional.
 
 The public validator treats these as structured artifacts, not placeholder
 files. Each uses its documented level-one heading, a positive `Version` or
-`Версия`, an explicitly approved `Status` or `Статус`, and non-empty level-two
-sections named above. Headings inside fenced examples do not satisfy the
-artifact contract. The status must name the Course Owner as the approver;
-Authoring Agent self-review is not approval. The Blueprint also records
-Reference Lesson calibration and workload; the quality report also records its
-validation run and remaining limitations.
+`Версия`, a ready `Status` or `Статус`, and non-empty level-two sections named
+above. Headings inside fenced examples do not satisfy the artifact contract. New
+delegated artifacts use these states:
+
+- Brief: `Статус: замысел зафиксирован; делегированное создание курса активно`;
+- Blueprint: `Статус: проект курса проверен; делегированное создание курса активно`;
+- quality report: `Статус: независимый ИИ-аудит завершён; критических и существенных замечаний нет`.
+
+Legacy Course Owner approvals remain valid. `Approved by Authoring Agent` is not a
+valid substitute: Authoring Agent self-review is neither owner approval nor an
+Independent Course Audit. The Brief records decisions and assumptions; the Blueprint
+records Reference Lesson calibration and workload; the quality report records its
+independent audit, validation run, and remaining limitations.
 
 ## Target directory convention
 
@@ -320,16 +407,144 @@ Each Lesson follows the Learning Cycle. The functions are required, but fixed he
 
 ## Pedagogical rules
 
+The evidence and editorial rationale for these rules is recorded in
+[`research/plain-language-course-authoring.md`](research/plain-language-course-authoring.md).
+
 ### Explain simply without distorting
 
-- Begin with the learner's problem or decision, not a dictionary definition.
-- Introduce an intuitive model before formal terminology when that reduces cognitive load.
-- Name and define each necessary term at first use, then use it consistently.
-- Explain causal relationships, not merely procedures.
-- State where a simplification or analogy stops working.
-- Exclude internal detail that does not affect the Learning Outcomes, or mark it `advanced`.
+Plain language is an outcome for the Learner Profile, not a readability score, a
+sentence-length target, or a list of forbidden words. Preserve difficulty inherent in
+the subject. Remove difficulty created by poor order, missing context, indirect syntax,
+and unexplained terminology.
 
-Course Depth means sufficient causal understanding, application, boundary recognition, and trade-off reasoning for the approved Learner Profile. It does not mean maximum detail.
+- Begin with the learner's concrete problem, question, or decision, not a dictionary
+  definition or the history of the topic.
+- Give the shortest accurate answer early, then explain why it is true and when it is
+  useful.
+- Introduce prerequisite ideas before using them. Present one conceptual step at a
+  time and make the connection to the previous step explicit.
+- Show a representative concrete case. Map each important object, action, and result
+  in the case to the general model.
+- Introduce an intuitive model before formal terminology when that reduces cognitive
+  load. For each necessary new term, give a familiar-language explanation, the exact
+  term, its role or distinguishing feature, a representative example, and a nearby
+  non-example when confusion is likely. Then use the term consistently.
+- Explain causes and decisions, not merely procedures. Make relations such as
+  condition, cause, consequence, contrast, and exception explicit.
+- Follow a core case with a contrast or boundary case that differs in one important
+  way. State where every simplification or analogy stops working.
+- Keep an exception near the rule when it changes the learner's immediate action.
+  Move nonessential nuance to `advanced` content.
+- Remove anecdotes, decoration, and interesting facts that do not improve the mental
+  model, resolve a misconception, or support a Learning Outcome.
+
+These functions do not require fixed headings or the same sequence in every Lesson.
+Use the smallest explanation that lets the learner reason and act accurately.
+
+Course Depth means sufficient causal understanding, application, boundary recognition, and trade-off reasoning for the recorded Learner Profile. It does not mean maximum detail.
+
+### Write idiomatic plain Russian
+
+Draft from meaning, not from source-language syntax. When a source is not Russian,
+first establish its claim, intent, and logical relations; then express them as a Russian
+author would. Do not preserve source sentence boundaries, word order, parts of speech,
+pronouns, idioms, metaphors, or punctuation merely because they appear in the source.
+After rewriting, compare every fact, condition, and applicability boundary with the
+source, and verify required terminology against an authoritative domain glossary.
+
+- Put the paragraph's answer or main claim before supporting detail when the learner
+  does not need the detail to understand it. Give each paragraph one logical move.
+- Prefer a visible actor and a finite verb to a chain of abstract nouns. Name who does
+  what unless the actor is unknown, irrelevant, or deliberately omitted to avoid
+  blaming the learner.
+- Prefer active voice when it makes the actor and action clearer. Use passive voice
+  when the result matters more than the actor or when active voice becomes awkward.
+- Prefer familiar, specific Russian words to formal calques when both are equally
+  accurate. Keep an exact professional term when the learner must recognize or use it;
+  explain it through known words and a concrete case instead of replacing it with an
+  inaccurate everyday synonym.
+- Use the same term for the same concept. Do not vary terminology merely to avoid
+  repetition.
+- Prefer one main assertion per sentence. Split nested clauses, long parenthetical
+  remarks, and multiple unrelated enumerations, but do not chop connected thought
+  into artificial fragments.
+- Keep the actor, action, and object close enough to parse without holding a long
+  insertion in memory. Unpack long chains of dependent nouns, especially consecutive
+  genitive constructions, with a verb, preposition, or separate sentence.
+- Use ordinary conjunctions and pronouns when they make relations natural and clear.
+  Do not remove them mechanically for brevity.
+- Write headings that let the learner predict the question, object, decision, or action
+  below. Prefer a verb when the learner action is central, but do not force every
+  heading into an imperative or infinitive.
+- Address the learner as `ты`. Use an imperative for a real step, not for every
+  explanatory sentence.
+
+Edit constructions by function, not by keyword:
+
+| Avoid when it hides the action | Prefer when meaning is unchanged |
+| --- | --- |
+| `Для осуществления проверки выполни следующие действия` | `Чтобы проверить, сделай следующее` |
+| `Данный способ обеспечивает возможность определить ошибку` | `Этот способ помогает найти ошибку` |
+| `При наличии необходимости изменить значение...` | `Если нужно изменить значение...` |
+| `После выполнения сохранения данные обновляются` | `Когда ты сохраняешь документ, данные обновляются` |
+
+Words such as `данный`, `является`, `осуществлять`, `посредством`, verbal nouns,
+participles, and passive constructions are warning signs, not automatic errors. Keep
+one when it is the clearest accurate choice in context.
+
+### Control Russian–English switching
+
+Learner-facing explanations, headings, instructions, feedback, examples, and authored
+metadata are Russian whenever an accurate natural Russian expression exists. An
+English source, skill, prompt, or internal agent vocabulary does not justify English
+prose in the Course.
+
+Keep the original language when it carries identity or exact operational meaning:
+
+- an official name of a person, organization, company, product, library, framework,
+  standard, or publication without an established official Russian form;
+- code, commands, identifiers, API names, file paths, configuration keys, and data
+  field names;
+- an exact interface label that the learner must find, especially when the declared
+  interface language is English;
+- a quotation or bibliographic title when its original form matters.
+
+Do not translate or transliterate a company or product name arbitrarily. Use its
+official Russian form when one exists; otherwise preserve the original, for example
+`OpenAI`, not `Открытый ИИ`. When an English professional term helps the learner search
+sources, recognize software, or communicate in the field, introduce it once after the
+Russian term, for example `извлечение из памяти (retrieval practice)`. Continue with
+the Russian term unless the English token itself is the object of instruction.
+
+Avoid mixed sentences such as `Сделай retrieval practice и получи feedback` when
+`Попробуй извлечь материал из памяти и получи обратную связь` preserves the meaning.
+Do not alternate English and Russian synonyms for stylistic variety, duplicate every
+heading in two languages, or leave English scaffolding copied from authoring artifacts.
+If an exact English interface label is necessary, keep the surrounding instruction in
+Russian: `Нажми Run`, not `Click Run`.
+
+### Revise for comprehension
+
+Use separate review passes so surface editing does not conceal a broken explanation:
+
+1. **Accuracy:** verify facts, causal model, examples, boundaries, and terminology.
+2. **Structure:** check that learner need comes first, prerequisites precede use, and
+   headings expose the path through the explanation.
+3. **Russian:** remove literal translation, unnecessary English switching,
+   bureaucratic scaffolding, hidden actors, noun chains, ambiguous references, and
+   needlessly nested syntax.
+4. **Read aloud:** rewrite every place where natural speech stumbles, then confirm that
+   no meaning or logical link disappeared.
+5. **Learner probe:** ask a person matching the Learner Profile to find the needed
+   idea, explain it in their own words, and use it in a small changed case. Record where
+   they hesitate, infer the wrong relation, or cannot act; revise and retest when the
+   finding is consequential.
+
+Run the learner probe on the Reference Lesson and on other high-risk explanations
+when practical. If no matching learner is available, record that limitation in the
+quality report. Course Owner approval, an Authoring Agent self-review, automated
+readability metrics, and a request such as “Всё понятно?” do not demonstrate learner
+comprehension.
 
 ### Scaffold and then remove support
 
@@ -342,6 +557,11 @@ Prefer this progression when the learner is new to a capability:
 5. independent choice and justification of an approach.
 
 For an experienced Learner Profile, compress early stages or use a realistic anti-example. Do not keep showing complete solutions after independent performance is expected.
+
+A worked example normally makes its context and goal, relevant initial data, each
+consequential step, the reason for that step, an intermediate check, the interpreted
+result, and its applicability boundary visible. Omit trivial mechanics that add no
+decision or useful model.
 
 ### Make the learner act
 
@@ -375,6 +595,11 @@ Flashcards are optional. Repetition is a Course-sequence property, not a compone
 
 - Address the learner as `ты` in clear conversational Russian.
 - Be precise without bureaucratic prose or unexplained jargon.
+- Do not dismiss a difficult step with `это просто`, `это легко`, or `это очевидно`.
+  Demonstrate the reasoning and acknowledge prerequisites instead of judging the
+  learner's difficulty. Keep these words when they carry exact domain meaning.
+- Do not imitate children's speech, overexplain common knowledge, or use a childish
+  analogy merely because the Learner Profile is new to the topic.
 - Describe what is wrong with an answer, never what is wrong with the learner.
 - Give specific feedback instead of automatic praise.
 - Acknowledge genuine difficulty without dramatizing it.
@@ -768,7 +993,12 @@ For medical, legal, financial, safety, or other high-risk content:
 - disclose in the quality report when no independent expert reviewed the Course;
 - never claim AI self-review is expert approval.
 
-At the current project stage, Course Owner approval and authoritative sourcing are sufficient; independent expert review is not a publication gate.
+An Independent Course Audit and authoritative sourcing are required, but neither is a
+substitute for an independent expert. Expert review is not a universal publication
+gate; unresolved consequential uncertainty is. For high-risk content, block release
+when sources conflict materially, applicability cannot be bounded, or the AI audit
+cannot verify a consequential claim. Disclose the missing expert review even when the
+remaining uncertainty is bounded.
 
 ### Freshness semantics
 
@@ -817,7 +1047,7 @@ The platform preserves Lesson Completion across a revision but tells the learner
 
 ## Validation and Definition of Done
 
-Run the public validation and build entry points before Course approval:
+Run the public validation and build entry points before Course release:
 
 ```sh
 pnpm validate
@@ -840,7 +1070,7 @@ The target validator must reject:
 - stale high-risk content;
 - presentation imports, custom scripts, styles, layouts, or progress controls.
 
-Technical validity is necessary but not sufficient. Before approval, confirm:
+Technical validity is necessary but not sufficient. Before release, confirm:
 
 - every Learning Outcome is taught, practiced, and demonstrated;
 - dependencies are introduced before use;
@@ -850,11 +1080,21 @@ Technical validity is necessary but not sufficient. Before approval, confirm:
 - support fades toward independent transfer;
 - Cumulative Retrieval is present across the Course;
 - no Lesson is overloaded or padded;
+- each difficult explanation starts from the learner's need, makes its causal or
+  decision model explicit, and tests a changed case;
+- learner-facing prose passes the plain-Russian, translation, and read-aloud audits;
+- every retained non-Russian fragment has an identity, source, interface, or technical
+  reason and uses the authoritative original form;
+- comprehension findings from the Reference Lesson are resolved or their absence is
+  recorded as a limitation;
 - visuals reduce cognitive load and remain understandable without color;
 - claims satisfy the Source Policy;
 - External References are supplemental and the core learning path is self-contained;
 - Russian prose follows the Course Voice;
 - the Capstone genuinely demonstrates all Learning Outcomes.
+
+The Course Owner reviews only the release summary and any unresolved Critical
+Decisions unless they explicitly request a broader review.
 
 ### Render QA
 
