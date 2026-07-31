@@ -13,6 +13,27 @@ function setText(root: ParentNode, selector: string, value: string) {
   if (element) element.textContent = value;
 }
 
+function updatedLessonCopy(count: number) {
+  if (count % 10 === 1 && count % 100 !== 11) return `${count} урок обновлён`;
+  if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) {
+    return `${count} урока обновлено`;
+  }
+  return `${count} уроков обновлено`;
+}
+
+function moduleDestinationIds(element: HTMLElement) {
+  try {
+    const value: unknown = JSON.parse(
+      element.dataset.destinationIds ?? "[]",
+    );
+    return Array.isArray(value)
+      ? value.filter((id): id is string => typeof id === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 function refreshHome(root: HTMLElement) {
   let catalog: HomeCatalogCourse[] = [];
   try {
@@ -40,6 +61,16 @@ function refreshHome(root: HTMLElement) {
     const hasProgress = course.destinations.some(
       ({ id }) => storedDestinations[id] !== undefined,
     );
+    const updatedLessons = course.destinations.filter((destination) => {
+      const stored = storedDestinations[destination.id];
+      return (
+        stored?.state === "completed" &&
+        destination.kind === "lesson" &&
+        typeof stored.completedRevision === "number" &&
+        typeof destination.revision === "number" &&
+        destination.revision > stored.completedRevision
+      );
+    });
     const courseRow = root.querySelector<HTMLElement>(
       `[data-catalog-course="${CSS.escape(course.id)}"]`,
     );
@@ -48,47 +79,43 @@ function refreshHome(root: HTMLElement) {
         courseRow,
         "[data-catalog-progress]",
         completed === course.destinations.length
-          ? `✓ Курс завершён · ${completed} из ${course.destinations.length} завершено`
+          ? `✓ ${completed} из ${course.destinations.length}`
           : hasProgress
             ? `${completed} из ${course.destinations.length} завершено`
             : "Не начат",
       );
+      const updateNotice = courseRow.querySelector<HTMLElement>(
+        "[data-catalog-updates]",
+      );
+      if (updateNotice) {
+        updateNotice.hidden = updatedLessons.length === 0;
+        updateNotice.textContent = updatedLessonCopy(updatedLessons.length);
+      }
       courseRow
-        .querySelectorAll<HTMLElement>("[data-compact-destination]")
-        .forEach((node) => {
-          const id = node.dataset.destinationId ?? "";
-          const stored = storedDestinations[id];
-          const state = stored?.state ?? "not-started";
-          const destination = course.destinations.find(
-            (destination) => destination.id === id,
+        .querySelectorAll<HTMLElement>("[data-progress-module]")
+        .forEach((moduleProgress) => {
+          const ids = moduleDestinationIds(moduleProgress);
+          const moduleCompleted = ids.filter(
+            (id) => storedDestinations[id]?.state === "completed",
+          ).length;
+          moduleProgress.dataset.completed = String(moduleCompleted);
+          moduleProgress.dataset.total = String(ids.length);
+          const fill = moduleProgress.querySelector<HTMLElement>(
+            "[data-progress-module-fill]",
           );
-          const kind = destination?.kind;
-          const revision = destination?.revision;
-          const revisit =
-            state === "completed" &&
-            kind === "lesson" &&
-            typeof stored.completedRevision === "number" &&
-            typeof revision === "number" &&
-            revision > stored.completedRevision;
-          node.dataset.state = state;
-          node.dataset.revisit = String(revisit);
-          node.textContent =
-            revisit
-              ? "↻"
-              : state === "completed"
-              ? "✓"
-              : state === "started"
-                ? kind === "lesson"
-                  ? "●"
-                  : kind === "checkpoint"
-                    ? "◈"
-                    : "▣"
-                : kind === "checkpoint"
-                  ? "◆"
-                  : kind === "capstone"
-                    ? "■"
-                    : "○";
+          if (fill) {
+            fill.style.width = ids.length
+              ? `${(moduleCompleted / ids.length) * 100}%`
+              : "0";
+          }
         });
+      const capstone = courseRow.querySelector<HTMLElement>(
+        "[data-progress-capstone]",
+      );
+      if (capstone) {
+        const id = capstone.dataset.destinationId ?? "";
+        capstone.dataset.state = storedDestinations[id]?.state ?? "not-started";
+      }
       course.destinations.forEach((destination) => {
         const stored = storedDestinations[destination.id];
         const revisit =

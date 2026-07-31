@@ -23,8 +23,11 @@ const courses = await getCourses();
 const catalog = await Promise.all(
   courses.map(async (course) => {
     const tree = await getCourseTree(course.id);
-    const destinations: HomeCatalogDestination[] = tree.modules.flatMap(
-      ({ module, lessons, checkpoint }) => [
+    const progressGroups = tree.modules.map(
+      ({ module, lessons, checkpoint }) => ({
+        id: moduleSlug(module),
+        title: module.data.title,
+        destinations: [
         ...lessons.map((lesson) => ({
           ...lessonDestinationLink(course.id, lesson),
           title: lesson.data.title,
@@ -39,14 +42,19 @@ const catalog = await Promise.all(
           moduleTitle: module.data.title,
           minutes: checkpoint.data.time,
         },
-      ],
+        ],
+      }),
     );
-    destinations.push({
+    const capstone = {
       ...capstoneDestinationLink(course.id),
       title: tree.capstone.data.title,
       capability: course.data.summary,
       minutes: tree.capstone.data.time,
-    });
+    };
+    const destinations: HomeCatalogDestination[] = [
+      ...progressGroups.flatMap((group) => group.destinations),
+      capstone,
+    ];
     return {
       course,
       tree,
@@ -55,6 +63,8 @@ const catalog = await Promise.all(
         0,
       ),
       destinations,
+      progressGroups,
+      capstone,
     };
   }),
 );
@@ -107,7 +117,14 @@ const progressCatalog: HomeCatalogCourse[] = catalog.map(
       <p>{catalog.length} {catalog.length === 1 ? "Курс" : "Курса"}</p>
     </header>
     <ol class="catalog-list" aria-label="Каталог курсов">
-      {catalog.map(({ course, tree, lessonCount, destinations }, index) => (
+      {catalog.map(({
+        course,
+        tree,
+        lessonCount,
+        destinations,
+        progressGroups,
+        capstone,
+      }, index) => (
         <li>
           <article
             aria-labelledby={`course-${course.id}`}
@@ -128,22 +145,30 @@ const progressCatalog: HomeCatalogCourse[] = catalog.map(
               </p>
             </div>
             <div class="catalog-route">
-              <div class="compact-route" aria-hidden="true">
-                {destinations.map((destination) => (
+              <div class="catalog-progress-visual" aria-hidden="true">
+                {progressGroups.map((group) => (
                   <span
-                    class="compact-node"
-                    data-compact-destination
-                    data-destination-id={destination.id}
-                    data-kind={destination.kind}
-                    data-state="not-started"
+                    class="module-segment"
+                    style={`--segment-weight: ${group.destinations.length}`}
+                    data-progress-module
+                    data-module-id={group.id}
+                    data-destination-ids={JSON.stringify(
+                      group.destinations.map(({ id }) => id),
+                    )}
+                    title={group.title}
                   >
-                    {destination.kind === "lesson"
-                      ? "○"
-                      : destination.kind === "checkpoint"
-                        ? "◆"
-                        : "■"}
+                    <span
+                      data-progress-module-fill
+                    ></span>
                   </span>
                 ))}
+                <span
+                  class="capstone-marker"
+                  data-progress-capstone
+                  data-destination-id={capstone.id}
+                  data-state="not-started"
+                  title="Итоговая работа"
+                ></span>
               </div>
               <ol
                 class="sr-only"
@@ -162,6 +187,7 @@ const progressCatalog: HomeCatalogCourse[] = catalog.map(
                 ))}
               </ol>
               <span data-catalog-progress>Не начат</span>
+              <span class="catalog-updates" data-catalog-updates hidden></span>
             </div>
             <a class="catalog-open" href={coursePath(course.id)}>
               Открыть Курс <span aria-hidden="true">→</span>
@@ -261,7 +287,7 @@ const progressCatalog: HomeCatalogCourse[] = catalog.map(
   .catalog-list > li { border-bottom: 1px solid var(--color-border); }
   article {
     display: grid;
-    grid-template-columns: 3rem minmax(0, 1fr) minmax(8rem, auto) auto;
+    grid-template-columns: 3rem minmax(0, 1fr) 12rem auto;
     gap: 1.5rem;
     align-items: start;
     padding-block: 2rem;
@@ -297,49 +323,54 @@ const progressCatalog: HomeCatalogCourse[] = catalog.map(
     font-family: var(--font-mono);
     font-size: .72rem;
   }
-  .compact-route { display: flex; align-items: center; overflow: hidden; }
-  .compact-node {
+  .catalog-progress-visual {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: .3rem;
+  }
+  .module-segment {
     position: relative;
-    z-index: 1;
+    height: 3px;
+    flex: var(--segment-weight) 1 0;
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--color-border);
+  }
+  .module-segment > span {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--color-ink);
+    transition: width 180ms ease-out;
+  }
+  .capstone-marker {
+    position: relative;
     display: grid;
-    width: .95rem;
-    height: .95rem;
+    width: .45rem;
+    height: .45rem;
     flex: 0 0 auto;
     place-items: center;
-    border: 1px solid var(--color-muted);
+    border: 1px solid var(--color-border);
     border-radius: 50%;
-    background: var(--color-canvas);
-    color: var(--color-muted);
-    font-size: .48rem;
   }
-  .compact-node + .compact-node { margin-left: .45rem; }
-  .compact-node + .compact-node::before {
-    position: absolute;
-    z-index: -1;
-    top: calc(50% - .5px);
-    right: 100%;
-    width: .5rem;
-    height: 1px;
-    background: var(--color-border);
-    content: "";
-  }
-  .compact-node[data-kind="checkpoint"],
-  .compact-node[data-kind="capstone"] {
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-  }
-  .compact-node[data-state="started"] {
-    border-color: var(--color-ink);
+  .capstone-marker::after {
+    width: .18rem;
+    height: .18rem;
+    border-radius: 50%;
     background: var(--color-ink);
-    color: var(--color-canvas);
+    content: "";
+    opacity: 0;
+    transform: scale(.5);
+    transition: opacity 180ms ease-out, transform 180ms ease-out;
   }
-  .compact-node[data-state="completed"] {
-    border-color: var(--color-completed-ink);
-    color: var(--color-completed-ink);
+  .capstone-marker[data-state="completed"]::after {
+    opacity: 1;
+    transform: scale(1);
   }
-  .compact-node[data-revisit="true"] {
-    border-color: var(--color-warning);
+  .catalog-updates {
+    margin-top: -.45rem;
     color: var(--color-warning);
   }
   .catalog-open {
@@ -351,7 +382,11 @@ const progressCatalog: HomeCatalogCourse[] = catalog.map(
     white-space: nowrap;
   }
   @media (max-width: 52rem) {
-    article { grid-template-columns: 2rem 1fr; gap: 1rem; }
+    article { grid-template-columns: 2rem minmax(0, 1fr); gap: 1rem; }
     .catalog-route, .catalog-open { grid-column: 2; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .module-segment > span,
+    .capstone-marker::after { transition: none; }
   }
 </style>

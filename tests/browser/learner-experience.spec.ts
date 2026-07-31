@@ -64,6 +64,47 @@ test("Home keeps its primary header controls clear on a narrow screen", async ({
   ).toBeLessThanOrEqual(390);
 });
 
+test("Home fills each Module segment only from completed destinations", async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    localStorage.setItem(
+      "prosto-courses:progress:v1",
+      JSON.stringify({
+        courses: {
+          markdown: {
+            destinations: {
+              "lesson:vvedenie": { state: "completed", visitedAt: 1 },
+              "lesson:source-render": { state: "started", visitedAt: 2 },
+              "lesson:formatting": { state: "completed", visitedAt: 3 },
+              "lesson:portability": { state: "started", visitedAt: 4 },
+            },
+          },
+        },
+      }),
+    );
+  });
+  await page.reload();
+
+  const markdown = page
+    .getByRole("list", { name: "Каталог курсов" })
+    .getByRole("listitem")
+    .filter({ hasText: "Основы Markdown" });
+  await expect(markdown).toContainText("2 из 10 завершено");
+  await expect(markdown.locator('[data-module-id="osnovy"]')).toHaveAttribute(
+    "data-completed",
+    "1",
+  );
+  await expect(markdown.locator('[data-module-id="struktura"]')).toHaveAttribute(
+    "data-completed",
+    "1",
+  );
+  await expect(markdown.locator('[data-module-id="proverka"]')).toHaveAttribute(
+    "data-completed",
+    "0",
+  );
+});
+
 test("Home resumes the newest valid incomplete destination across the Course Catalog", async ({
   page,
 }) => {
@@ -132,6 +173,12 @@ test("Home resumes the newest valid incomplete destination across the Course Cat
   ).toContainText(
     "Заголовки, выделение и списки: Завершено · материал обновлён — повтори",
   );
+  await expect(
+    catalog
+      .getByRole("listitem")
+      .filter({ hasText: "Основы Markdown" })
+      .locator("[data-catalog-updates]"),
+  ).toHaveText("1 урок обновлён");
   await expect(
     catalog
       .getByRole("listitem")
@@ -876,7 +923,7 @@ test("Home shows completed-only progress without inventing a Resume Destination"
       .getByRole("list", { name: "Каталог курсов" })
       .getByRole("listitem")
       .filter({ hasText: "Основы Markdown" }),
-  ).toContainText("✓ Курс завершён · 10 из 10 завершено");
+  ).toContainText("✓ 10 из 10");
 });
 
 test("Home names and navigates directly to every Resume Destination kind", async ({
