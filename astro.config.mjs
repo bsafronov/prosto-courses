@@ -1,8 +1,13 @@
 import mdx from "@astrojs/mdx";
 import { unified } from "@astrojs/markdown-remark";
+import tailwindcss from "@tailwindcss/vite";
 import AstroPWA from "@vite-pwa/astro";
 import { defineConfig } from "astro/config";
 import path from "node:path";
+import {
+  designSystemBuildBudget,
+  tailwindRuntimeGuard,
+} from "./scripts/design-system-build.mjs";
 import {
   MAX_PRECACHE_FILE_BYTES,
   precacheReleaseBudget,
@@ -22,6 +27,9 @@ export default defineConfig({
   base: siteBasePath,
   output: "static",
   trailingSlash: "always",
+  vite: {
+    plugins: [tailwindcss(), tailwindRuntimeGuard()],
+  },
   markdown: {
     processor: unified({
       rehypePlugins: [
@@ -33,6 +41,7 @@ export default defineConfig({
   ...(cacheDir ? { cacheDir } : {}),
   integrations: [
     mdx(),
+    designSystemBuildBudget({ siteBasePath }),
     precacheReleaseBudget(),
     AstroPWA({
       ...(outDir ? { outDir } : {}),
