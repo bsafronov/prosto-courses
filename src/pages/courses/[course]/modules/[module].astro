@@ -2,6 +2,7 @@
 import { getCollection, render, type CollectionEntry } from "astro:content";
 import CourseLessonList from "../../../../components/CourseLessonList.astro";
 import ContentFreshness from "../../../../components/ContentFreshness.astro";
+import LearningPage from "../../../../components/LearningPage.astro";
 import LearningShell from "../../../../components/LearningShell.astro";
 import SequenceDestinationLink from "../../../../components/SequenceDestinationLink.astro";
 import { semanticComponents } from "../../../../components/semantic-components";
@@ -73,11 +74,13 @@ const { Content } = await render(module);
     tree={tree}
     current={{ kind: "module", slug }}
   >
-    <article class="module-content">
-      <header>
-        <p class="eyebrow">Модуль {modulePosition} из {tree.modules.length}</p>
-        <h1>{module.data.title}</h1>
-        <p class="summary">{module.data.summary}</p>
+    <LearningPage
+      eyebrow={`Модуль ${modulePosition} из ${tree.modules.length}`}
+      sequenceLabel="Последовательность курса"
+      title={module.data.title}
+    >
+      <Fragment slot="header-details">
+        <p class="learning-page__summary type-reading">{module.data.summary}</p>
         <WorkloadSummary
           label="Объём Модуля"
           items={[
@@ -87,81 +90,50 @@ const { Content } = await render(module);
         />
         <ContentFreshness state={moduleFreshnessState(course, current)} />
         <a
-          class="button"
+          class="button learning-page__primary-action"
           href={lessonPath(course.id, lessonSlug(current.lessons[0]))}
         >Начать Модуль</a>
-      </header>
-      <div class="prose">
-        <Content components={semanticComponents} />
-        <h2>Что ты сможешь после Модуля</h2>
-        <p>{module.data.capability}</p>
-        <h2>Какие результаты поддерживает Модуль</h2>
-        <ul>
-          {supportedOutcomes.map((outcome) => (
-            <li>{outcome.statement}</li>
-          ))}
-        </ul>
-      </div>
-      <section aria-labelledby="module-lessons-heading">
-        <h2 id="module-lessons-heading">Уроки Модуля</h2>
-        <CourseLessonList
-          courseSlug={course.id}
-          lessons={current.lessons}
-          label="Уроки Модуля"
-        />
-        <a class="checkpoint" href={checkpointPath(course.id, slug)}>
-          {current.checkpoint.data.title} →
-        </a>
-      </section>
-      <nav class="sequence" aria-label="Последовательность курса">
-        {previousModule
-          ? <SequenceDestinationLink
-              destination={checkpointDestinationLink(
-                course.id,
-                moduleSlug(previousModule.module),
-              )}
-            >
-              ← Предыдущая проверка Модуля: {previousModule.checkpoint.data.title}
-            </SequenceDestinationLink>
-          : <a href={coursePath(course.id)}>← Обзор курса</a>}
-        <SequenceDestinationLink
-          destination={lessonDestinationLink(course.id, firstLesson)}
-          align="end"
-        >
-          Следующий урок: {firstLesson.data.title} →
-        </SequenceDestinationLink>
-      </nav>
-    </article>
+      </Fragment>
+      <Content components={semanticComponents} />
+      <h2>Что ты сможешь после Модуля</h2>
+      <p>{module.data.capability}</p>
+      <h2>Какие результаты поддерживает Модуль</h2>
+      <ul>
+        {supportedOutcomes.map((outcome) => (
+          <li>{outcome.statement}</li>
+        ))}
+      </ul>
+      <Fragment slot="after-reading">
+        <section class="learning-section" aria-labelledby="module-lessons-heading">
+          <h2 id="module-lessons-heading" class="learning-section__title type-section-title">Уроки Модуля</h2>
+          <CourseLessonList
+            courseSlug={course.id}
+            lessons={current.lessons}
+            label="Уроки Модуля"
+          />
+          <a class="learning-section__action type-supporting" href={checkpointPath(course.id, slug)}>
+            {current.checkpoint.data.title} →
+          </a>
+        </section>
+      </Fragment>
+      <Fragment slot="sequence">
+          {previousModule
+            ? <SequenceDestinationLink
+                destination={checkpointDestinationLink(
+                  course.id,
+                  moduleSlug(previousModule.module),
+                )}
+              >
+                ← Предыдущая проверка Модуля: {previousModule.checkpoint.data.title}
+              </SequenceDestinationLink>
+            : <a class="sequence-destination-link type-supporting" href={coursePath(course.id)}>← Обзор курса</a>}
+          <SequenceDestinationLink
+            destination={lessonDestinationLink(course.id, firstLesson)}
+            align="end"
+          >
+            Следующий урок: {firstLesson.data.title} →
+          </SequenceDestinationLink>
+      </Fragment>
+    </LearningPage>
   </LearningShell>
 </BaseLayout>
-
-<style>
-  .module-content {
-    width: min(100%, 69ch);
-    min-width: 0;
-    padding-block: clamp(3rem, 7vw, 6.5rem) 7rem;
-  }
-  header { border-bottom: 1px solid var(--color-border); padding-bottom: 2rem; }
-  h1 {
-    margin: .15rem 0 .6rem;
-    font-size: clamp(2.7rem, 5.5vw, 5rem);
-    font-weight: 600;
-    line-height: 1;
-    letter-spacing: -.06em;
-  }
-  .summary { color: var(--color-muted); font-size: 1.1rem; }
-  .prose { padding-top: 1rem; }
-  section { margin-top: 2.5rem; }
-  .checkpoint { display: inline-block; margin-top: 1rem; font-weight: 750; }
-  .sequence {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    border-top: 1px solid var(--color-border);
-    margin-top: 4rem;
-    padding-top: 1.5rem;
-  }
-  .sequence > a { font-weight: 750; }
-  @media (max-width: 52rem) { .module-content { width: 100%; padding-block: 2.5rem 6.5rem; } }
-  @media (max-width: 36rem) { .sequence { grid-template-columns: 1fr; } }
-</style>

@@ -9,22 +9,11 @@ interface Props {
 
 const { destination, align = "start" } = Astro.props;
 ---
-<a href={destination.href} data-align={align}>
+<a
+  class="sequence-destination-link type-supporting"
+  href={destination.href}
+  data-align={align}
+>
   <span><slot /></span>
   <ProgressStatus destination={destination} />
 </a>
-
-<style>
-  a {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: .45rem;
-    font-weight: 750;
-  }
-  a[data-align="end"] {
-    justify-content: flex-end;
-    margin-left: auto;
-    text-align: right;
-  }
-</style>

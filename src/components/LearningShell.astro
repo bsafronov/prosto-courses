@@ -30,7 +30,7 @@ const destinations = getCoreDestinationLinks(course.id, tree);
 >
   <aside class="course-route-panel" id="course-route-panel" data-course-route-panel>
     <div class="route-mobile-head">
-      <span id="course-route-title">Маршрут курса</span>
+      <span id="course-route-title" class="type-supporting">Маршрут курса</span>
       <button
         class="button-secondary button-icon"
         type="button"
@@ -40,11 +40,11 @@ const destinations = getCoreDestinationLinks(course.id, tree);
     </div>
     <nav aria-label="Навигация по курсу">
       <header class="route-head">
-        <span>Маршрут курса</span>
-        <strong>{course.data.title}</strong>
-        <a class="link-control" href={coursePath(course.id)}>О курсе</a>
-        <p data-course-progress role="status" aria-live="polite">Не начат</p>
-        <p class="route-guidance">
+        <span class="type-meta">Маршрут курса</span>
+        <strong class="type-supporting">{course.data.title}</strong>
+        <a class="link-control type-meta" href={coursePath(course.id)}>О курсе</a>
+        <p class="type-meta" data-course-progress role="status" aria-live="polite">Не начат</p>
+        <p class="route-guidance type-meta">
           Рекомендуемая последовательность не ограничивает переходы — можно
           открыть любую часть Курса.
         </p>
@@ -183,56 +183,44 @@ const destinations = getCoreDestinationLinks(course.id, tree);
 <style>
   .learning-shell {
     display: grid;
-    width: min(76rem, calc(100% - 2rem));
-    grid-template-columns: 18rem minmax(0, 1fr);
-    gap: clamp(3rem, 6vw, 6rem);
+    grid-template-columns: var(--measure-course-route) minmax(0, 1fr);
+    gap: var(--space-learning-columns);
     align-items: start;
   }
   .course-route-panel {
     position: sticky;
-    top: 5.5rem;
-    width: 18rem;
-    max-height: calc(100vh - 7rem);
-    padding-block: 2.5rem;
+    top: calc(var(--shell-header-min-height) + var(--space-6));
+    width: var(--measure-course-route);
+    max-height: calc(100vh - var(--shell-header-min-height) - var(--space-12));
+    padding-block: var(--space-10);
     overflow-y: auto;
     overscroll-behavior: contain;
   }
   .route-mobile-head { display: none; }
-  .route-head { margin-bottom: 2rem; }
+  .route-head { margin-bottom: var(--space-8); }
   .route-head > span:first-child,
   .route-head [data-course-progress] {
-    margin: 0;
+    margin: var(--space-0);
     color: var(--color-muted);
-    font-family: var(--font-sans);
-    font-size: var(--font-size-meta);
-    font-weight: var(--font-weight-medium);
-    line-height: var(--line-height-meta);
     text-transform: uppercase;
   }
   .route-guidance {
     color: var(--color-muted);
-    font-size: var(--font-size-meta);
-    line-height: var(--line-height-meta);
   }
   .route-head > strong {
     display: block;
-    margin: .35rem 0 .6rem;
+    margin: var(--space-2) var(--space-0);
     color: var(--color-ink);
-    font-size: var(--font-size-supporting);
-    font-weight: var(--font-weight-semibold);
     letter-spacing: var(--tracking-title);
-    line-height: var(--line-height-supporting);
   }
   .route-head > a {
     color: var(--color-muted);
-    font-size: var(--font-size-meta);
-    line-height: var(--line-height-meta);
     text-decoration: none;
   }
   .route-progress {
     display: block;
-    height: 2px;
-    margin-top: .75rem;
+    height: var(--border-width-emphasis);
+    margin-top: var(--space-3);
     background: var(--color-border);
   }
   .route-progress > span {
@@ -247,7 +235,6 @@ const destinations = getCoreDestinationLinks(course.id, tree);
   @media (max-width: 52rem) {
     .learning-shell {
       display: block;
-      width: min(100% - 2rem, 44rem);
     }
     .course-route-panel {
       position: fixed;
@@ -255,10 +242,10 @@ const destinations = getCoreDestinationLinks(course.id, tree);
       top: var(--shell-header-min-height);
       bottom: 0;
       left: 0;
-      width: min(88vw, 23rem);
+      width: min(calc(100% - var(--space-8)), var(--measure-course-drawer));
       max-height: none;
-      border-right: 1px solid var(--color-border);
-      padding: 0 1.25rem 3rem;
+      border-right: var(--border-subtle);
+      padding: var(--space-0) var(--space-5) var(--space-12);
       background: var(--color-canvas);
       box-shadow: var(--shadow);
       transform: translateX(-105%);
@@ -278,18 +265,18 @@ const destinations = getCoreDestinationLinks(course.id, tree);
       z-index: 2;
       top: 0;
       display: flex;
-      min-height: 3.75rem;
+      min-height: calc(var(--control-min-height) + var(--space-4));
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1px solid var(--color-border);
-      margin-bottom: 1rem;
+      border-bottom: var(--border-subtle);
+      margin-bottom: var(--space-4);
       background: var(--color-canvas);
       font-weight: var(--font-weight-semibold);
     }
     .route-mobile-head button {
       width: var(--control-min-height);
       min-height: var(--control-min-height);
-      font-size: 1.4rem;
+      font-size: var(--font-size-component-title);
     }
     .course-route-backdrop {
       position: fixed;
@@ -297,12 +284,12 @@ const destinations = getCoreDestinationLinks(course.id, tree);
       inset: var(--shell-header-min-height) 0 0;
       width: 100%;
       min-height: 0;
-      border: 0;
-      border-radius: 0;
-      padding: 0;
-      background: rgb(9 9 11 / 56%);
+      border: var(--space-0);
+      border-radius: var(--space-0);
+      padding: var(--space-0);
+      background: var(--color-backdrop);
     }
-    .course-route-backdrop:hover { background: rgb(9 9 11 / 56%); }
+    .course-route-backdrop:hover { background: var(--color-backdrop); }
   }
   @media (prefers-reduced-motion: reduce) {
     .course-route-panel, .route-progress > span { transition: none; }

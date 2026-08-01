@@ -1,6 +1,7 @@
 ---
 import { getCollection, render, type CollectionEntry } from "astro:content";
 import CompletionControl from "../../../../../components/CompletionControl.astro";
+import LearningPage from "../../../../../components/LearningPage.astro";
 import LearningShell from "../../../../../components/LearningShell.astro";
 import ProgressStatus from "../../../../../components/ProgressStatus.astro";
 import SequenceDestinationLink from "../../../../../components/SequenceDestinationLink.astro";
@@ -70,16 +71,20 @@ const { Content } = await render(checkpoint);
     current={{ kind: "checkpoint", slug }}
     destination={progress.current}
   >
-    <article class="assessment-content">
-      <header>
-        <p class="eyebrow">Проверка Модуля</p>
-        <h1>{checkpoint.data.title}</h1>
-        <p><a href={modulePath(course.id, slug)}>{currentModule.module.data.title}</a></p>
+    <LearningPage
+      eyebrow="Проверка Модуля"
+      sequenceLabel="Последовательность курса"
+      title={checkpoint.data.title}
+    >
+      <Fragment slot="header-details">
+        <p class="learning-page__summary type-supporting"><a href={modulePath(course.id, slug)}>{currentModule.module.data.title}</a></p>
         <ProgressStatus destination={progress.current} />
-      </header>
-      <div class="prose"><Content components={semanticComponents} /></div>
-      <CompletionControl kind="checkpoint" />
-      <nav class="sequence" aria-label="Последовательность курса">
+      </Fragment>
+      <Content components={semanticComponents} />
+      <Fragment slot="after-reading">
+        <CompletionControl kind="checkpoint" />
+      </Fragment>
+      <Fragment slot="sequence">
         <SequenceDestinationLink
           destination={lessonDestinationLink(
             course.id,
@@ -89,38 +94,14 @@ const { Content } = await render(checkpoint);
           ← Последний урок: {previousLesson.data.title}
         </SequenceDestinationLink>
         {nextModule
-          ? <a class="plain-sequence-link" href={modulePath(course.id, moduleSlug(nextModule.module))}>Перейти к следующему Модулю: {nextModule.module.data.title} →</a>
+          ? <a class="sequence-destination-link type-supporting" data-align="end" href={modulePath(course.id, moduleSlug(nextModule.module))}>Перейти к следующему Модулю: {nextModule.module.data.title} →</a>
           : <SequenceDestinationLink
               destination={capstoneDestinationLink(course.id)}
               align="end"
             >
               Перейти к итоговой работе →
             </SequenceDestinationLink>}
-      </nav>
-    </article>
+      </Fragment>
+    </LearningPage>
   </LearningShell>
 </BaseLayout>
-
-<style>
-  .assessment-content {
-    width: min(100%, 69ch);
-    min-width: 0;
-    padding-block: clamp(3rem, 7vw, 6.5rem) 7rem;
-  }
-  header { border-bottom: 1px solid var(--color-border); padding-bottom: 2rem; }
-  h1 {
-    margin: .15rem 0 .6rem;
-    font-size: clamp(2.7rem, 5.5vw, 5rem);
-    font-weight: 600;
-    line-height: 1;
-    letter-spacing: -.06em;
-  }
-  .prose { padding-top: 1.25rem; font-size: 18px; line-height: 1.72; }
-  .sequence { display: flex; justify-content: space-between; gap: 1rem; border-top: 1px solid var(--color-border); margin-top: 2.5rem; padding-top: 1.5rem; }
-  .plain-sequence-link { margin-left: auto; text-align: right; font-weight: 750; }
-  @media (max-width: 52rem) { .assessment-content { width: 100%; padding-block: 2.5rem 6.5rem; } }
-  @media (max-width: 36rem) {
-    .sequence { flex-direction: column; }
-    .plain-sequence-link { align-self: flex-end; }
-  }
-</style>

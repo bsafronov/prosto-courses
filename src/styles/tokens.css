@@ -25,6 +25,7 @@
   --color-data-series-3: #47665b;
   --color-data-series-4: #625771;
   --color-data-series-5: #704f5c;
+  --color-backdrop: rgb(9 9 11 / 56%);
 
   /* Families and allowed weights */
   --font-sans: "Onest", ui-sans-serif, system-ui, sans-serif;
@@ -42,7 +43,7 @@
   --font-size-body: 1rem;
   --line-height-body: 1.5;
   --font-size-reading: 1.125rem;
-  --line-height-reading: 1.6;
+  --line-height-reading: 1.7;
   --font-size-component-title: 1.25rem;
   --line-height-component-title: 1.4;
   --font-size-section-title: 1.75rem;
@@ -88,6 +89,10 @@
   --measure-theme-control: 7.5rem;
   --measure-theme-control-narrow: 5rem;
   --measure-mobile-title: 22rem;
+  --measure-learning-content: 52rem;
+  --measure-course-route: 18rem;
+  --measure-course-drawer: 23rem;
+  --measure-completion-control: 11rem;
   --breakpoint-viewport-min: 20rem;
 
   /* Borders, radii, shadows, and controls */
@@ -112,6 +117,9 @@
   --shell-header-canvas-share: 92%;
   --shell-header-backdrop-blur: 0.875rem;
   --shell-footer-space-before: var(--space-16);
+  --learning-page-start: clamp(var(--space-10), 7vw, var(--space-16));
+  --learning-page-end: var(--space-24);
+  --space-learning-columns: clamp(var(--space-8), 4vw, var(--space-12));
   --progress-marker-size: 0.5rem;
   --progress-marker-dot-size: 0.1875rem;
 

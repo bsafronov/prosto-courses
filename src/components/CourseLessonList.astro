@@ -34,12 +34,12 @@ const {
           data-destination-id={destination.id}
           data-lesson-title={lesson.data.title}
         >
-          <span class="lesson-number" aria-hidden="true">{lessonIndex + 1}</span>
-          <span class="lesson-title">{lesson.data.title}</span>
+          <span class="lesson-number type-meta" aria-hidden="true">{lessonIndex + 1}</span>
+          <span class="lesson-title type-body">{lesson.data.title}</span>
           <span class="lesson-state">
             <ProgressStatus destination={destination} />
             <span
-              class="revisit"
+              class="revisit type-meta"
               data-revision-revisit
               data-destination-id={destination.id}
               hidden
@@ -54,16 +54,49 @@ const {
 </ol>
 
 <style>
-  .lesson-list { margin: 0; border-top: 1px solid var(--color-border); padding: 0; list-style: none; }
-  .lesson-list li { border-bottom: 1px solid var(--color-border); }
-  a { display: grid; grid-template-columns: 2rem 1fr auto; gap: .75rem; align-items: center; padding-block: .9rem; color: var(--color-ink); text-decoration: none; }
-  a:hover .lesson-title { text-decoration: underline; text-underline-offset: .18em; }
-  .lesson-number { display: grid; place-items: center; width: 2rem; height: 2rem; border: 1px solid var(--color-border); border-radius: 50%; font: 500 .72rem/1 var(--font-mono); }
-  .lesson-title { font-weight: 720; }
-  .lesson-state { display: grid; justify-items: end; gap: .2rem; }
-  .revisit { color: var(--color-brand); font-size: .8rem; font-weight: 750; text-decoration: underline; text-underline-offset: .18em; }
-  @media (max-width: 34rem) {
-    a { grid-template-columns: 2rem 1fr; }
+  .lesson-list {
+    margin: var(--space-0);
+    border-top: var(--border-subtle);
+    padding: var(--space-0);
+    list-style: none;
+  }
+  .lesson-list li { border-bottom: var(--border-subtle); }
+  a {
+    display: grid;
+    grid-template-columns: var(--space-8) minmax(0, 1fr) auto;
+    gap: var(--space-3);
+    align-items: center;
+    padding-block: var(--space-4);
+    color: var(--color-ink);
+    text-decoration: none;
+  }
+  a:hover .lesson-title {
+    text-decoration: underline;
+    text-underline-offset: var(--space-1);
+  }
+  .lesson-number {
+    display: grid;
+    width: var(--space-8);
+    height: var(--space-8);
+    place-items: center;
+    border: var(--border-subtle);
+    border-radius: var(--radius-round);
+    font-family: var(--font-mono);
+  }
+  .lesson-title { font-weight: var(--font-weight-semibold); }
+  .lesson-state {
+    display: grid;
+    justify-items: end;
+    gap: var(--space-1);
+  }
+  .revisit {
+    color: var(--color-warning);
+    font-weight: var(--font-weight-semibold);
+    text-decoration: underline;
+    text-underline-offset: var(--space-1);
+  }
+  @media (max-width: 36rem) {
+    a { grid-template-columns: var(--space-8) minmax(0, 1fr); }
     .lesson-state { grid-column: 2; justify-self: start; justify-items: start; }
   }
 </style>

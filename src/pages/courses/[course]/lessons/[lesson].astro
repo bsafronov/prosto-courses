@@ -1,6 +1,7 @@
 ---
 import { getCollection, render, type CollectionEntry } from "astro:content";
 import CompletionControl from "../../../../components/CompletionControl.astro";
+import LearningPage from "../../../../components/LearningPage.astro";
 import LearningShell from "../../../../components/LearningShell.astro";
 import ProgressStatus from "../../../../components/ProgressStatus.astro";
 import SequenceDestinationLink from "../../../../components/SequenceDestinationLink.astro";
@@ -81,19 +82,20 @@ const routePosition =
     current={{ kind: "lesson", slug }}
     destination={progress.current}
   >
-    <article class="lesson-content">
-      <header>
-        <p class="eyebrow">
-          Урок {lessonIndex + 1} из {currentModule.lessons.length}
-        </p>
-        <h1>{lesson.data.title}</h1>
+    <LearningPage
+      eyebrow={`Урок ${lessonIndex + 1} из ${currentModule.lessons.length}`}
+      eyebrowTechnical
+      sequenceLabel="Последовательность уроков"
+      title={lesson.data.title}
+    >
+      <Fragment slot="header-details">
         <div
           class="lesson-utility"
           role="group"
           aria-label="Сведения об Уроке"
         >
-          <p class="capability">{lesson.data.capability}</p>
-          <p class="route-position">
+          <p class="capability learning-page__summary type-reading">{lesson.data.capability}</p>
+          <p class="route-position type-meta type-technical">
             Маршрут: {routePosition} из {progress.destinations.length}
           </p>
           <WorkloadSummary
@@ -101,14 +103,16 @@ const routePosition =
             items={lessonTimeItems}
           />
           <div class="lesson-progress">
-            <span>Прогресс Урока</span>
+            <span class="type-meta">Прогресс Урока</span>
             <ProgressStatus destination={progress.current} />
           </div>
         </div>
-      </header>
-      <div class="prose"><Content components={semanticComponents} /></div>
-      <CompletionControl kind="lesson" />
-      <nav class="sequence" aria-label="Последовательность уроков">
+      </Fragment>
+      <Content components={semanticComponents} />
+      <Fragment slot="after-reading">
+        <CompletionControl kind="lesson" />
+      </Fragment>
+      <Fragment slot="sequence">
         {previous
           ? <SequenceDestinationLink
               destination={lessonDestinationLink(
@@ -147,70 +151,25 @@ const routePosition =
             >
               Перейти к проверке Модуля: {currentModule.checkpoint.data.title} →
             </SequenceDestinationLink>}
-      </nav>
-    </article>
+      </Fragment>
+    </LearningPage>
   </LearningShell>
 </BaseLayout>
 
 <style>
-  .lesson-content {
-    width: min(100%, 69ch);
-    min-width: 0;
-    padding-block: clamp(3rem, 7vw, 6.5rem) 7rem;
-    font-size: 18px;
-  }
-  header { border-bottom: 1px solid var(--color-border); padding-bottom: 2rem; }
-  .eyebrow {
-    font-family: var(--font-mono);
-  }
-  h1 {
-    max-width: 15ch;
-    margin: 0;
-    font-size: clamp(2.7rem, 5.5vw, 4.5rem);
-    font-weight: 600;
-    letter-spacing: -.06em;
-    line-height: 1;
-  }
-  .capability {
-    max-width: 44rem;
-    margin: 0;
-    color: var(--color-muted);
-    font-size: 1.05rem;
-  }
-  .lesson-utility { margin-top: 1.15rem; }
+  .lesson-utility { margin-top: var(--space-5); }
   .route-position {
-    margin: .7rem 0 0;
+    margin: var(--space-3) var(--space-0) var(--space-0);
     color: var(--color-muted);
-    font: 400 .72rem/1.4 var(--font-mono);
     text-transform: uppercase;
   }
-  .lesson-utility :global(.workload) { margin-block: .8rem; }
+  .lesson-utility :global(.workload) { margin-block: var(--space-3); }
   .lesson-progress {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: var(--space-4);
     color: var(--color-muted);
-    font-family: var(--font-sans);
-    font-size: var(--font-size-meta);
-    font-weight: var(--font-weight-medium);
-    line-height: var(--line-height-meta);
     text-transform: uppercase;
-  }
-  .prose { padding-top: 1.25rem; line-height: 1.72; }
-  .sequence {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    border-top: 1px solid var(--color-border);
-    margin-top: 4rem;
-    padding-top: 1.5rem;
-  }
-  @media (max-width: 52rem) {
-    .lesson-content { width: 100%; padding-block: 2.5rem 6.5rem; }
-    h1 { font-size: clamp(2.55rem, 12vw, 4.5rem); }
-  }
-  @media (max-width: 36rem) {
-    .sequence { grid-template-columns: 1fr; }
   }
 </style>

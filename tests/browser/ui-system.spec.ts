@@ -18,12 +18,16 @@ async function cardSurface(locator: Locator) {
 
 const themes = {
   light: {
+    canvas: "rgb(250, 250, 250)",
+    border: "rgb(228, 228, 231)",
     focus: "rgb(63, 63, 70)",
     ink: "rgb(24, 24, 27)",
     muted: "rgb(113, 113, 122)",
     surface: "rgb(255, 255, 255)",
   },
   dark: {
+    canvas: "rgb(9, 9, 11)",
+    border: "rgb(39, 39, 42)",
     focus: "rgb(212, 212, 216)",
     ink: "rgb(250, 250, 250)",
     muted: "rgb(161, 161, 170)",
@@ -141,6 +145,107 @@ for (const [theme, colors] of Object.entries(themes)) {
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
       ).toBeLessThanOrEqual(viewport.width);
+    });
+  }
+}
+
+const learningJourney = [
+  {
+    kind: "Module",
+    path: "./courses/markdown/modules/osnovy/",
+    title: "От исходника к структуре",
+    current: "От исходника к структуре",
+  },
+  {
+    kind: "Lesson",
+    path: "./courses/markdown/lessons/vvedenie/",
+    title: "Знакомство с Markdown",
+    current: /Знакомство с Markdown/,
+  },
+  {
+    kind: "Module Checkpoint",
+    path: "./courses/markdown/modules/osnovy/checkpoint/",
+    title: "Объясни путь от исходника к документу",
+    current: /Проверка Модуля: Объясни путь от исходника к документу/,
+  },
+  {
+    kind: "Capstone Demonstration",
+    path: "./courses/markdown/capstone/",
+    title: "Понятная инструкция в Markdown",
+    current: /Итоговая работа: Понятная инструкция в Markdown/,
+  },
+] as const;
+
+for (const [theme, colors] of Object.entries(themes)) {
+  for (const viewport of responsiveViewports) {
+    test(`Learning journey keeps ${theme} UI contracts at ${viewport.name}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+
+      for (const destination of learningJourney) {
+        await page.goto(destination.path);
+        await selectTheme(page, theme);
+
+        const article = page.locator("main article");
+        const title = article.getByRole("heading", {
+          level: 1,
+          name: destination.title,
+        });
+        const readingFlow = article.locator(".reading-flow");
+        const courseRoute = page.getByRole("navigation", {
+          name: "Навигация по курсу",
+        });
+
+        await expect(title).toHaveCSS("font-size", viewport.pageTitle);
+        await expect(article).toHaveCSS("font-size", "18px");
+        await expect(readingFlow.locator("p:not([class])").first()).toHaveCSS(
+          "font-size",
+          "18px",
+        );
+        if (viewport.width === 320) {
+          await page
+            .getByRole("button", { name: "Открыть маршрут курса" })
+            .click();
+        }
+        await expect(
+          courseRoute.getByRole("link", { name: destination.current }),
+        ).toHaveAttribute("aria-current", "page");
+        await expect(courseRoute.locator("[data-progress-status]").first()).toHaveCSS(
+          "font-size",
+          "12px",
+        );
+        await expect(
+          article
+            .getByRole("navigation", { name: /Последовательность/ })
+            .getByRole("link")
+            .first(),
+        ).toHaveCSS("font-size", "14px");
+        await expect(article).toHaveCSS("color", colors.ink);
+
+        if (viewport.width === 320) {
+          const drawer = page.getByRole("dialog", { name: "Маршрут курса" });
+          await expect(drawer).toHaveCSS("position", "fixed");
+          await expect(drawer).toHaveCSS("background-color", colors.canvas);
+          await expect(drawer).toHaveCSS("border-right-color", colors.border);
+          await expect(drawer).toHaveCSS("border-right-width", "1px");
+          await page.keyboard.press("Escape");
+        } else {
+          await expect(page.locator("[data-course-route-panel]")).toHaveCSS(
+            "position",
+            "sticky",
+          );
+          await expect(page.locator("[data-course-route-panel]")).toHaveCSS(
+            "width",
+            "288px",
+          );
+        }
+
+        expect(
+          await page.evaluate(() => document.documentElement.scrollWidth),
+          `${destination.kind} overflows ${viewport.name}`,
+        ).toBeLessThanOrEqual(viewport.width);
+      }
     });
   }
 }

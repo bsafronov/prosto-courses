@@ -16,10 +16,10 @@ const headingId = `${kind}-completion-heading`;
 <section class="completion work-area" aria-labelledby={headingId}>
   <div class="completion-copy">
     <p class="work-area__eyebrow">Локальная отметка</p>
-    <h2 id={headingId}>{copy.heading}</h2>
+    <h2 id={headingId} class="type-component-title">{copy.heading}</h2>
     {kind === "lesson" && (
       <p
-        class="revision-notice"
+        class="revision-notice type-supporting"
         data-revision-notice
         role="status"
         aria-live="polite"
@@ -28,7 +28,7 @@ const headingId = `${kind}-completion-heading`;
         {lessonRevisionCopy.notice}
       </p>
     )}
-    <p class="description">{copy.description}</p>
+    <p class="description type-supporting">{copy.description}</p>
   </div>
   <button type="button" data-completion-toggle aria-pressed="false" disabled>
     {copy.complete}
@@ -39,23 +39,31 @@ const headingId = `${kind}-completion-heading`;
   .completion {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 1.5rem;
+    gap: var(--space-6);
     align-items: end;
-    margin-top: 3rem;
-    padding: 1.25rem;
+    margin-top: var(--space-12);
+    padding: var(--space-5);
   }
   .completion-copy { min-width: 0; }
-  .completion h2 { margin: 0; font-size: 1.25rem; }
-  .completion .description { margin: .65rem 0 0; color: var(--color-muted); }
-  .completion .revision-notice { border-left: .25rem solid var(--color-brand); padding-left: .8rem; color: var(--color-ink); font-weight: 700; }
-  .completion button { min-width: 11rem; }
+  .completion h2 { margin: var(--space-0); }
+  .completion .description {
+    margin: var(--space-3) var(--space-0) var(--space-0);
+    color: var(--color-muted);
+  }
+  .completion .revision-notice {
+    border-left: var(--border-width-emphasis) solid var(--color-brand);
+    padding-left: var(--space-3);
+    color: var(--color-ink);
+    font-weight: var(--font-weight-semibold);
+  }
+  .completion button { min-width: var(--measure-completion-control); }
   .completion button[aria-pressed="true"] {
-    border: 1px solid var(--color-border);
+    border: var(--border-subtle);
     background: var(--color-canvas);
     color: var(--color-ink);
   }
-  @media (max-width: 34rem) {
-    .completion { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+  @media (max-width: 36rem) {
+    .completion { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
     .completion button { width: 100%; }
   }
 </style>
