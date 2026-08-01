@@ -1,0 +1,16 @@
+---
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props as Props;
+if (!Astro.slots.has("visual") || !Astro.slots.has("details")) {
+  throw new Error("LearningVisual requires visual and details slots");
+}
+---
+
+<figure class="learning-visual" aria-label={title}>
+  <figcaption class="learning-visual__title">{title}</figcaption>
+  <slot name="visual" />
+  <slot name="details" />
+</figure>

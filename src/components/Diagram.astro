@@ -1,4 +1,6 @@
 ---
+import LearningVisual from "./LearningVisual.astro";
+
 interface Props {
   title: string;
   description: string;
@@ -9,10 +11,10 @@ interface Props {
 const { title, description, howToRead, takeaway } = Astro.props;
 ---
 
-<figure class="diagram" aria-label={title}>
-  <figcaption>{title}</figcaption>
+<LearningVisual title={title}>
   <div
-    class="diagram-visual"
+    slot="visual"
+    class="diagram-visual learning-visual__viewport"
     role="img"
     aria-label={description}
     aria-busy="true"
@@ -21,12 +23,15 @@ const { title, description, howToRead, takeaway } = Astro.props;
   >
     <slot />
   </div>
-  <div class="diagram-interpretation">
+  <div
+    slot="details"
+    class="diagram-interpretation learning-visual__interpretation"
+  >
     <p><strong>Описание:</strong> {description}</p>
     <p><strong>Как читать:</strong> {howToRead}</p>
     <p><strong>Главный вывод:</strong> {takeaway}</p>
   </div>
-</figure>
+</LearningVisual>
 
 <script>
   import mermaid from "mermaid";
@@ -35,20 +40,22 @@ const { title, description, howToRead, takeaway } = Astro.props;
 
   function initialiseTheme() {
     const styles = getComputedStyle(document.documentElement);
-    const color = (name: string) => styles.getPropertyValue(name).trim();
+    const tokenValue = (name: string) => styles.getPropertyValue(name).trim();
     mermaid.initialize({
       startOnLoad: false,
       securityLevel: "strict",
       theme: "base",
       themeVariables: {
-        background: color("--color-canvas"),
-        primaryColor: color("--color-surface"),
-        primaryTextColor: color("--color-ink"),
-        primaryBorderColor: color("--color-muted"),
-        lineColor: color("--color-muted"),
-        secondaryColor: color("--color-surface"),
-        tertiaryColor: color("--color-canvas"),
-        textColor: color("--color-ink"),
+        background: tokenValue("--color-canvas"),
+        fontFamily: tokenValue("--font-sans"),
+        fontSize: tokenValue("--font-size-supporting"),
+        primaryColor: tokenValue("--color-surface"),
+        primaryTextColor: tokenValue("--color-ink"),
+        primaryBorderColor: tokenValue("--color-muted"),
+        lineColor: tokenValue("--color-muted"),
+        secondaryColor: tokenValue("--color-surface"),
+        tertiaryColor: tokenValue("--color-canvas"),
+        textColor: tokenValue("--color-ink"),
       },
       flowchart: { htmlLabels: false, useMaxWidth: true },
     });
@@ -103,43 +110,15 @@ const { title, description, howToRead, takeaway } = Astro.props;
 </script>
 
 <style>
-  .diagram {
-    min-width: 0;
-    margin: 2rem 0;
-    border: 0;
-    background: transparent;
-  }
-  figcaption {
-    border-bottom: 1px solid var(--color-border);
-    padding: .9rem 0;
-    font-weight: 800;
-  }
-  .diagram-visual {
-    max-width: 100%;
-    overflow-x: auto;
-    padding: 1rem 0;
-    background: transparent;
-  }
   .diagram-visual :global(pre) { display: none; }
   .diagram-visual :global(svg) {
     display: block;
     width: 100% !important;
-    min-width: 44rem;
+    min-width: var(--measure-diagram-visual);
     max-width: none;
     height: auto;
     margin-inline: auto;
   }
-  .diagram-visual:focus-visible {
-    outline: 2px solid var(--color-focus);
-    outline-offset: 3px;
-  }
-  .diagram-interpretation {
-    display: grid;
-    gap: .65rem;
-    border-top: 1px solid var(--color-border);
-    padding: 1rem 0;
-  }
-  .diagram-interpretation p { margin: 0; }
   @media (prefers-reduced-motion: reduce) {
     .diagram-visual,
     .diagram-visual :global(*) {

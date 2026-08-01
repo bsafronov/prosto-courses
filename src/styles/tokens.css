@@ -93,6 +93,9 @@
   --measure-course-route: 18rem;
   --measure-course-drawer: 23rem;
   --measure-completion-control: 11rem;
+  --measure-visual-detail: 15rem;
+  --measure-diagram-visual: 44rem;
+  --measure-chart-table: 36rem;
   --breakpoint-viewport-min: 320px;
 
   /* Borders, radii, shadows, and controls */

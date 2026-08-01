@@ -1,4 +1,90 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
+
+const visualThemes = {
+  light: {
+    border: "rgb(228, 228, 231)",
+    focus: "rgb(63, 63, 70)",
+    ink: "rgb(24, 24, 27)",
+    muted: "rgb(113, 113, 122)",
+  },
+  dark: {
+    border: "rgb(39, 39, 42)",
+    focus: "rgb(212, 212, 216)",
+    ink: "rgb(250, 250, 250)",
+    muted: "rgb(161, 161, 170)",
+  },
+} as const;
+type VisualTheme = keyof typeof visualThemes;
+
+async function selectTheme(page: Page, theme: VisualTheme) {
+  await page
+    .getByRole("combobox", { name: "Тема оформления" })
+    .selectOption(theme);
+}
+
+async function expectNoPageOverflow(page: Page, width: number) {
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(width);
+}
+
+async function svgTextLayout(
+  svg: Locator,
+  labelSelector: string,
+  overlapSelector = labelSelector,
+) {
+  return svg.evaluate(
+    (element, selectors) => {
+      const frame = element.getBoundingClientRect();
+      const labels = [
+        ...element.querySelectorAll<SVGTextElement>(selectors.label),
+      ].map((label) => ({
+        box: label.getBoundingClientRect(),
+        text: label.textContent,
+      }));
+      const overlapLabels = [
+        ...element.querySelectorAll<SVGTextElement>(selectors.overlap),
+      ].map((label) => ({
+        box: label.getBoundingClientRect(),
+        text: label.textContent,
+      }));
+      return {
+        outside: labels
+          .filter(
+            ({ box }) =>
+              box.left < frame.left ||
+              box.right > frame.right ||
+              box.top < frame.top ||
+              box.bottom > frame.bottom,
+          )
+          .map(({ box, text }) => ({
+            box: {
+              bottom: Math.round(box.bottom - frame.top),
+              left: Math.round(box.left - frame.left),
+              right: Math.round(box.right - frame.left),
+              top: Math.round(box.top - frame.top),
+            },
+            frame: {
+              height: Math.round(frame.height),
+              width: Math.round(frame.width),
+            },
+            text,
+          })),
+        overlaps: overlapLabels.flatMap((label, index) =>
+          overlapLabels.slice(index + 1).flatMap((candidate) => {
+            const intersects =
+              label.box.left < candidate.box.right &&
+              label.box.right > candidate.box.left &&
+              label.box.top < candidate.box.bottom &&
+              label.box.bottom > candidate.box.top;
+            return intersects ? [`${label.text} / ${candidate.text}`] : [];
+          }),
+        ),
+      };
+    },
+    { label: labelSelector, overlap: overlapSelector },
+  );
+}
 
 test.beforeEach(async ({ page }) => {
   await page.goto("./courses/markdown/lessons/vvedenie/");
@@ -203,6 +289,162 @@ test("sourced images expose alternative text, caption, provenance, and illustrat
     "Иллюстративное сгенерированное изображение.",
   );
 });
+
+for (const theme of Object.keys(visualThemes) as VisualTheme[]) {
+  const colors = visualThemes[theme];
+  for (const viewport of [
+    { name: "320px", width: 320, height: 800 },
+    { name: "desktop", width: 1280, height: 900 },
+  ] as const) {
+    test(`Learning Visuals keep ${theme} semantic presentation at ${viewport.name}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto("./courses/markdown/lessons/vvedenie/");
+      await selectTheme(page, theme);
+
+      const diagram = page.getByRole("figure", {
+        name: "Как Markdown становится страницей",
+      });
+      const diagramTitle = diagram.locator("figcaption");
+      const diagramVisual = diagram.getByRole("img");
+      await expect(diagram).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+      await expect(diagram).toHaveCSS("box-shadow", "none");
+      await expect(diagramTitle).toHaveCSS("font-family", /Onest/);
+      await expect(diagramTitle).toHaveCSS("font-size", "20px");
+      await expect(diagramTitle).toHaveCSS("font-weight", "600");
+      await expect(diagramTitle).toHaveCSS("border-bottom-color", colors.border);
+      await expect(diagram.locator("svg text").first()).toHaveCSS(
+        "font-family",
+        /Onest/,
+      );
+      await expect(diagram.locator("svg text").first()).toHaveCSS(
+        "font-size",
+        "14px",
+      );
+      await expect(diagram.locator(".diagram-interpretation")).toHaveCSS(
+        "font-size",
+        "14px",
+      );
+      await diagramVisual.focus();
+      await expect(diagramVisual).toHaveCSS("outline-color", colors.focus);
+      await expectNoPageOverflow(page, viewport.width);
+
+      await page.goto("./courses/accessible-images/lessons/describe-purpose/");
+      await selectTheme(page, theme);
+
+      const image = page.getByRole("figure", {
+        name: "Illustrative context label used to test sourced-image alternatives.",
+      });
+      await expect(image).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+      await expect(image).toHaveCSS("box-shadow", "none");
+      await expect(image.locator("figcaption")).toHaveCSS("font-size", "14px");
+      await expect(image.locator("figcaption")).toHaveCSS("color", colors.muted);
+      await expect(image.locator(".provenance")).toHaveCSS("font-size", "12px");
+      await expect(image.getByRole("img")).toHaveCSS(
+        "border-top-color",
+        colors.muted,
+      );
+
+      const chart = page.getByRole("figure", {
+        name: "Average published and reviewed lessons per editor",
+      });
+      const chartTitle = chart.locator("figcaption");
+      const chartVisual = chart.getByRole("img");
+      await expect(chart).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+      await expect(chart).toHaveCSS("box-shadow", "none");
+      await expect(chartTitle).toHaveCSS("font-family", /Onest/);
+      await expect(chartTitle).toHaveCSS("font-size", "20px");
+      await expect(chartTitle).toHaveCSS("font-weight", "600");
+      await expect(chart.locator(".chart-tick-label").first()).toHaveCSS(
+        "font-size",
+        "12px",
+      );
+      await expect(chart.locator(".chart-value-label").first()).toHaveCSS(
+        "font-weight",
+        "600",
+      );
+      await expect(chart.locator(".chart-axis-label").first()).toHaveCSS(
+        "font-size",
+        "14px",
+      );
+      await expect(chart.locator(".chart-axes dd").first()).toHaveCSS(
+        "font-size",
+        "14px",
+      );
+      await expect(chart.locator(".chart-legend")).toHaveCSS(
+        "font-size",
+        "14px",
+      );
+      await expect(chart.locator(".chart-interpretation")).toHaveCSS(
+        "font-size",
+        "14px",
+      );
+      await expect(chart.locator(".chart-grid-line").first()).toHaveCSS(
+        "stroke",
+        colors.border,
+      );
+      await expect(chart.locator(".chart-axis-line")).toHaveCSS(
+        "stroke",
+        colors.ink,
+      );
+      await chartVisual.focus();
+      await expect(chartVisual).toHaveCSS("outline-color", colors.focus);
+      await expectNoPageOverflow(page, viewport.width);
+    });
+  }
+
+  test(`Learning Visuals reflow at 200% text zoom with long labels in ${theme}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.goto("./courses/markdown/lessons/vvedenie/");
+    await selectTheme(page, theme);
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+
+    const diagram = page.getByRole("figure", {
+      name: "Как Markdown становится страницей",
+    });
+    await expect(diagram.locator("figcaption")).toBeVisible();
+    await expect(diagram.getByText(/Содержание и знаки Markdown/)).toBeVisible();
+    const diagramLabels = await svgTextLayout(diagram.locator("svg"), "text");
+    expect(diagramLabels.outside).toEqual([]);
+    expect(diagramLabels.overlaps).toEqual([]);
+    await expectNoPageOverflow(page, 320);
+
+    await page.goto("./courses/accessible-images/lessons/describe-purpose/");
+    await selectTheme(page, theme);
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+
+    const image = page.getByRole("figure", {
+      name: "Illustrative context label used to test sourced-image alternatives.",
+    });
+    const chart = page.getByRole("figure", {
+      name: "Average published and reviewed lessons per editor",
+    });
+    await expect(image.locator("figcaption")).toBeVisible();
+    await expect(
+      chart
+        .getByRole("definition")
+        .filter({ hasText: "Average lessons per editor (lesson)" }),
+    ).toBeVisible();
+    await expect(
+      chart.getByRole("list", { name: "Легенда графика" }),
+    ).toBeVisible();
+    const renderedLabels = await svgTextLayout(
+      chart.locator("svg"),
+      ".chart-axis-label, .chart-category-label, .chart-value-label",
+      ".chart-value-label",
+    );
+    expect(renderedLabels.outside).toEqual([]);
+    expect(renderedLabels.overlaps).toEqual([]);
+    await expectNoPageOverflow(page, 320);
+  });
+}
 
 test("semantic visuals remain usable at a narrow width and reduced motion", async ({
   page,

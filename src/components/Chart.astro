@@ -1,5 +1,6 @@
 ---
 import ExternalReference from "./ExternalReference.astro";
+import LearningVisual from "./LearningVisual.astro";
 
 interface Axis {
   label: string;
@@ -56,21 +57,24 @@ const domainMaximum =
     ? authoredDomainMaximum + 1
     : authoredDomainMaximum;
 const domainSpan = domainMaximum - domainMinimum;
+// Technical exception: unitless values from `plot` through the SVG markup define
+// exact data coordinates, mark shapes, and non-color pattern encoding. They do
+// not participate in UI spacing or establish a local visual scale.
 const plot = {
-  left: 76,
-  top: 28,
-  right: 24,
-  bottom: 70,
-  width: Math.max(540, xValues.length * Math.max(110, series.length * 58)),
-  height: 260,
+  left: 112,
+  top: 80,
+  right: 32,
+  bottom: 120,
+  width: Math.max(720, xValues.length * Math.max(150, series.length * 76)),
+  height: 440,
 };
 const svgWidth = plot.left + plot.width + plot.right;
 const svgHeight = plot.top + plot.height + plot.bottom;
 const groupWidth = plot.width / xValues.length;
 const barAreaWidth = groupWidth * 0.72;
-const barGap = 6;
+const barGap = 8;
 const barWidth = Math.max(
-  10,
+  16,
   (barAreaWidth - barGap * (series.length - 1)) / series.length,
 );
 const yPosition = (value: number) =>
@@ -80,6 +84,8 @@ const ticks = Array.from({ length: 5 }, (_, index) => {
   const value = domainMinimum + (domainSpan * index) / 4;
   return { value, y: yPosition(value) };
 }).reverse();
+// Technical exception: series colors are data-driven inline custom properties.
+// Values remain central semantic color tokens and repeat only when data exceeds them.
 const palette = [
   "var(--color-data-series-1)",
   "var(--color-data-series-2)",
@@ -91,11 +97,10 @@ const patternKinds = ["solid", "diagonal", "dots", "crosshatch"];
 const chartKey = crypto.randomUUID();
 ---
 
-<figure class="chart" aria-label={title}>
-  <figcaption>{title}</figcaption>
-
+<LearningVisual title={title}>
   <div
-    class="chart-visual"
+    slot="visual"
+    class="chart-visual learning-visual__viewport"
     role="img"
     aria-label={description}
     tabindex="0"
@@ -229,7 +234,7 @@ const chartKey = crypto.randomUUID();
         {xAxis.label} ({xAxis.unit})
       </text>
       <text
-        transform={`translate(18 ${plot.top + plot.height / 2}) rotate(-90)`}
+        transform={`translate(32 ${plot.top + plot.height / 2}) rotate(-90)`}
         text-anchor="middle"
         class="chart-axis-label"
       >
@@ -238,7 +243,7 @@ const chartKey = crypto.randomUUID();
     </svg>
   </div>
 
-  <div class="chart-details">
+  <div slot="details" class="chart-details">
     <dl class="chart-axes">
       <div>
         <dt>Горизонтальная ось</dt>
@@ -293,7 +298,7 @@ const chartKey = crypto.randomUUID();
       </table>
     </div>
 
-    <div class="chart-interpretation">
+    <div class="chart-interpretation learning-visual__interpretation">
       <p><strong>Описание:</strong> {description}</p>
       <p><strong>Как читать:</strong> {howToRead}</p>
       <p><strong>Главный вывод:</strong> {takeaway}</p>
@@ -304,27 +309,12 @@ const chartKey = crypto.randomUUID();
       </p>
     </div>
   </div>
-</figure>
+</LearningVisual>
 
 <style>
-  .chart {
-    min-width: 0;
-    margin: 2rem 0;
-    border: 0;
-    background: transparent;
-  }
-  figcaption {
-    border-bottom: 1px solid var(--color-border);
-    padding: .9rem 0;
-    font-weight: 800;
-  }
-  .chart-visual {
-    max-width: 100%;
-    overflow-x: auto;
-    padding: 1rem 0;
-    background: transparent;
-  }
   .chart-visual svg { display: block; max-width: none; }
+  /* Technical exception: stroke widths and hatch dimensions encode SVG/data-mark
+     geometry. UI color, typography, spacing, borders, and focus use system tokens. */
   .chart-grid-line { stroke: var(--color-border); stroke-width: 1; }
   .chart-axis-line { stroke: var(--color-ink); stroke-width: 1.5; }
   .chart-tick-label,
@@ -335,51 +325,82 @@ const chartKey = crypto.randomUUID();
     font-family: var(--font-sans);
   }
   .chart-tick-label,
-  .chart-category-label { font-size: 13px; }
-  .chart-value-label { font-size: 12px; font-weight: 800; }
-  .chart-axis-label { font-size: 14px; font-weight: 800; }
+  .chart-category-label {
+    font-size: var(--font-size-meta);
+    font-weight: var(--font-weight-medium);
+  }
+  .chart-value-label {
+    font-size: var(--font-size-meta);
+    font-weight: var(--font-weight-semibold);
+  }
+  .chart-axis-label {
+    font-size: var(--font-size-supporting);
+    font-weight: var(--font-weight-semibold);
+  }
   .chart-details {
     display: grid;
-    gap: 1rem;
-    border-top: 1px solid var(--color-border);
-    padding: 1rem 0;
+    gap: var(--space-4);
+    border-top: var(--border-subtle);
+    padding-block: var(--space-4);
   }
   .chart-axes {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: .75rem;
-    margin: 0;
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(min(100%, var(--measure-visual-detail)), 1fr)
+    );
+    gap: var(--space-3);
+    margin: var(--space-0);
   }
   .chart-axes div {
-    border-bottom: 1px solid var(--color-border);
-    padding: .65rem 0;
+    border-bottom: var(--border-subtle);
+    padding-block: var(--space-3);
   }
-  .chart-axes dt { color: var(--color-muted); font-size: .85rem; }
-  .chart-axes dd { margin: .15rem 0 0; font-weight: 750; }
+  .chart-axes dt {
+    color: var(--color-muted);
+    font-size: var(--font-size-meta);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-meta);
+    line-height: var(--line-height-meta);
+  }
+  .chart-axes dd {
+    margin: var(--space-1) var(--space-0) var(--space-0);
+    font-size: var(--font-size-supporting);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-supporting);
+  }
   .chart-legend {
     display: flex;
     flex-wrap: wrap;
-    gap: .7rem 1rem;
-    margin: 0;
-    padding: 0;
+    gap: var(--space-3) var(--space-4);
+    margin: var(--space-0);
+    padding: var(--space-0);
+    font-size: var(--font-size-supporting);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-supporting);
     list-style: none;
   }
-  .chart-legend li { display: inline-flex; align-items: center; gap: .45rem; }
+  .chart-legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
   .chart-series-key {
     display: inline-grid;
-    min-width: 1.35rem;
-    min-height: 1.35rem;
+    min-width: var(--target-min-size);
+    min-height: var(--target-min-size);
     place-items: center;
-    border: 1px solid var(--color-ink);
-    border-radius: 50%;
-    font-size: .78rem;
-    font-weight: 850;
+    border: var(--border-width-thin) solid var(--color-ink);
+    border-radius: var(--radius-round);
+    font-size: var(--font-size-meta);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-meta);
   }
   .chart-swatch {
-    width: 1.35rem;
-    height: 1rem;
-    border: 1px solid var(--color-ink);
-    border-radius: .2rem;
+    width: var(--target-min-size);
+    height: var(--space-4);
+    border: var(--border-width-thin) solid var(--color-ink);
+    border-radius: var(--radius);
     background-color: var(--chart-color);
   }
   .chart-swatch-diagonal {
@@ -403,35 +424,32 @@ const chartKey = crypto.randomUUID();
   .chart-table-scroll {
     max-width: 100%;
     overflow-x: auto;
-  }
-  .chart-table-scroll:focus-visible,
-  .chart-visual:focus-visible {
-    outline: 2px solid var(--color-focus);
-    outline-offset: 3px;
+    overscroll-behavior-inline: contain;
   }
   table {
     width: 100%;
-    min-width: 36rem;
+    min-width: var(--measure-chart-table);
     border-collapse: collapse;
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
   }
   caption {
-    margin-bottom: .45rem;
+    margin-bottom: var(--space-2);
+    color: var(--color-muted);
+    font-size: var(--font-size-supporting);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-supporting);
     text-align: left;
-    font-weight: 800;
   }
   th, td {
-    border: 1px solid var(--color-border);
-    padding: .55rem .65rem;
+    border: var(--border-subtle);
+    padding: var(--space-2) var(--space-3);
     text-align: right;
   }
   thead th, tbody th {
     background: var(--color-surface);
     color: var(--color-ink);
+    font-weight: var(--font-weight-semibold);
     text-align: left;
-  }
-  .chart-interpretation { display: grid; gap: .65rem; }
-  .chart-interpretation p { margin: 0; }
-  @media (max-width: 32rem) {
-    .chart-axes { grid-template-columns: 1fr; }
   }
 </style>

@@ -22,11 +22,11 @@ const { src, alt, title } = Astro.props;
 const metadata = JSON.parse(title) as ImageMetadata;
 ---
 
-<figure class="authored-image" aria-label={metadata.caption}>
+<figure class="authored-image learning-visual" aria-label={metadata.caption}>
   <img src={src} alt={alt} loading="lazy" decoding="async" />
-  <figcaption>
+  <figcaption class="learning-visual__image-caption">
     <span>{metadata.caption}</span>
-    <span class="provenance">
+    <span class="provenance learning-visual__meta">
       Источник:
       {metadata.source.url
         ? <ExternalReference href={metadata.source.url}>
@@ -36,7 +36,9 @@ const metadata = JSON.parse(title) as ImageMetadata;
       Лицензия: {metadata.license}.
     </span>
     {metadata.origin === "generated" && (
-      <span class="illustrative">Иллюстративное сгенерированное изображение.</span>
+      <span class="illustrative learning-visual__meta">
+        Иллюстративное сгенерированное изображение.
+      </span>
     )}
   </figcaption>
 </figure>
@@ -44,26 +46,13 @@ const metadata = JSON.parse(title) as ImageMetadata;
 <style>
   .authored-image {
     display: grid;
-    gap: .7rem;
-    margin: 1.5rem 0;
+    gap: var(--space-3);
   }
 
   img {
     max-width: 100%;
     height: auto;
-    border: 1px solid var(--color-muted);
+    border: var(--border-width-thin) solid var(--color-muted);
     border-radius: var(--radius);
-  }
-
-  figcaption {
-    display: grid;
-    gap: .25rem;
-    color: var(--color-muted);
-    font-size: .9rem;
-  }
-
-  .provenance,
-  .illustrative {
-    font-size: .82rem;
   }
 </style>
