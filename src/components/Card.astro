@@ -1,0 +1,99 @@
+---
+type CardRoot = "article" | "aside" | "div" | "section";
+type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
+type HeadingTag = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+
+interface Props {
+  as: CardRoot;
+  headingId?: string;
+  headingLevel?: HeadingLevel;
+  titleRole?: "component-title" | "page-title";
+  class?: string;
+}
+
+const {
+  as: Root,
+  headingId,
+  headingLevel,
+  titleRole = "component-title",
+  class: className,
+} = Astro.props as Props;
+const hasTitle = Astro.slots.has("title");
+if (hasTitle && (!headingId || !headingLevel)) {
+  throw new Error("Card title requires headingId and headingLevel");
+}
+const Heading = `h${headingLevel ?? 2}` as HeadingTag;
+---
+
+<Root
+  class:list={["card", className]}
+  aria-labelledby={hasTitle ? headingId : undefined}
+>
+  {Astro.slots.has("eyebrow") && (
+    <div class="card__eyebrow type-meta" data-card-region="eyebrow">
+      <slot name="eyebrow" />
+    </div>
+  )}
+  {hasTitle && (
+    <Heading
+      id={headingId}
+      class:list={["card__title", `type-${titleRole}`]}
+      data-card-region="title"
+    >
+      <slot name="title" />
+    </Heading>
+  )}
+  {Astro.slots.has("description") && (
+    <p
+      class="card__description type-supporting"
+      data-card-region="description"
+    >
+      <slot name="description" />
+    </p>
+  )}
+  {Astro.slots.has("default") && (
+    <div class="card__body type-body" data-card-region="body"><slot /></div>
+  )}
+  {Astro.slots.has("actions") && (
+    <div class="card__actions" data-card-region="actions">
+      <slot name="actions" />
+    </div>
+  )}
+</Root>
+
+<style>
+  .card {
+    min-width: 0;
+    border: var(--border-subtle);
+    border-radius: var(--radius);
+    padding: var(--space-card);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-card);
+    color: var(--color-ink);
+    overflow-wrap: anywhere;
+  }
+  .card__eyebrow {
+    margin: var(--space-0) var(--space-0) var(--space-2);
+    color: var(--color-muted);
+    text-transform: uppercase;
+  }
+  .card__title {
+    margin: var(--space-0);
+    color: var(--color-ink);
+  }
+  .card__description {
+    max-width: var(--measure-card-copy);
+    margin-top: var(--space-3);
+    color: var(--color-muted);
+  }
+  .card__body {
+    margin-top: var(--space-5);
+  }
+  .card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    margin-top: var(--space-6);
+  }
+</style>
