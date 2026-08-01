@@ -14,7 +14,7 @@ const initialStatus = progressStatusCopy["not-started"];
 ---
 <span class="status-stack">
   <span
-    class="status"
+    class="status type-meta"
     data-progress-status
     data-destination-id={destination.id}
     data-state="not-started"
@@ -25,7 +25,7 @@ const initialStatus = progressStatusCopy["not-started"];
   </span>
   {destination.kind === "lesson" && (
     <span
-      class="revision-status"
+      class="revision-status type-meta"
       data-revision-status
       data-destination-id={destination.id}
       aria-live="polite"
@@ -37,27 +37,25 @@ const initialStatus = progressStatusCopy["not-started"];
 </span>
 
 <style>
-  .status-stack { display: grid; justify-items: end; gap: .3rem; }
+  .status-stack {
+    display: grid;
+    justify-items: end;
+    gap: var(--space-1);
+  }
   .status {
     display: inline-flex;
     align-items: center;
-    gap: .35rem;
+    gap: var(--space-1);
     color: var(--color-muted);
     font-family: var(--font-sans);
-    font-size: var(--font-size-meta);
-    font-weight: var(--font-weight-medium);
-    line-height: var(--line-height-meta);
     white-space: nowrap;
   }
   .status[data-state="started"],
   .status[data-state="completed"] { color: var(--color-ink); }
   .revision-status {
-    border-left: 2px solid currentColor;
-    padding-left: .45rem;
+    border-left: var(--border-width-emphasis) solid currentColor;
+    padding-left: var(--space-2);
     color: var(--color-warning);
     font-family: var(--font-sans);
-    font-size: var(--font-size-meta);
-    font-weight: var(--font-weight-medium);
-    line-height: var(--line-height-meta);
   }
 </style>

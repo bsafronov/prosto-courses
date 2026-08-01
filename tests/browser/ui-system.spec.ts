@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 async function cardSurface(locator: Locator) {
   return locator.evaluate((element) => {
@@ -31,33 +31,39 @@ const themes = {
   },
 } as const;
 
+const responsiveViewports = [
+  {
+    name: "320px",
+    width: 320,
+    height: 800,
+    display: "40px",
+    pageTitle: "32px",
+    sectionTitle: "28px",
+  },
+  {
+    name: "desktop",
+    width: 1280,
+    height: 900,
+    display: "64px",
+    pageTitle: "48px",
+    sectionTitle: "36px",
+  },
+] as const;
+
+async function selectTheme(page: Page, theme: string) {
+  await page
+    .getByRole("combobox", { name: "Тема оформления" })
+    .selectOption(theme);
+}
+
 for (const [theme, colors] of Object.entries(themes)) {
-  for (const viewport of [
-    {
-      name: "320px",
-      width: 320,
-      height: 800,
-      display: "40px",
-      pageTitle: "32px",
-      sectionTitle: "28px",
-    },
-    {
-      name: "desktop",
-      width: 1280,
-      height: 900,
-      display: "64px",
-      pageTitle: "48px",
-      sectionTitle: "36px",
-    },
-  ]) {
+  for (const viewport of responsiveViewports) {
     test(`Catalog and offline Cards keep ${theme} contracts at ${viewport.name}`, async ({
       page,
     }) => {
       await page.setViewportSize(viewport);
       await page.goto("./");
-      await page
-        .getByRole("combobox", { name: "Тема оформления" })
-        .selectOption(theme);
+      await selectTheme(page, theme);
 
       const hero = page.getByRole("heading", {
         level: 1,
@@ -135,6 +141,131 @@ for (const [theme, colors] of Object.entries(themes)) {
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
       ).toBeLessThanOrEqual(viewport.width);
+    });
+  }
+}
+
+for (const [theme, colors] of Object.entries(themes)) {
+  for (const viewport of responsiveViewports) {
+    test(`Course Overview keeps ${theme} UI contracts at ${viewport.name}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize(viewport);
+      await page.goto("./courses/markdown/");
+      await selectTheme(page, theme);
+
+      const overviewCard = page.getByRole("region", {
+        name: "Основы Markdown",
+      });
+      const routeCard = page.getByRole("region", { name: "Маршрут курса" });
+      const title = overviewCard.getByRole("heading", {
+        level: 1,
+        name: "Основы Markdown",
+      });
+      const action = overviewCard.getByRole("link", { name: "Начать" });
+
+      await expect(title).toHaveCSS("font-size", viewport.pageTitle);
+      await expect(
+        overviewCard.locator('[data-card-region="description"]'),
+      ).toHaveCSS("font-size", "14px");
+      await expect(
+        overviewCard.locator('[data-card-region="description"]'),
+      ).toHaveCSS("max-width", "688px");
+      await expect(action).toHaveAttribute("href", /\/lessons\/vvedenie\/$/);
+      expect((await action.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      expect(
+        await overviewCard
+          .locator("[data-card-region]")
+          .evaluateAll((regions) =>
+            regions.map((region) => region.getAttribute("data-card-region")),
+          ),
+      ).toEqual(["eyebrow", "title", "description", "body", "actions"]);
+
+      await expect(
+        routeCard.getByRole("heading", { level: 2, name: "Маршрут курса" }),
+      ).toHaveCSS("font-size", "20px");
+      await expect(routeCard.locator('[data-card-region="description"]')).toHaveCSS(
+        "font-size",
+        "14px",
+      );
+      await expect(
+        routeCard.getByRole("link", { name: "От исходника к структуре" }),
+      ).toHaveCSS("font-size", "12px");
+      await expect(routeCard.locator(".route-node").first()).toHaveCSS(
+        "font-family",
+        /IBM Plex Mono/,
+      );
+      await expect(routeCard.locator("[data-progress-status]").first()).toHaveCSS(
+        "font-family",
+        /Onest/,
+      );
+
+      const details = page.getByRole("article", {
+        name: "Подробнее о курсе",
+      });
+      await expect(
+        details.getByRole("heading", { level: 2, name: "Чему ты научишься" }),
+      ).toHaveCSS("font-size", viewport.sectionTitle);
+      await expect(details).toHaveCSS("font-size", "18px");
+      await expect(details.locator(".completion-note")).toHaveCSS(
+        "font-size",
+        "14px",
+      );
+      for (const summary of [
+        details.getByRole("group", { name: "Объём курса" }),
+        details.getByRole("group", { name: "Актуальность материалов" }),
+      ]) {
+        await expect(summary.locator("dt").first()).toHaveCSS("font-size", "12px");
+        await expect(summary.locator("dd").first()).toHaveCSS("font-size", "16px");
+      }
+
+      await expect(overviewCard).toHaveCSS("background-color", colors.surface);
+      await expect(overviewCard).toHaveCSS("color", colors.ink);
+      await expect(overviewCard.locator('[data-card-region="description"]')).toHaveCSS(
+        "color",
+        colors.muted,
+      );
+      expect(await cardSurface(routeCard)).toEqual(await cardSurface(overviewCard));
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(viewport.width);
+
+      await page.evaluate(() => {
+        localStorage.setItem(
+          "prosto-courses:progress:v1",
+          JSON.stringify({
+            courses: {
+              markdown: {
+                destinations: {
+                  "lesson:formatting": {
+                    state: "completed",
+                    visitedAt: 1,
+                    completedRevision: 1,
+                  },
+                  "lesson:source-render": {
+                    state: "started",
+                    visitedAt: 2,
+                  },
+                },
+              },
+            },
+          }),
+        );
+      });
+      await page.reload();
+
+      await expect(
+        overviewCard.getByRole("link", { name: "Продолжить" }),
+      ).toHaveAttribute("href", /\/lessons\/source-render\/$/);
+      const revisedLesson = routeCard.getByRole("link", {
+        name: "Пересмотреть обновлённый урок: Заголовки, выделение и списки",
+      });
+      await expect(
+        revisedLesson.getByText("Обновлён после завершения", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        revisedLesson.getByLabel("Статус урока: Завершён"),
+      ).toBeVisible();
     });
   }
 }

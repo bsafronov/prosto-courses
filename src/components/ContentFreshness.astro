@@ -3,6 +3,8 @@ import {
   formatFreshnessDate,
   type ContentFreshnessState,
 } from "../lib/courses";
+import SummaryGrid from "./SummaryGrid.astro";
+import SummaryItem from "./SummaryItem.astro";
 
 interface Props {
   state: ContentFreshnessState;
@@ -15,86 +17,43 @@ const reviewAfter =
     ? state.freshness.reviewAfter.toISOString().slice(0, 10)
     : undefined;
 ---
-<dl class="freshness" role="group" aria-label="Актуальность материалов">
-  <div>
-    <dt>Проверено</dt>
-    <dd>
-      <time datetime={verifiedAt}>
-        {formatFreshnessDate(state.freshness.verifiedAt)}
-      </time>
-    </dd>
-  </div>
+<SummaryGrid label="Актуальность материалов">
+  <SummaryItem label="Проверено">
+    <time datetime={verifiedAt}>
+      {formatFreshnessDate(state.freshness.verifiedAt)}
+    </time>
+  </SummaryItem>
   {state.freshness.jurisdiction && (
-    <div>
-      <dt>Юрисдикция</dt>
-      <dd>{state.freshness.jurisdiction}</dd>
-    </div>
+    <SummaryItem label="Юрисдикция">{state.freshness.jurisdiction}</SummaryItem>
   )}
-  <div class:list={["state", state.status]}>
-    <dt>Состояние</dt>
-    <dd>
-      {state.status === "stable" && "Стабильные сведения"}
-      {state.status === "current" && state.freshness.mode === "time-sensitive" && (
-        <>
-          Актуально до <time datetime={reviewAfter}>
+  <SummaryItem label="Состояние" tone={state.status === "stale" ? "warning" : undefined}>
+    {state.status === "stable" && "Стабильные сведения"}
+    {state.status === "current" && state.freshness.mode === "time-sensitive" && (
+      <>
+        Актуально до <time datetime={reviewAfter}>
+          {formatFreshnessDate(state.freshness.reviewAfter)}
+        </time>
+      </>
+    )}
+    {state.status === "stale" && state.freshness.mode === "time-sensitive" && (
+      <span class="state-message" role="status">
+        <strong>Требуется повторная проверка</strong>
+        <span class="state-message__detail type-supporting muted">
+          Срок проверки истёк <time datetime={reviewAfter}>
             {formatFreshnessDate(state.freshness.reviewAfter)}
-          </time>
-        </>
-      )}
-      {state.status === "stale" && state.freshness.mode === "time-sensitive" && (
-        <span role="status">
-          <strong>Требуется повторная проверка</strong>
-          <span>
-            Срок проверки истёк <time datetime={reviewAfter}>
-              {formatFreshnessDate(state.freshness.reviewAfter)}
-            </time>. Сверься с актуальными источниками.
-          </span>
+          </time>. Сверься с актуальными источниками.
         </span>
-      )}
-    </dd>
-  </div>
-</dl>
+      </span>
+    )}
+  </SummaryItem>
+</SummaryGrid>
 
 <style>
-  .freshness {
-    display: flex;
-    flex-wrap: wrap;
-    gap: .7rem;
-    margin: 1.5rem 0;
-  }
-
-  .freshness > div {
-    min-width: 10rem;
-    border-bottom: 1px solid var(--color-border);
-    padding: .75rem 0;
-  }
-
-  .freshness > .stale {
-    border-left: 2px solid var(--color-warning);
-    padding-left: .75rem;
-    color: var(--color-warning);
-    background: transparent;
-  }
-
-  dt {
-    color: var(--color-muted);
-    font-size: .78rem;
-    font-weight: 750;
-  }
-
-  dd {
-    margin: .15rem 0 0;
-    font-weight: 750;
-  }
-
-  dd span {
+  .state-message {
     display: grid;
-    gap: .2rem;
+    gap: var(--space-1);
   }
-
-  dd span span {
-    color: var(--color-muted);
-    font-size: .88rem;
-    font-weight: 500;
+  .state-message__detail {
+    font-weight: var(--font-weight-regular);
   }
 </style>

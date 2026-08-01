@@ -41,7 +41,7 @@ let lessonIndex = 0;
         : `${lessonListLabel}: ${module.data.title}`;
       return (
         <li class="module">
-          <p class="module-title">
+          <p class="module-title type-meta">
             <span aria-hidden="true">
               {String(moduleIndex + 1).padStart(2, "0")}
             </span>
@@ -59,10 +59,11 @@ let lessonIndex = 0;
               const destination = lessonDestination(currentSlug);
               return (
                 <li class="destination" data-kind="lesson">
-                  <span class="route-node" aria-hidden="true">
+                  <span class="route-node type-meta" aria-hidden="true">
                     {String(lessonIndex).padStart(2, "0")}
                   </span>
                   <a
+                    class="type-meta"
                     href={lessonPath(courseSlug, currentSlug)}
                     aria-current={current?.kind === "lesson" &&
                       current.slug === currentSlug
@@ -76,7 +77,7 @@ let lessonIndex = 0;
                     <span>{lesson.data.title}</span>
                     <ProgressStatus destination={destination} />
                     <span
-                      class="revisit"
+                      class="revisit type-meta"
                       data-revision-revisit
                       data-destination-id={destination.id}
                       hidden
@@ -92,8 +93,9 @@ let lessonIndex = 0;
             const destination = checkpointDestination(slug);
             return (
               <div class="destination checkpoint" data-kind="checkpoint">
-                <span class="route-node" aria-hidden="true">◆</span>
+                <span class="route-node type-meta" aria-hidden="true">◆</span>
                 <a
+                  class="type-meta"
                   href={checkpointPath(courseSlug, slug)}
                   aria-current={current?.kind === "checkpoint" &&
                     current.slug === slug
@@ -110,8 +112,9 @@ let lessonIndex = 0;
       );
     })}
     <li class="destination capstone" data-kind="capstone">
-      <span class="route-node" aria-hidden="true">■</span>
+      <span class="route-node type-meta" aria-hidden="true">■</span>
       <a
+        class="type-meta"
         href={capstonePath(courseSlug)}
         aria-current={current?.kind === "capstone" ? "page" : undefined}
       >
@@ -123,22 +126,20 @@ let lessonIndex = 0;
 </div>
 
 <style>
+  .outline { max-width: var(--measure-copy); }
   .module-list, .destination-list {
     display: grid;
     margin: 0;
     padding: 0;
     list-style: none;
   }
-  .module-list { gap: 2rem; }
+  .module-list { gap: var(--space-8); }
   .module-title {
     display: grid;
-    grid-template-columns: 2rem 1fr;
-    gap: .6rem;
-    margin: 0 0 .8rem;
+    grid-template-columns: var(--space-8) 1fr;
+    gap: var(--space-2);
+    margin: var(--space-0) var(--space-0) var(--space-3);
     color: var(--color-muted);
-    font-size: var(--font-size-meta);
-    font-weight: var(--font-weight-medium);
-    line-height: var(--line-height-meta);
   }
   .module-title > span { font-family: var(--font-mono); }
   .module-title a {
@@ -151,50 +152,47 @@ let lessonIndex = 0;
   }
   .destination-list {
     position: relative;
-    gap: .25rem;
+    gap: var(--space-1);
   }
   .destination-list::before {
     position: absolute;
-    top: 1rem;
-    bottom: 1rem;
-    left: .85rem;
-    width: 1px;
+    top: var(--space-4);
+    bottom: var(--space-4);
+    left: calc(var(--space-6) / 2);
+    width: var(--border-width-thin);
     background: var(--color-border);
     content: "";
   }
   .destination {
     position: relative;
     display: grid;
-    grid-template-columns: 1.7rem minmax(0, 1fr);
-    gap: .65rem;
+    grid-template-columns: var(--space-6) minmax(0, 1fr);
+    gap: var(--space-2);
     align-items: start;
   }
   .route-node {
     z-index: 1;
     display: grid;
-    width: 1.7rem;
-    height: 1.7rem;
+    width: var(--space-6);
+    height: var(--space-6);
     place-items: center;
-    border: 1px solid var(--color-border);
-    border-radius: 50%;
+    border: var(--border-subtle);
+    border-radius: var(--radius-round);
     background: var(--color-canvas);
     color: var(--color-muted);
-    font: 400 .58rem/1 var(--font-mono);
+    font-family: var(--font-mono);
   }
   .destination[data-kind="checkpoint"] .route-node,
   .capstone .route-node {
     border: 0;
     border-radius: 0;
     background: transparent;
-    font-size: .7rem;
   }
   .destination > a {
     display: grid;
-    gap: .1rem;
-    padding: .3rem .15rem .7rem;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-1) var(--space-3);
     color: var(--color-muted);
-    font-size: var(--font-size-meta);
-    line-height: var(--line-height-meta);
     text-decoration: none;
   }
   .destination > a[aria-current="page"] {
@@ -206,15 +204,12 @@ let lessonIndex = 0;
     background: var(--color-ink);
     color: var(--color-canvas);
   }
-  .checkpoint { margin-top: .25rem; }
-  .capstone { margin-top: -1.3rem; }
+  .checkpoint { margin-top: var(--space-1); }
+  .capstone { margin-top: calc(-1 * var(--space-5)); }
   .revisit {
     color: var(--color-warning);
     font-family: var(--font-sans);
-    font-size: var(--font-size-meta);
-    font-weight: var(--font-weight-medium);
-    line-height: var(--line-height-meta);
     text-decoration: underline;
-    text-underline-offset: .18em;
+    text-underline-offset: var(--space-1);
   }
 </style>

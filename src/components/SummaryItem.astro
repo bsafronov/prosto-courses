@@ -1,0 +1,33 @@
+---
+interface Props {
+  label: string;
+  tone?: "warning";
+}
+
+const { label, tone } = Astro.props;
+---
+
+<div class:list={["summary-item", { "summary-item--warning": tone === "warning" }]}>
+  <dt class="type-meta">{label}</dt>
+  <dd class="type-body"><slot /></dd>
+</div>
+
+<style>
+  .summary-item {
+    min-width: 0;
+    border-bottom: var(--border-subtle);
+    padding-block: var(--space-3);
+  }
+  .summary-item--warning {
+    border-left: var(--border-width-emphasis) solid var(--color-warning);
+    padding-left: var(--space-3);
+    color: var(--color-warning);
+  }
+  dt {
+    color: var(--color-muted);
+  }
+  dd {
+    margin: var(--space-1) var(--space-0) var(--space-0);
+    font-weight: var(--font-weight-semibold);
+  }
+</style>

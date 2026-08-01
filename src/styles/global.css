@@ -133,6 +133,27 @@ button:disabled:hover {
   margin-inline: auto;
 }
 .reading-width { width: min(var(--measure-reading), 100%); }
+.reading-flow > :where(p, ul, ol, blockquote) {
+  margin-block: var(--space-5);
+}
+.reading-flow > :first-child {
+  margin-top: var(--space-0);
+}
+.reading-flow > h2 {
+  margin: var(--space-12) var(--space-0) var(--space-4);
+  border-top: var(--border-subtle);
+  padding-top: var(--space-5);
+  text-wrap: balance;
+}
+.reading-flow > :where(ul, ol) {
+  padding-inline-start: var(--space-6);
+}
+.reading-flow > :where(ul, ol) > li {
+  padding-inline-start: var(--space-1);
+}
+.reading-flow > :where(ul, ol) > li + li {
+  margin-top: var(--space-2);
+}
 .eyebrow,
 .type-meta {
   font-family: var(--font-sans);
@@ -167,7 +188,8 @@ button:disabled:hover {
   letter-spacing: var(--tracking-title);
   line-height: var(--line-height-component-title);
 }
-.type-section-title {
+.type-section-title,
+.reading-flow > h2 {
   font-size: var(--font-size-section-title);
   font-weight: var(--font-weight-semibold);
   letter-spacing: var(--tracking-title);

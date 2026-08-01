@@ -1,0 +1,21 @@
+---
+interface Props {
+  label: string;
+}
+
+const { label } = Astro.props;
+---
+
+<dl class="summary-grid" role="group" aria-label={label}><slot /></dl>
+
+<style>
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(min(100%, var(--measure-summary-item)), 1fr)
+    );
+    gap: var(--space-4);
+    margin-block: var(--space-6);
+  }
+</style>
