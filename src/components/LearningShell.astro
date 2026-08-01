@@ -32,6 +32,7 @@ const destinations = getCoreDestinationLinks(course.id, tree);
     <div class="route-mobile-head">
       <span id="course-route-title">Маршрут курса</span>
       <button
+        class="button-secondary button-icon"
         type="button"
         data-course-route-close
         aria-label="Закрыть маршрут курса"
@@ -41,7 +42,7 @@ const destinations = getCoreDestinationLinks(course.id, tree);
       <header class="route-head">
         <span>Маршрут курса</span>
         <strong>{course.data.title}</strong>
-        <a href={coursePath(course.id)}>О курсе</a>
+        <a class="link-control" href={coursePath(course.id)}>О курсе</a>
         <p data-course-progress role="status" aria-live="polite">Не начат</p>
         <p class="route-guidance">
           Рекомендуемая последовательность не ограничивает переходы — можно
@@ -202,25 +203,30 @@ const destinations = getCoreDestinationLinks(course.id, tree);
   .route-head [data-course-progress] {
     margin: 0;
     color: var(--color-muted);
-    font: 400 .68rem/1.4 var(--font-mono);
+    font-family: var(--font-sans);
+    font-size: var(--font-size-meta);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-meta);
     text-transform: uppercase;
   }
   .route-guidance {
     color: var(--color-muted);
-    font-size: .72rem;
-    line-height: 1.45;
+    font-size: var(--font-size-meta);
+    line-height: var(--line-height-meta);
   }
   .route-head > strong {
     display: block;
     margin: .35rem 0 .6rem;
     color: var(--color-ink);
-    font-weight: 650;
-    letter-spacing: -.025em;
-    line-height: 1.35;
+    font-size: var(--font-size-supporting);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--tracking-title);
+    line-height: var(--line-height-supporting);
   }
   .route-head > a {
     color: var(--color-muted);
-    font-size: .75rem;
+    font-size: var(--font-size-meta);
+    line-height: var(--line-height-meta);
     text-decoration: none;
   }
   .route-progress {
@@ -246,7 +252,7 @@ const destinations = getCoreDestinationLinks(course.id, tree);
     .course-route-panel {
       position: fixed;
       z-index: 90;
-      top: 3.5rem;
+      top: var(--shell-header-min-height);
       bottom: 0;
       left: 0;
       width: min(88vw, 23rem);
@@ -278,20 +284,17 @@ const destinations = getCoreDestinationLinks(course.id, tree);
       border-bottom: 1px solid var(--color-border);
       margin-bottom: 1rem;
       background: var(--color-canvas);
-      font-weight: 600;
+      font-weight: var(--font-weight-semibold);
     }
     .route-mobile-head button {
-      width: 2.35rem;
-      min-height: 2.35rem;
-      border-color: var(--color-border);
-      background: transparent;
-      color: var(--color-ink);
+      width: var(--control-min-height);
+      min-height: var(--control-min-height);
       font-size: 1.4rem;
     }
     .course-route-backdrop {
       position: fixed;
       z-index: 80;
-      inset: 3.5rem 0 0;
+      inset: var(--shell-header-min-height) 0 0;
       width: 100%;
       min-height: 0;
       border: 0;

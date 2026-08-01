@@ -860,7 +860,7 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
   .options label + label { border-top: 1px solid var(--color-border); }
   input { margin-top: .35rem; accent-color: var(--color-brand); }
   .answer-field { display: grid; gap: .45rem; margin-top: 1rem; font-weight: 700; }
-  .answer-field input { width: 100%; margin: 0; border: 1px solid var(--color-border); border-radius: var(--radius); padding: .6rem; background: var(--color-canvas); color: inherit; font: inherit; font-weight: 400; }
+  .answer-field input { width: 100%; margin: 0; font-weight: var(--font-weight-regular); }
   .numeric-answer { display: flex; align-items: center; gap: .55rem; }
   .numeric-unit { font-weight: 600; }
   .matching-row {
@@ -873,7 +873,7 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
   }
   .matching-row + .matching-row { border-top: 1px solid var(--color-border); }
   .matching-row span { font-weight: 700; }
-  select { width: 100%; border: 1px solid var(--color-border); border-radius: var(--radius); padding: .55rem; background: var(--color-canvas); color: inherit; font: inherit; }
+  select { width: 100%; }
   .ordering-instructions {
     margin: .8rem 0 0;
     color: var(--color-muted);

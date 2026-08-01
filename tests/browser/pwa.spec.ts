@@ -2,6 +2,7 @@ import {
   expect,
   test,
   type APIRequestContext,
+  type BrowserContext,
   type Page,
 } from "@playwright/test";
 import { siteBasePath, siteOrigin } from "../../site.config.mjs";
@@ -16,6 +17,15 @@ interface ReleaseInventory {
 function fixtureServerUrl(baseURL: string | undefined, pathname: string) {
   if (!baseURL) throw new Error("Playwright baseURL is required");
   return new URL(pathname, baseURL).href;
+}
+
+async function enableDataSaving(context: BrowserContext) {
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, "connection", {
+      configurable: true,
+      value: { saveData: true },
+    });
+  });
 }
 
 async function getReleaseInventory(
@@ -69,9 +79,15 @@ async function expectQuietInstall(page: Page) {
   await expect(
     control.getByText("Подготовка офлайн", { exact: true }),
   ).toBeHidden();
-  await expect(
-    control.getByRole("button", { name: "Установить", exact: true }),
-  ).toBeVisible();
+  const install = control.getByRole("button", {
+    name: "Установить",
+    exact: true,
+  });
+  await expect(install).toBeVisible();
+  const target = await install.boundingBox();
+  expect(target).not.toBeNull();
+  expect(target!.width).toBeGreaterThanOrEqual(44);
+  expect(target!.height).toBeGreaterThanOrEqual(44);
   await expect(control).not.toContainText("Доступно офлайн");
   return control;
 }
@@ -560,18 +576,40 @@ test("preparing Offline Availability keeps focus stable through completion", asy
   await expect(catalogLink).toBeFocused();
 });
 
+test("data saving recognizes an active release before it controls the page", async ({
+  context,
+  page,
+}) => {
+  await enableDataSaving(context);
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator.serviceWorker, "getRegistration", {
+      configurable: true,
+      value: async () => ({
+        active: { state: "activated" },
+        installing: null,
+        waiting: null,
+        update: async () => undefined,
+      }),
+    });
+  });
+  await page.goto("./");
+
+  const control = page.getByRole("group", {
+    name: "Приложение и офлайн-доступ",
+  });
+  await expectQuietInstall(page);
+  await expect(
+    control.getByText("Офлайн по запросу", { exact: true }),
+  ).toBeHidden();
+});
+
 test("data saving defers preparation until the learner accepts the measured release", async ({
   baseURL,
   context,
   page,
   request,
 }) => {
-  await context.addInitScript(() => {
-    Object.defineProperty(navigator, "connection", {
-      configurable: true,
-      value: { saveData: true },
-    });
-  });
+  await enableDataSaving(context);
   await page.goto("./");
 
   const control = page.getByRole("group", { name: "Приложение и офлайн-доступ" });

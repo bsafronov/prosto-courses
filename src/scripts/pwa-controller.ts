@@ -219,8 +219,12 @@ function createController(config: {
     registrationAttempt += 1;
   }
 
+  function hasActiveRelease() {
+    return Boolean(navigator.serviceWorker.controller || registration?.active);
+  }
+
   function preparationFailed() {
-    if (navigator.serviceWorker.controller || registration?.active) {
+    if (hasActiveRelease()) {
       state.readiness = "ready";
     } else if (!state.online) {
       state.readiness = "preparing";
@@ -267,7 +271,7 @@ function createController(config: {
     if (registrationStarted || !state.online) return;
     registrationStarted = true;
     const attempt = ++registrationAttempt;
-    if (!navigator.serviceWorker.controller) state.readiness = "preparing";
+    if (!hasActiveRelease()) state.readiness = "preparing";
     emit();
 
     updateServiceWorker = registerSW({
@@ -296,7 +300,7 @@ function createController(config: {
         nextRegistration.addEventListener("updatefound", () => {
           observeInstall(registration?.installing ?? null, attempt);
         });
-        if (navigator.serviceWorker.controller) {
+        if (hasActiveRelease()) {
           state.readiness = "ready";
           emit();
           checkForUpdate();
@@ -328,11 +332,11 @@ function createController(config: {
       if (!("serviceWorker" in navigator) || !navigator.serviceWorker) return;
       state.supported = true;
       state.online = navigator.onLine;
-      const hasActiveRelease = Boolean(navigator.serviceWorker.controller);
-      state.readiness = hasActiveRelease ? "ready" : "preparing";
       const existingRegistration =
         await navigator.serviceWorker.getRegistration();
       if (existingRegistration) rememberRegistration(existingRegistration);
+      const activeReleaseAvailable = hasActiveRelease();
+      state.readiness = activeReleaseAvailable ? "ready" : "preparing";
 
       window.addEventListener("beforeinstallprompt", (event) => {
         event.preventDefault();
@@ -351,8 +355,7 @@ function createController(config: {
         state.online = false;
         if (
           state.readiness === "preparing" &&
-          !navigator.serviceWorker.controller &&
-          !registration?.active
+          !hasActiveRelease()
         ) {
           invalidateRegistrationAttempt();
         }
@@ -369,7 +372,7 @@ function createController(config: {
         returnToCatalogAfterUpdate,
       );
 
-      if (nav.connection?.saveData && !hasActiveRelease) {
+      if (nav.connection?.saveData && !activeReleaseAvailable) {
         state.readiness = "deferred";
         emit();
         await loadReleaseSize();

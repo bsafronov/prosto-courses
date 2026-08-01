@@ -343,7 +343,7 @@ test("visual foundation uses the exact palettes and typography roles", async ({
   await expect(page.locator("body")).toHaveCSS("font-family", /Onest/);
   await expect(code).toHaveCSS("font-family", /IBM Plex Mono/);
   await expect(lessonPosition).toHaveCSS("font-family", /IBM Plex Mono/);
-  await expect(pwaControl).toHaveCSS("font-family", /IBM Plex Mono/);
+  await expect(pwaControl).toHaveCSS("font-family", /Onest/);
 });
 
 test("thin learner Header exposes shared controls on every learner route", async ({

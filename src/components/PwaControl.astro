@@ -25,7 +25,7 @@ import { sitePath } from "../lib/courses";
     hidden
   ></span>
   <button
-    class="pwa-action"
+    class="pwa-action button-secondary"
     data-pwa-action
     type="button"
     aria-describedby="pwa-action-detail"
@@ -43,17 +43,17 @@ import { sitePath } from "../lib/courses";
   .pwa-control {
     position: relative;
     display: inline-flex;
-    min-height: 2.35rem;
+    min-height: var(--control-min-height);
     align-items: center;
-    gap: .5rem;
-    border: 1px solid var(--color-border);
+    gap: var(--space-2);
+    border: var(--border-subtle);
     border-radius: var(--radius);
-    padding: .3rem .35rem .3rem .6rem;
+    padding: var(--space-1) var(--space-2);
     background: var(--color-surface);
     color: var(--color-muted);
-    font-family: var(--font-mono);
-    font-size: .82rem;
-    line-height: 1.25;
+    font-family: var(--font-sans);
+    font-size: var(--font-size-supporting);
+    line-height: var(--line-height-supporting);
   }
   .pwa-control[hidden] { display: none; }
   .pwa-control[data-quiet="true"] {
@@ -63,11 +63,11 @@ import { sitePath } from "../lib/courses";
     background: transparent;
   }
   .pwa-indicator {
-    width: .55rem;
-    height: .55rem;
+    width: var(--progress-marker-size);
+    height: var(--progress-marker-size);
     flex: 0 0 auto;
-    border: 1px solid currentColor;
-    border-radius: 50%;
+    border: var(--border-width-thin) solid currentColor;
+    border-radius: var(--radius-round);
     background: var(--color-canvas);
   }
   .pwa-indicator[hidden] { display: none; }
@@ -81,21 +81,17 @@ import { sitePath } from "../lib/courses";
     border-color: var(--color-error);
     background: var(--color-error);
   }
-  .pwa-status { color: var(--color-ink); font-weight: 750; white-space: nowrap; }
-  .pwa-status[hidden] { display: none; }
-  .pwa-detail { max-width: 24rem; }
-  .pwa-action {
-    min-height: 1.75rem;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius);
-    padding: .2rem .55rem;
-    background: var(--color-canvas);
+  .pwa-status {
     color: var(--color-ink);
-    font-size: .8rem;
+    font-weight: var(--font-weight-semibold);
     white-space: nowrap;
   }
-  .pwa-action:hover { background: var(--color-ink); color: var(--color-canvas); }
-  .pwa-action:disabled { cursor: not-allowed; opacity: .55; }
+  .pwa-status[hidden] { display: none; }
+  .pwa-detail { max-width: var(--measure-control-detail); }
+  .pwa-action {
+    padding-inline: var(--control-padding-inline-compact);
+    white-space: nowrap;
+  }
   @media (max-width: 42rem) {
     .pwa-control { max-width: 100%; flex-wrap: wrap; }
     .pwa-detail { order: 3; flex-basis: 100%; }

@@ -43,7 +43,10 @@ const initialStatus = progressStatusCopy["not-started"];
     align-items: center;
     gap: .35rem;
     color: var(--color-muted);
-    font: 400 .68rem/1.3 var(--font-mono);
+    font-family: var(--font-sans);
+    font-size: var(--font-size-meta);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-meta);
     white-space: nowrap;
   }
   .status[data-state="started"],
@@ -52,6 +55,9 @@ const initialStatus = progressStatusCopy["not-started"];
     border-left: 2px solid currentColor;
     padding-left: .45rem;
     color: var(--color-warning);
-    font: 500 .68rem/1.3 var(--font-mono);
+    font-family: var(--font-sans);
+    font-size: var(--font-size-meta);
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-meta);
   }
 </style>

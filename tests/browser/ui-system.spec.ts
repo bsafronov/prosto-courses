@@ -18,11 +18,15 @@ async function cardSurface(locator: Locator) {
 
 const themes = {
   light: {
+    focus: "rgb(63, 63, 70)",
     ink: "rgb(24, 24, 27)",
+    muted: "rgb(113, 113, 122)",
     surface: "rgb(255, 255, 255)",
   },
   dark: {
+    focus: "rgb(212, 212, 216)",
     ink: "rgb(250, 250, 250)",
+    muted: "rgb(161, 161, 170)",
     surface: "rgb(24, 24, 27)",
   },
 } as const;
@@ -134,3 +138,153 @@ for (const [theme, colors] of Object.entries(themes)) {
     });
   }
 }
+
+for (const [theme, colors] of Object.entries(themes)) {
+  test(`Shell and controls keep accessible ${theme} presentation`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("./courses/accessible-images/lessons/describe-purpose/");
+
+    const themeControl = page.getByRole("combobox", {
+      name: "Тема оформления",
+    });
+    await themeControl.selectOption(theme);
+
+    const pwaControl = page.getByRole("group", {
+      name: "Приложение и офлайн-доступ",
+    });
+    const exactCheck = page.locator(
+      '[data-knowledge-check][data-type="exact"]',
+    );
+    const textInput = exactCheck.getByRole("textbox", { name: "Ответ" });
+    const matchingSelect = page.getByRole("combobox", {
+      name: "Соответствие для «Surrounding context»",
+    });
+    const checkButton = exactCheck.getByRole("button", {
+      name: "Проверить ответ",
+    });
+
+    for (const target of [themeControl, textInput, matchingSelect, checkButton]) {
+      const box = await target.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+      await target.focus();
+      await expect(target).toHaveCSS("outline-color", colors.focus);
+      await expect(target).toHaveCSS("outline-style", "solid");
+      await expect(target).toHaveCSS("outline-width", "2px");
+    }
+    await expect(textInput).toHaveCSS("border-top-color", colors.muted);
+    await expect(matchingSelect).toHaveCSS("border-top-color", colors.muted);
+
+    const catalogLink = page.getByRole("link", { name: "Каталог" });
+    const aboutCourseLink = page.getByRole("link", { name: "О курсе" });
+    for (const target of [catalogLink, aboutCourseLink]) {
+      const box = await target.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.height).toBeGreaterThanOrEqual(24);
+    }
+
+    for (const target of [
+      page.locator("body"),
+      page.getByRole("banner"),
+      page.getByRole("contentinfo"),
+      themeControl,
+      pwaControl,
+      textInput,
+      matchingSelect,
+      checkButton,
+      page.locator("[data-course-progress]"),
+      page.locator("[data-progress-status]").first(),
+      page.locator("[data-revision-revisit]").first(),
+      page.locator(".lesson-progress"),
+    ]) {
+      await expect(target).toHaveCSS("font-family", /Onest/);
+    }
+    for (const target of [
+      aboutCourseLink,
+      page.locator(".module-title a").first(),
+      page.locator("[data-lesson-link]").first(),
+    ]) {
+      await expect(target).toHaveCSS("font-size", "12px");
+    }
+
+    await expect(page.locator("body")).toHaveCSS("color", colors.ink);
+    await expect(pwaControl).toHaveCSS("background-color", colors.surface);
+    await expect(page.getByRole("banner")).toHaveCSS(
+      "border-bottom-width",
+      "1px",
+    );
+
+    await page.goto("./courses/markdown/lessons/formatting/");
+    const deleteReflection = page.getByRole("button", {
+      name: "Удалить навсегда",
+    });
+    await expect(deleteReflection).toBeDisabled();
+    await expect(deleteReflection).toHaveCSS("cursor", "not-allowed");
+    await expect(deleteReflection).toHaveCSS("opacity", "1");
+    await expect(deleteReflection).toHaveCSS("border-top-width", "1px");
+    await expect(deleteReflection).toHaveCSS("border-top-color", colors.muted);
+    await expect(page.getByRole("textbox", { name: "Твоя заметка" })).toHaveCSS(
+      "border-top-color",
+      colors.muted,
+    );
+    await expect(page.locator(".privacy")).toHaveCSS("font-family", /Onest/);
+    await expect(page.locator(".privacy")).toHaveCSS("line-height", "16.8px");
+  });
+}
+
+test("Long Lesson title keeps responsive Header and keyboard Course route", async ({
+  page,
+}) => {
+  const title = "Синдром Дауна: учитывать развитие и здоровье";
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(
+    "./courses/psihologicheskaya-pomoshch-doshkolnikam/lessons/sindrom-dauna-razvitie-i-zdorove/",
+  );
+
+  const header = page.getByRole("banner");
+  const routeToggle = header.getByRole("button", {
+    name: "Открыть маршрут курса",
+  });
+  await expect(
+    header.getByRole("link", { name: "Prosto.Courses" }),
+  ).toBeVisible();
+  await expect(routeToggle).toBeHidden();
+
+  await page.setViewportSize({ width: 320, height: 800 });
+  const mobileTitle = header.getByText(title, { exact: true });
+  await expect(routeToggle).toBeVisible();
+  await expect(mobileTitle).toBeVisible();
+  await expect(mobileTitle).toHaveCSS("text-overflow", "ellipsis");
+  await expect(mobileTitle).toHaveCSS("white-space", "nowrap");
+  const [toggleBox, titleBox, themeBox] = await Promise.all([
+    routeToggle.boundingBox(),
+    mobileTitle.boundingBox(),
+    header
+      .getByRole("combobox", { name: "Тема оформления" })
+      .boundingBox(),
+  ]);
+  expect(toggleBox).not.toBeNull();
+  expect(titleBox).not.toBeNull();
+  expect(themeBox).not.toBeNull();
+  expect(toggleBox!.width).toBeGreaterThanOrEqual(44);
+  expect(toggleBox!.height).toBeGreaterThanOrEqual(44);
+  expect(toggleBox!.x + toggleBox!.width).toBeLessThanOrEqual(titleBox!.x);
+  expect(titleBox!.x + titleBox!.width).toBeLessThanOrEqual(themeBox!.x);
+
+  await routeToggle.focus();
+  await page.keyboard.press("Enter");
+  const drawer = page.getByRole("dialog", { name: "Маршрут курса" });
+  const close = drawer.getByRole("button", { name: "Закрыть маршрут курса" });
+  await expect(close).toBeFocused();
+  const closeBox = await close.boundingBox();
+  expect(closeBox).not.toBeNull();
+  expect(closeBox!.width).toBeGreaterThanOrEqual(44);
+  expect(closeBox!.height).toBeGreaterThanOrEqual(44);
+  await page.keyboard.press("Escape");
+  await expect(routeToggle).toBeFocused();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(320);
+});

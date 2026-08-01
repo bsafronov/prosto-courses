@@ -14,6 +14,12 @@
   --color-completed-ink: #28613b;
   --color-warning: #8a5a00;
   --color-error: #a12828;
+  --color-control-background: var(--color-surface);
+  --color-control-ink: var(--color-ink);
+  --color-control-primary-background: var(--color-brand);
+  --color-control-primary-ink: var(--color-canvas);
+  --color-control-disabled-background: var(--color-canvas);
+  --color-control-disabled-ink: var(--color-muted);
   --color-data-series-1: #3d566e;
   --color-data-series-2: #695d4e;
   --color-data-series-3: #47665b;
@@ -77,6 +83,10 @@
   --measure-offline: 42rem;
   --measure-card-copy: 43rem;
   --measure-card-route: 12rem;
+  --measure-control-detail: 24rem;
+  --measure-theme-control: 7.5rem;
+  --measure-theme-control-narrow: 5rem;
+  --measure-mobile-title: 22rem;
   --breakpoint-viewport-min: 20rem;
 
   /* Borders, radii, shadows, and controls */
@@ -89,10 +99,17 @@
   --shadow-card: none;
   --shadow: 0 1rem 3rem rgb(24 24 27 / 10%);
   --control-min-height: 2.75rem;
+  --target-min-size: 1.5rem;
   --control-padding-block: 0.75rem;
   --control-padding-inline: 1rem;
+  --control-padding-inline-compact: var(--space-2);
+  --control-border: var(--border-width-thin) solid var(--color-muted);
   --focus-outline-width: 0.125rem;
   --focus-outline-offset: 0.1875rem;
+  --shell-header-min-height: var(--space-16);
+  --shell-header-canvas-share: 92%;
+  --shell-header-backdrop-blur: 0.875rem;
+  --shell-footer-space-before: var(--space-16);
   --progress-marker-size: 0.5rem;
   --progress-marker-dot-size: 0.1875rem;
 

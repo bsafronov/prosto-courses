@@ -1,7 +1,11 @@
 <label class="theme-control">
   <span class="sr-only">Тема</span>
   <span aria-hidden="true">◐</span>
-  <select data-theme-control aria-label="Тема оформления">
+  <select
+    class="select-quiet"
+    data-theme-control
+    aria-label="Тема оформления"
+  >
     <option value="system">Системная</option>
     <option value="light">Светлая</option>
     <option value="dark">Тёмная</option>
@@ -61,23 +65,18 @@
 <style>
   .theme-control {
     display: inline-flex;
-    min-height: 2rem;
+    min-height: var(--control-min-height);
     align-items: center;
-    gap: .35rem;
-    border-left: 1px solid var(--color-border);
-    padding-left: 1rem;
+    gap: var(--space-1);
+    border-left: var(--border-subtle);
+    padding-left: var(--space-4);
     color: var(--color-muted);
   }
-  select {
-    max-width: 7.5rem;
-    border: 0;
-    padding: .25rem .1rem;
-    background: transparent;
-    color: var(--color-ink);
-    font: 500 .78rem/1.2 var(--font-mono);
-  }
   @media (max-width: 36rem) {
-    .theme-control { border-left: 0; padding-left: .25rem; }
-    select { width: 5rem; font-size: .68rem; }
+    .theme-control {
+      border-left: 0;
+      padding-left: var(--space-1);
+    }
+    select { width: var(--measure-theme-control-narrow); }
   }
 </style>
