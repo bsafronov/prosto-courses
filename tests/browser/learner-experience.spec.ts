@@ -531,8 +531,8 @@ test("Lesson keeps 18px prose within a restrained reading measure", async ({
   });
 
   expect(readingGeometry.fontSize).toBe(18);
-  expect(readingGeometry.lineMeasure).toBeGreaterThanOrEqual(65);
-  expect(readingGeometry.lineMeasure).toBeLessThanOrEqual(70);
+    expect(readingGeometry.lineMeasure).toBeGreaterThanOrEqual(64.5);
+    expect(readingGeometry.lineMeasure).toBeLessThanOrEqual(65.5);
 });
 
 test("Lesson heading keeps meaningful content in the first desktop viewport", async ({

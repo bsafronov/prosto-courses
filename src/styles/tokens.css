@@ -43,7 +43,7 @@
   --font-size-body: 1rem;
   --line-height-body: 1.5;
   --font-size-reading: 1.125rem;
-  --line-height-reading: 1.7;
+  --line-height-reading: 1.6;
   --font-size-component-title: 1.25rem;
   --line-height-component-title: 1.4;
   --font-size-section-title: 1.75rem;
@@ -93,7 +93,7 @@
   --measure-course-route: 18rem;
   --measure-course-drawer: 23rem;
   --measure-completion-control: 11rem;
-  --breakpoint-viewport-min: 20rem;
+  --breakpoint-viewport-min: 320px;
 
   /* Borders, radii, shadows, and controls */
   --border-width-thin: 0.0625rem;

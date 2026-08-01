@@ -64,6 +64,9 @@ const headingId = `${kind}-completion-heading`;
   }
   @media (max-width: 36rem) {
     .completion { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
-    .completion button { width: 100%; }
+    .completion button {
+      width: 100%;
+      min-width: 0;
+    }
   }
 </style>

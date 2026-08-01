@@ -20,8 +20,9 @@ a {
 a:hover { color: var(--color-brand-dark); }
 .external-reference-marker {
   display: inline-block;
-  margin-inline-start: .15em;
-  font-size: .75em;
+  margin-inline-start: var(--space-1);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-meta);
   font-weight: var(--font-weight-bold);
   line-height: 0;
   text-decoration: none;
@@ -30,12 +31,13 @@ a:hover { color: var(--color-brand-dark); }
 .external-reference-message {
   display: block;
   width: fit-content;
-  margin-top: .35rem;
-  border-left: .2rem solid var(--color-warning);
-  padding-left: .55rem;
+  margin-top: var(--space-2);
+  border-left: var(--border-width-emphasis) solid var(--color-warning);
+  padding-left: var(--space-3);
   color: var(--color-warning);
-  font-size: .88rem;
-  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-supporting);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-supporting);
 }
 button,
 input,
@@ -136,6 +138,7 @@ button:disabled:hover {
 .reading-flow {
   font-size: inherit;
   line-height: inherit;
+  overflow-wrap: anywhere;
 }
 .reading-flow p {
   text-wrap: pretty;
@@ -171,7 +174,6 @@ button:disabled:hover {
 }
 .reading-flow > :where(ul, ol) > li::marker {
   color: var(--color-muted);
-  font-family: var(--font-mono);
   font-weight: var(--font-weight-medium);
 }
 .reading-flow code {
@@ -222,7 +224,6 @@ button:disabled:hover {
 }
 .reading-flow > table thead th {
   color: var(--color-muted);
-  font-family: var(--font-mono);
   font-size: var(--font-size-meta);
   font-weight: var(--font-weight-medium);
   letter-spacing: var(--tracking-meta);
@@ -312,6 +313,7 @@ button:disabled:hover {
   color: var(--color-muted);
 }
 .learning-page__body {
+  width: min(var(--measure-reading), 100%);
   padding-top: var(--space-5);
 }
 .learning-page__primary-action {
@@ -354,6 +356,8 @@ button:disabled:hover {
   border: var(--border-subtle);
   border-radius: var(--radius);
   background: var(--color-surface);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
 }
 .work-area__eyebrow {
   margin: 0 0 var(--space-1);

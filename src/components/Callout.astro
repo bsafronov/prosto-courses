@@ -25,7 +25,7 @@ const presentation = presentations[kind];
 ---
 
 <aside class="callout" data-kind={kind} aria-label={presentation.label}>
-  <p class="callout-label">
+  <p class="callout-label type-meta">
     <span class="callout-icon" aria-hidden="true">{presentation.icon}</span>
     <span>{presentation.label}</span>
   </p>
@@ -36,26 +36,31 @@ const presentation = presentations[kind];
   .callout {
     --callout-accent: var(--color-muted);
     min-width: 0;
-    margin: 1.75rem 0;
+    margin: var(--space-8) var(--space-0);
     border: 0;
-    border-inline-start: 2px solid var(--callout-accent);
-    padding: .2rem 0 .2rem 1.15rem;
+    border-inline-start: var(--border-width-emphasis) solid var(--callout-accent);
+    padding: var(--space-1) var(--space-0) var(--space-1) var(--space-4);
     background: transparent;
     overflow-wrap: anywhere;
   }
+  .callout[data-kind="key"],
+  .callout[data-kind="info"] { --callout-accent: var(--color-brand); }
   .callout[data-kind="warning"] { --callout-accent: var(--color-warning); }
   .callout[data-kind="error"] { --callout-accent: var(--color-error); }
   .callout-label {
     display: flex;
-    gap: .55rem;
+    gap: var(--space-2);
     align-items: center;
-    margin: 0 0 .45rem;
+    margin: var(--space-0) var(--space-0) var(--space-2);
     color: var(--callout-accent);
-    font: 500 .7rem/1.4 var(--font-mono);
-    letter-spacing: .02em;
     text-transform: uppercase;
   }
-  .callout-icon { display: inline-grid; width: 1.3rem; place-items: center; font-size: 1.05rem; }
+  .callout-icon {
+    display: inline-grid;
+    width: var(--space-5);
+    place-items: center;
+    font-size: var(--font-size-body);
+  }
   .callout-content :global(> :first-child) { margin-top: 0; }
   .callout-content :global(> :last-child) { margin-bottom: 0; }
 </style>

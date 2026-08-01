@@ -72,7 +72,7 @@ test("long-form prose keeps a divided reading rhythm in both themes", async ({
       background: getComputedStyle(element).backgroundColor,
     }));
 
-    expect(presentation.paragraphLineHeight).toBeGreaterThanOrEqual(1.65);
+      expect(presentation.paragraphLineHeight).toBeCloseTo(1.6, 5);
     expect(
       contrastRatio(codeColors.foreground, codeColors.background),
     ).toBeGreaterThanOrEqual(4.5);

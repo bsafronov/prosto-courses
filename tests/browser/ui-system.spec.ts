@@ -20,18 +20,24 @@ const themes = {
   light: {
     canvas: "rgb(250, 250, 250)",
     border: "rgb(228, 228, 231)",
+    brand: "rgb(39, 39, 42)",
+    error: "rgb(161, 40, 40)",
     focus: "rgb(63, 63, 70)",
     ink: "rgb(24, 24, 27)",
     muted: "rgb(113, 113, 122)",
     surface: "rgb(255, 255, 255)",
+    warning: "rgb(138, 90, 0)",
   },
   dark: {
     canvas: "rgb(9, 9, 11)",
     border: "rgb(39, 39, 42)",
+    brand: "rgb(228, 228, 231)",
+    error: "rgb(240, 154, 154)",
     focus: "rgb(212, 212, 216)",
     ink: "rgb(250, 250, 250)",
     muted: "rgb(161, 161, 170)",
     surface: "rgb(24, 24, 27)",
+    warning: "rgb(232, 187, 102)",
   },
 } as const;
 
@@ -177,6 +183,251 @@ const learningJourney = [
 ] as const;
 
 for (const [theme, colors] of Object.entries(themes)) {
+  test(`Lesson reading and semantic blocks keep ${theme} contracts`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto("./courses/markdown/lessons/vvedenie/");
+    await selectTheme(page, theme);
+
+    const article = page.locator("main article");
+    const reading = article.locator(".learning-page__body");
+    const proseParagraph = reading.locator(":scope > p").first();
+    const proseList = reading.locator(":scope > :is(ul, ol)").first();
+    const inlineCode = reading.locator("p code").first();
+    const codeBlock = reading.locator(":scope > pre").first();
+    const callout = article.getByRole("complementary", {
+      name: "Ключевая мысль",
+    });
+    const calloutLabel = callout.getByText("Ключевая мысль", { exact: true });
+    const externalReference = article.getByRole("link", {
+      name: /Blocks and inlines/,
+    });
+
+    await expect(reading).toHaveCSS("font-size", "18px");
+    await expect(reading).toHaveCSS("line-height", "28.8px");
+    expect(
+      await reading.evaluate((element) => {
+        const probe = document.createElement("span");
+        probe.style.width = "1ch";
+        probe.style.position = "absolute";
+        probe.style.visibility = "hidden";
+        element.append(probe);
+        const characterWidth = probe.getBoundingClientRect().width;
+        probe.remove();
+        return element.getBoundingClientRect().width / characterWidth;
+      }),
+    ).toBeLessThanOrEqual(65.5);
+    for (const prose of [proseParagraph, proseList]) {
+      await expect(prose).toHaveCSS("font-family", /Onest/);
+      await expect(prose).toHaveCSS("font-size", "18px");
+    }
+    await expect(
+      reading.getByRole("heading", { level: 2 }).first(),
+    ).toHaveCSS("font-size", "36px");
+    await expect(inlineCode).toHaveCSS("font-family", /IBM Plex Mono/);
+    await expect(codeBlock.locator("code")).toHaveCSS(
+      "font-family",
+      /IBM Plex Mono/,
+    );
+
+    await expect(callout).toHaveCSS("border-left-color", colors.brand);
+    await expect(callout).toHaveCSS("border-left-width", "2px");
+    await expect(callout).toHaveCSS("margin-top", "32px");
+    await expect(calloutLabel).toHaveCSS("font-family", /Onest/);
+    await expect(calloutLabel).toHaveCSS("font-size", "12px");
+    await expect(callout.locator(".callout-content")).toHaveCSS(
+      "font-size",
+      "18px",
+    );
+
+    await expect(externalReference).toHaveCSS("font-family", /Onest/);
+    await expect(externalReference).toHaveCSS("font-size", "18px");
+    await expect(externalReference.locator("sup")).toHaveCSS(
+      "font-family",
+      /Onest/,
+    );
+    await page.context().setOffline(true);
+    await externalReference.click();
+    const offlineReferenceMessage = page.getByRole("status").filter({
+      hasText: "Для этой ссылки нужен интернет.",
+    });
+    await expect(offlineReferenceMessage).toHaveCSS("font-family", /Onest/);
+    await expect(offlineReferenceMessage).toHaveCSS("font-size", "14px");
+    await expect(offlineReferenceMessage).toHaveCSS("color", colors.warning);
+    await page.context().setOffline(false);
+    await expect(article.locator("[data-knowledge-check]")).toHaveCSS(
+      "font-size",
+      "16px",
+    );
+
+    for (const meaning of [
+      {
+        color: colors.brand,
+        label: "Информация",
+        path: "./courses/markdown/lessons/source-render/",
+      },
+      {
+        color: colors.warning,
+        label: "Предупреждение",
+        path: "./courses/markdown/lessons/links-code/",
+      },
+      {
+        color: colors.error,
+        label: "Ошибка",
+        path: "./courses/markdown/lessons/portability/",
+      },
+      {
+        color: colors.muted,
+        label: "Дополнительно — необязательно",
+        path: "./courses/markdown/lessons/formatting/",
+      },
+      {
+        color: colors.muted,
+        label: "Контекст",
+        path: "./courses/markdown/lessons/review/",
+      },
+    ]) {
+      await page.goto(meaning.path);
+      await selectTheme(page, theme);
+      await expect(
+        page.getByRole("complementary", { name: meaning.label }),
+      ).toHaveCSS("border-left-color", meaning.color);
+    }
+  });
+}
+
+for (const [theme, colors] of Object.entries(themes)) {
+  test(`Lesson tables, quotes, and supporting context keep ${theme} contracts`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(
+      "./courses/psihologicheskaya-pomoshch-doshkolnikam/lessons/sdvg-regulyaciya-deyatelnosti/",
+    );
+    await selectTheme(page, theme);
+
+    const table = page.locator(".learning-page__body > table");
+    await expect(table).toHaveCSS("font-family", /Onest/);
+    await expect(table).toHaveCSS("font-size", "16px");
+    await expect(table).toHaveCSS("line-height", "24px");
+    await expect(table.getByRole("columnheader").first()).toHaveCSS(
+      "font-family",
+      /Onest/,
+    );
+    await expect(table.getByRole("columnheader").first()).toHaveCSS(
+      "font-size",
+      "12px",
+    );
+
+    await page.goto(
+      "./courses/psihologicheskaya-pomoshch-doshkolnikam/lessons/bezopasnost-vo-vremya-epizoda/",
+    );
+    const quote = page.locator(".learning-page__body > blockquote").first();
+    await expect(quote).toHaveCSS("font-family", /Onest/);
+    await expect(quote).toHaveCSS("font-size", "18px");
+    await expect(quote).toHaveCSS("line-height", "28.8px");
+    await expect(quote).toHaveCSS("border-left-color", colors.muted);
+
+    await page.goto("./courses/accessible-images/");
+    const freshness = page.getByRole("group", {
+      name: "Актуальность материалов",
+    });
+    await expect(freshness).toHaveCSS("font-family", /Onest/);
+    await expect(freshness).toHaveCSS("font-size", "16px");
+    await expect(freshness.locator("dt").first()).toHaveCSS(
+      "font-size",
+      "12px",
+    );
+    await expect(freshness.locator("dd").first()).toHaveCSS(
+      "font-size",
+      "16px",
+    );
+    await expect(
+      freshness.getByText("Требуется повторная проверка", { exact: true }),
+    ).toHaveCSS("color", colors.warning);
+  });
+}
+
+for (const theme of Object.keys(themes)) {
+  for (const accommodation of ["200% text zoom", "WCAG text spacing"] as const) {
+    test(`Long Russian Lesson reflows with ${accommodation} in ${theme}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 320, height: 800 });
+      await page.goto(
+        "./courses/psihologicheskaya-pomoshch-doshkolnikam/lessons/sdvg-regulyaciya-deyatelnosti/",
+      );
+      await selectTheme(page, theme);
+
+      if (accommodation === "200% text zoom") {
+        await page.evaluate(() => {
+          document.documentElement.style.fontSize = "200%";
+        });
+      } else {
+        await page.addStyleTag({
+          content: `
+            .learning-page,
+            .learning-page * {
+              line-height: 1.5 !important;
+              letter-spacing: 0.12em !important;
+              word-spacing: 0.16em !important;
+            }
+            .learning-page p {
+              margin-bottom: 2em !important;
+            }
+          `,
+        });
+      }
+
+      const article = page.locator("main article");
+      const title = article.getByRole("heading", {
+        level: 1,
+        name: "СДВГ: как помочь управлять деятельностью",
+      });
+      const table = article.locator(".learning-page__body > table");
+      const callout = article.getByRole("complementary", {
+        name: "Дополнительно — необязательно",
+      });
+
+      await expect(title).toBeVisible();
+      await expect(table).toBeVisible();
+      await expect(callout).toBeVisible();
+      if (accommodation === "WCAG text spacing") {
+        const paragraph = article.locator(".learning-page__body > p").first();
+        await expect(paragraph).toHaveCSS("line-height", "27px");
+        await expect(paragraph).toHaveCSS("letter-spacing", "2.16px");
+        await expect(paragraph).toHaveCSS("word-spacing", "2.88px");
+      }
+      const layout = await page.evaluate(() => ({
+        clientWidth: document.documentElement.clientWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+        overflowers: [...document.querySelectorAll<HTMLElement>("body *")]
+          .filter((element) => !element.closest(".course-route-panel"))
+          .filter(
+            (element) =>
+              element.getBoundingClientRect().right > innerWidth ||
+              (element.scrollWidth > element.clientWidth &&
+                getComputedStyle(element).overflowX === "visible"),
+          )
+          .slice(0, 24)
+          .map((element) => ({
+            className: element.className,
+            clientWidth: element.clientWidth,
+            right: Math.round(element.getBoundingClientRect().right),
+            scrollWidth: element.scrollWidth,
+            tagName: element.tagName,
+          })),
+      }));
+      expect(
+        layout.scrollWidth,
+        `Overflowing elements: ${JSON.stringify(layout.overflowers)}`,
+      ).toBe(layout.clientWidth);
+    });
+  }
+}
+
+for (const [theme, colors] of Object.entries(themes)) {
   for (const viewport of responsiveViewports) {
     test(`Learning journey keeps ${theme} UI contracts at ${viewport.name}`, async ({
       page,
@@ -192,17 +443,14 @@ for (const [theme, colors] of Object.entries(themes)) {
           level: 1,
           name: destination.title,
         });
-        const readingFlow = article.locator(".reading-flow");
+        const readingFlow = article.locator(".learning-page__body");
         const courseRoute = page.getByRole("navigation", {
           name: "Навигация по курсу",
         });
 
         await expect(title).toHaveCSS("font-size", viewport.pageTitle);
         await expect(article).toHaveCSS("font-size", "18px");
-        await expect(readingFlow.locator("p:not([class])").first()).toHaveCSS(
-          "font-size",
-          "18px",
-        );
+        await expect(readingFlow).toHaveCSS("font-size", "18px");
         if (viewport.width === 320) {
           await page
             .getByRole("button", { name: "Открыть маршрут курса" })
