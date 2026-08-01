@@ -27,12 +27,12 @@ const { label, summary } = Astro.props;
     width: fit-content;
     cursor: pointer;
     color: var(--color-ink);
-    font-weight: 800;
+    font-weight: var(--font-weight-bold);
   }
   .feedback-content {
-    margin-top: .85rem;
-    border-left: 2px solid var(--color-muted);
-    padding: .25rem 0 .25rem 1rem;
+    margin-top: var(--space-3);
+    border-left: var(--border-width-emphasis) solid var(--color-muted);
+    padding: var(--space-1) var(--space-0) var(--space-1) var(--space-4);
     background: transparent;
   }
 </style>

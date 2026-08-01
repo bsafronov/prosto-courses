@@ -1,4 +1,6 @@
 ---
+import Card from "./Card.astro";
+
 interface Props {
   title: string;
   level: "core" | "challenge" | "stretch";
@@ -29,23 +31,23 @@ const taskId = `practice-task-${Math.random().toString(36).slice(2)}`;
 const titleId = `${taskId}-title`;
 ---
 
-<section
-  class="practice-task work-area"
+<Card
+  as="section"
+  class="practice-task type-body"
+  headingId={titleId}
+  headingLevel={2}
   data-practice-task
   role="region"
-  aria-labelledby={titleId}
 >
-  <header>
-    <p class="work-area__eyebrow">
-      {levelLabels[level]} · {estimatedMinutes} мин
-    </p>
-    <h2 id={titleId}>{title}</h2>
-    <p class="goal"><strong>Цель:</strong> {goal}</p>
-  </header>
+  <Fragment slot="eyebrow">
+    {levelLabels[level]} · {estimatedMinutes} мин
+  </Fragment>
+  <Fragment slot="title">{title}</Fragment>
+  <Fragment slot="description"><strong>Цель:</strong> {goal}</Fragment>
   {
     constraints.length > 0 && (
       <section class="task-list" aria-label="Ограничения">
-        <h3>Ограничения</h3>
+        <h3 class="type-body">Ограничения</h3>
         <ul>
           {constraints.map((constraint) => <li>{constraint}</li>)}
         </ul>
@@ -53,20 +55,22 @@ const titleId = `${taskId}-title`;
     )
   }
   <section class="task-list" aria-label="Критерии готовности">
-    <h3>Критерии готовности</h3>
+    <h3 class="type-body">Критерии готовности</h3>
     <ul>
       {criteria.map((criterion) => <li>{criterion}</li>)}
     </ul>
   </section>
   <div class="prompt" data-task-prompt>
-    <h3>Задание</h3>
+    <h3 class="type-body">Задание</h3>
     <slot />
   </div>
   {
     hints.length > 0 && (
       <section class="support" aria-label="Подсказки">
-        <h3>Подсказки</h3>
-        <p>Открывай их по одной — от общего направления к конкретному шагу.</p>
+        <h3 class="type-body">Подсказки</h3>
+        <p class="type-supporting">
+          Открывай их по одной — от общего направления к конкретному шагу.
+        </p>
         <ol aria-label="Открытые подсказки" aria-live="polite">
           {hints.map((hint) => <li data-task-hint hidden>{hint}</li>)}
         </ol>
@@ -81,7 +85,7 @@ const titleId = `${taskId}-title`;
     )
   }
   <div data-task-feedback-destination></div>
-</section>
+</Card>
 
 <script>
   function initialisePracticeTask(task: HTMLElement) {
@@ -127,40 +131,42 @@ const titleId = `${taskId}-title`;
 </script>
 
 <style>
-  .practice-task {
-    margin: 2rem 0;
+  :global(.practice-task) {
+    margin-block: var(--space-8);
     overflow: hidden;
   }
-  header { padding: 1.25rem; }
-  h2 { margin: 0; font-size: 1.35rem; }
-  h3 { margin: 0 0 .45rem; font-size: 1rem; }
-  .goal { margin: .65rem 0 0; color: var(--color-muted); }
-  .task-list, .prompt, .support {
-    margin: 0;
-    border: 0;
-    border-top: 1px solid var(--color-border);
-    border-radius: 0;
-    padding: 1rem 1.25rem;
+  :global(.practice-task .task-list),
+  :global(.practice-task .prompt),
+  :global(.practice-task .support) {
+    margin: var(--space-0);
+    border: var(--space-0);
+    border-top: var(--border-subtle);
+    border-radius: var(--space-0);
+    padding-block: var(--space-4);
     background: transparent;
   }
-  .task-list ul, .support ol { margin: .4rem 0 0; padding-left: 1.35rem; }
-  .prompt :global(p:first-of-type) { margin-top: 0; }
-  .prompt :global(p:last-of-type) { margin-bottom: 0; }
-  [data-task-feedback-destination]:not(:empty) {
-    border-top: 1px solid var(--color-border);
-    padding: 1rem 1.25rem 1.25rem;
+  :global(.practice-task h3) {
+    margin: var(--space-0) var(--space-0) var(--space-2);
+    font-weight: var(--font-weight-bold);
   }
-  .support p { margin: 0 0 .7rem; color: var(--color-muted); font-size: .92rem; }
-  .support li { margin: .35rem 0; }
-  .support button { margin-top: .75rem; }
-  @media (max-width: 34rem) {
-    header,
-    .task-list,
-    .prompt,
-    .support,
-    [data-task-feedback-destination]:not(:empty) {
-      padding-inline: 1rem;
-    }
-    .support button { width: 100%; }
+  :global(.practice-task .task-list ul),
+  :global(.practice-task .support ol) {
+    margin: var(--space-2) var(--space-0) var(--space-0);
+    padding-left: var(--space-6);
+  }
+  :global(.practice-task .prompt p:first-of-type) { margin-top: var(--space-0); }
+  :global(.practice-task .prompt p:last-of-type) { margin-bottom: var(--space-0); }
+  :global(.practice-task [data-task-feedback-destination]:not(:empty)) {
+    border-top: var(--border-subtle);
+    padding-top: var(--space-4);
+  }
+  :global(.practice-task .support p) {
+    margin: var(--space-0) var(--space-0) var(--space-3);
+    color: var(--color-muted);
+  }
+  :global(.practice-task .support li) { margin-block: var(--space-2); }
+  :global(.practice-task .support button) { margin-top: var(--space-3); }
+  @media (max-width: 36rem) {
+    :global(.practice-task .support button) { width: 100%; }
   }
 </style>

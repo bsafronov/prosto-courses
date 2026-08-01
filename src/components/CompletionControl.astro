@@ -1,4 +1,5 @@
 ---
+import Card from "./Card.astro";
 import type { CoreDestinationKind } from "../lib/courses";
 import {
   completionControlCopy,
@@ -13,58 +14,81 @@ const { kind } = Astro.props;
 const copy = completionControlCopy[kind];
 const headingId = `${kind}-completion-heading`;
 ---
-<section class="completion work-area" aria-labelledby={headingId}>
-  <div class="completion-copy">
-    <p class="work-area__eyebrow">Локальная отметка</p>
-    <h2 id={headingId} class="type-component-title">{copy.heading}</h2>
+<Card
+  as="section"
+  class="completion type-body"
+  headingId={headingId}
+  headingLevel={2}
+>
+  <Fragment slot="eyebrow">Локальная отметка</Fragment>
+  <Fragment slot="title">{copy.heading}</Fragment>
+  <Fragment slot="description">
     {kind === "lesson" && (
-      <p
-        class="revision-notice type-supporting"
+      <span
+        class="revision-notice"
         data-revision-notice
         role="status"
         aria-live="polite"
         hidden
       >
         {lessonRevisionCopy.notice}
-      </p>
+      </span>
     )}
-    <p class="description type-supporting">{copy.description}</p>
-  </div>
-  <button type="button" data-completion-toggle aria-pressed="false" disabled>
+    <span class="completion-description">{copy.description}</span>
+  </Fragment>
+  <button
+    slot="actions"
+    type="button"
+    data-completion-toggle
+    aria-pressed="false"
+    disabled
+  >
     {copy.complete}
   </button>
-</section>
+</Card>
 
 <style>
-  .completion {
+  :global(.completion) {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: var(--space-6);
+    column-gap: var(--space-6);
     align-items: end;
     margin-top: var(--space-12);
-    padding: var(--space-5);
   }
-  .completion-copy { min-width: 0; }
-  .completion h2 { margin: var(--space-0); }
-  .completion .description {
-    margin: var(--space-3) var(--space-0) var(--space-0);
-    color: var(--color-muted);
+  :global(.completion [data-card-region="eyebrow"]),
+  :global(.completion [data-card-region="title"]),
+  :global(.completion [data-card-region="description"]) {
+    grid-column: 1;
   }
-  .completion .revision-notice {
+  :global(.completion [data-card-region="actions"]) {
+    grid-column: 2;
+    grid-row: 1 / 4;
+    align-self: end;
+    margin-top: var(--space-0);
+  }
+  .revision-notice {
+    display: block;
+    margin-bottom: var(--space-3);
     border-left: var(--border-width-emphasis) solid var(--color-brand);
     padding-left: var(--space-3);
     color: var(--color-ink);
     font-weight: var(--font-weight-semibold);
   }
-  .completion button { min-width: var(--measure-completion-control); }
-  .completion button[aria-pressed="true"] {
+  .completion-description { display: block; }
+  :global(.completion button) { min-width: var(--measure-completion-control); }
+  :global(.completion button[aria-pressed="true"]) {
     border: var(--border-subtle);
     background: var(--color-canvas);
     color: var(--color-ink);
   }
   @media (max-width: 36rem) {
-    .completion { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
-    .completion button {
+    :global(.completion) { grid-template-columns: minmax(0, 1fr); }
+    :global(.completion [data-card-region="actions"]) {
+      grid-column: 1;
+      grid-row: auto;
+      margin-top: var(--space-4);
+    }
+    :global(.completion button) {
       width: 100%;
       min-width: 0;
     }

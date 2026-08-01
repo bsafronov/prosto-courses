@@ -714,7 +714,7 @@ for (const [theme, colors] of Object.entries(themes)) {
       colors.muted,
     );
     await expect(page.locator(".privacy")).toHaveCSS("font-family", /Onest/);
-    await expect(page.locator(".privacy")).toHaveCSS("line-height", "16.8px");
+    await expect(page.locator(".privacy")).toHaveCSS("line-height", "19.6px");
   });
 }
 

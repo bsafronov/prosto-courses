@@ -1,4 +1,6 @@
 ---
+import Card from "./Card.astro";
+
 interface Props {
   prompt: string;
   outcomes: string[];
@@ -21,17 +23,19 @@ const noteId = `${reflectionId}-note`;
 const privacyId = `${reflectionId}-privacy`;
 ---
 
-<section
-  class="reflection work-area"
+<Card
+  as="section"
+  class="reflection type-body"
+  headingId={promptId}
+  headingLevel={2}
   data-reflection
   data-reflection-id={reflectionId}
-  aria-labelledby={promptId}
 >
-  <p class="work-area__eyebrow">Осмысли опыт</p>
-  <h2 id={promptId}>{prompt}</h2>
+  <Fragment slot="eyebrow">Осмысли опыт</Fragment>
+  <Fragment slot="title">{prompt}</Fragment>
   {
     guidance.length > 0 && (
-      <div class="guidance">
+      <div class="guidance type-supporting">
         <p>Если полезно, опирайся на вопросы:</p>
         <ul>
           {guidance.map((item) => (
@@ -48,22 +52,22 @@ const privacyId = `${reflectionId}-privacy`;
     aria-describedby={privacyId}
     rows="7"
   ></textarea>
-  <p id={privacyId} class="privacy">
+  <p id={privacyId} class="privacy type-supporting">
     Текст остаётся только в этом браузере и никуда не отправляется.
   </p>
-  <div class="actions">
-    <button type="button" data-reflection-copy disabled>Копировать</button>
-    <button type="button" data-reflection-export disabled>Экспортировать</button>
-    <button type="button" data-reflection-delete disabled>Удалить навсегда</button>
-  </div>
   <p
-    class="status"
+    class="status type-supporting"
     data-reflection-status
     role="status"
     aria-live="polite"
     aria-atomic="true"
   ></p>
-</section>
+  <div class="reflection-actions" slot="actions">
+    <button type="button" data-reflection-copy disabled>Копировать</button>
+    <button type="button" data-reflection-export disabled>Экспортировать</button>
+    <button type="button" data-reflection-delete disabled>Удалить навсегда</button>
+  </div>
+</Card>
 
 <script>
   const storagePrefix = "prosto-courses:reflection:v1";
@@ -177,48 +181,48 @@ const privacyId = `${reflectionId}-privacy`;
 </script>
 
 <style>
-  .reflection {
-    margin: 2rem 0;
-    padding: 1.25rem;
+  :global(.reflection) {
+    margin-block: var(--space-8);
   }
-  h2 { margin: 0 0 1rem; font-size: 1.2rem; }
   .guidance {
-    margin-bottom: 1rem;
+    margin-bottom: var(--space-4);
     color: var(--color-muted);
   }
-  .guidance p { margin-bottom: .35rem; font-weight: 700; }
-  .guidance ul { margin-top: 0; }
-  label { display: block; margin-bottom: .4rem; font-weight: 800; }
+  .guidance p { margin-bottom: var(--space-2); font-weight: var(--font-weight-bold); }
+  .guidance ul { margin-top: var(--space-0); }
+  label {
+    display: block;
+    margin-bottom: var(--space-2);
+    font-weight: var(--font-weight-bold);
+  }
   textarea {
     width: 100%;
     resize: vertical;
-    line-height: 1.55;
   }
   .privacy {
-    margin: .55rem 0 1rem;
-    border-left: 2px solid var(--color-muted);
-    padding-left: .65rem;
+    margin: var(--space-2) var(--space-0) var(--space-4);
+    border-left: var(--border-width-emphasis) solid var(--color-muted);
+    padding-left: var(--space-3);
     color: var(--color-muted);
     font-family: var(--font-sans);
-    font-size: var(--font-size-meta);
-    font-weight: var(--font-weight-medium);
-    line-height: var(--line-height-meta);
   }
-  .actions {
+  .reflection-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: .65rem;
-    border-top: 1px solid var(--color-border);
-    padding-top: 1rem;
+    gap: var(--space-3);
   }
-  .actions button:last-child:not(:disabled) {
-    border: 1px solid var(--color-error);
+  .reflection-actions button:last-child:not(:disabled) {
+    border: var(--border-width-thin) solid var(--color-error);
     color: var(--color-error);
     background: var(--color-surface);
   }
-  .status { min-height: 1.5em; margin: .75rem 0 0; font-weight: 700; }
-  @media (max-width: 34rem) {
-    .actions { display: grid; }
-    .actions button { width: 100%; }
+  .status {
+    min-height: 1.5em;
+    margin: var(--space-3) var(--space-0) var(--space-0);
+    font-weight: var(--font-weight-bold);
+  }
+  @media (max-width: 36rem) {
+    .reflection-actions { display: grid; width: 100%; }
+    .reflection-actions button { width: 100%; }
   }
 </style>

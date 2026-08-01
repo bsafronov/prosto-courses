@@ -9,6 +9,7 @@ interface Props {
   headingLevel?: HeadingLevel;
   titleRole?: "component-title" | "page-title";
   class?: string;
+  [attribute: string]: unknown;
 }
 
 const {
@@ -17,6 +18,7 @@ const {
   headingLevel,
   titleRole = "component-title",
   class: className,
+  ...attributes
 } = Astro.props as Props;
 const hasTitle = Astro.slots.has("title");
 if (hasTitle && (!headingId || !headingLevel)) {
@@ -26,6 +28,7 @@ const Heading = `h${headingLevel ?? 2}` as HeadingTag;
 ---
 
 <Root
+  {...attributes}
   class:list={["card", className]}
   aria-labelledby={hasTitle ? headingId : undefined}
 >
@@ -52,7 +55,7 @@ const Heading = `h${headingLevel ?? 2}` as HeadingTag;
     </p>
   )}
   {Astro.slots.has("default") && (
-    <div class="card__body type-body" data-card-region="body"><slot /></div>
+    <div class="card__body" data-card-region="body"><slot /></div>
   )}
   {Astro.slots.has("actions") && (
     <div class="card__actions" data-card-region="actions">
