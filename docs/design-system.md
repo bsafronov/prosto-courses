@@ -71,6 +71,9 @@ accepts only documented dynamic geometry properties; marker cannot bypass
 color, typography, spacing, or other guardrails.
 The same data attribute on an SVG documents its narrow coordinate and glyph
 geometry; color, stroke width, and opacity still require central tokens.
+Dynamic SVG presentation may use `data-ui-token-expression="<reason>"` only
+when the expression selects central tokens; literal values inside `{...}` are
+still validated and cannot use this marker as an allowlist.
 Unique local container thresholds use an adjacent
 `ui-contract-exception component-geometry: <reason>` comment.
 

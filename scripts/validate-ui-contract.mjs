@@ -289,20 +289,37 @@ function findBreakpoints(css) {
 function findSvgPresentationAttributes(source) {
   const attributes = [];
   const svgPattern = /<svg\b([^>]*)>([\s\S]*?)<\/svg>/gi;
-  const attributePattern =
+  const quotedAttributePattern =
     /\b(fill|stroke|stroke-width|opacity|width|height|r|rx|ry|x|y|x1|y1|x2|y2|cx|cy)\s*=\s*(["'])(.*?)\2/gi;
+  const expressionAttributePattern =
+    /\b(fill|stroke|stroke-width|opacity|width|height|r|rx|ry|x|y|x1|y1|x2|y2|cx|cy)\s*=\s*\{\s*([^{}]+?)\s*\}/gi;
 
   for (const svg of source.matchAll(svgPattern)) {
     const block = svg[0];
     const documentedGeometry = /data-ui-geometry-exception\s*=\s*["'][^"']+["']/i.test(
       svg[1],
     );
-    for (const attribute of block.matchAll(attributePattern)) {
+    const documentedTokenExpression = /data-ui-token-expression\s*=\s*["'][^"']+["']/i.test(
+      svg[1],
+    );
+    for (const attribute of block.matchAll(quotedAttributePattern)) {
       attributes.push({
         documentedGeometry,
+        documentedTokenExpression,
+        expression: false,
         index: svg.index + attribute.index,
         property: attribute[1].toLowerCase(),
         value: attribute[3].trim(),
+      });
+    }
+    for (const attribute of block.matchAll(expressionAttributePattern)) {
+      attributes.push({
+        documentedGeometry,
+        documentedTokenExpression,
+        expression: true,
+        index: svg.index + attribute.index,
+        property: attribute[1].toLowerCase(),
+        value: attribute[2].trim(),
       });
     }
   }
@@ -382,6 +399,30 @@ for (const file of files) {
     extension === ".tsx"
   ) {
     for (const attribute of findSvgPresentationAttributes(source)) {
+      if (attribute.expression) {
+        const literal = attribute.value.match(/^(?:(["'`])([\s\S]*)\1|(-?\d*\.?\d+))$/);
+        if (literal) {
+          attribute.value = literal[2] ?? literal[3];
+        } else if (
+          (attribute.documentedGeometry &&
+            !["fill", "stroke", "stroke-width", "opacity"].includes(
+              attribute.property,
+            )) ||
+          attribute.documentedTokenExpression
+        ) {
+          continue;
+        } else {
+          report(
+            file,
+            lineAt(source, attribute.index),
+            attribute.property,
+            attribute.value,
+            "document this narrow SVG token expression",
+          );
+          continue;
+        }
+      }
+
       if (
         ["fill", "stroke", "stroke-width", "opacity"].includes(
           attribute.property,
