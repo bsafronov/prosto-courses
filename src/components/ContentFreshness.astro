@@ -36,7 +36,7 @@ const reviewAfter =
       </>
     )}
     {state.status === "stale" && state.freshness.mode === "time-sensitive" && (
-      <span class="state-message" role="status">
+      <span class="state-message stack" role="status">
         <strong>Требуется повторная проверка</strong>
         <span class="state-message__detail type-supporting muted">
           Срок проверки истёк <time datetime={reviewAfter}>
@@ -50,7 +50,6 @@ const reviewAfter =
 
 <style>
   .state-message {
-    display: grid;
     gap: var(--space-1);
   }
   .state-message__detail {

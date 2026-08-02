@@ -4,7 +4,6 @@ interface Props {
   eyebrowTechnical?: boolean;
   sequenceLabel: string;
   title: string;
-  class?: string;
 }
 
 const {
@@ -12,11 +11,10 @@ const {
   eyebrowTechnical = false,
   sequenceLabel,
   title,
-  class: className,
 } = Astro.props as Props;
 ---
 
-<article class:list={["learning-page", "type-reading", className]}>
+<article class="learning-page type-reading">
   <header class="learning-page__header">
     <p class:list={["eyebrow", { "type-technical": eyebrowTechnical }]}>
       {eyebrow}

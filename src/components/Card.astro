@@ -7,7 +7,6 @@ interface Props {
   as: CardRoot;
   headingId?: string;
   headingLevel?: HeadingLevel;
-  titleRole?: "component-title" | "page-title";
   class?: string;
   [attribute: string]: unknown;
 }
@@ -16,7 +15,6 @@ const {
   as: Root,
   headingId,
   headingLevel,
-  titleRole = "component-title",
   class: className,
   ...attributes
 } = Astro.props as Props;
@@ -25,6 +23,7 @@ if (hasTitle && (!headingId || !headingLevel)) {
   throw new Error("Card title requires headingId and headingLevel");
 }
 const Heading = `h${headingLevel ?? 2}` as HeadingTag;
+const titleRole = headingLevel === 1 ? "page-title" : "component-title";
 ---
 
 <Root
@@ -58,7 +57,7 @@ const Heading = `h${headingLevel ?? 2}` as HeadingTag;
     <div class="card__body" data-card-region="body"><slot /></div>
   )}
   {Astro.slots.has("actions") && (
-    <div class="card__actions" data-card-region="actions">
+    <div class="card__actions cluster" data-card-region="actions">
       <slot name="actions" />
     </div>
   )}
@@ -93,10 +92,6 @@ const Heading = `h${headingLevel ?? 2}` as HeadingTag;
     margin-top: var(--space-5);
   }
   .card__actions {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-3);
     margin-top: var(--space-6);
   }
 </style>

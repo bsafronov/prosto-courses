@@ -16,6 +16,10 @@ percentages, and CSS-wide or intrinsic layout keywords are allowed because they
 do not create a competing design scale. Media queries cannot consume custom
 properties, so their literal value must match a `--breakpoint-*` declaration in
 the token source.
+Single-consumer technical measures are allowed only when a rendered contract
+proves a platform constraint. Current examples are the narrow theme control at
+200% text zoom and the Diagram's contained horizontal overflow for readable
+labels; they are not reusable component design scales.
 
 Typography is selected as a composite role: `meta`, `supporting`, `body`,
 `reading`, `component-title`, `section-title`, `page-title`, or `display`.
@@ -65,6 +69,8 @@ token is not an exception. Mark a script mutation with an adjacent
 inline custom property with `data-ui-geometry-exception="<reason>"`. Validator
 accepts only documented dynamic geometry properties; marker cannot bypass
 color, typography, spacing, or other guardrails.
+The same data attribute on an SVG documents its narrow coordinate and glyph
+geometry; color, stroke width, and opacity still require central tokens.
 Unique local container thresholds use an adjacent
 `ui-contract-exception component-geometry: <reason>` comment.
 

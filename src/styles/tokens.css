@@ -83,19 +83,15 @@
   --measure-content: 70rem;
   --measure-offline: 42rem;
   --measure-card-copy: 43rem;
-  --measure-card-route: 12rem;
-  --measure-control-detail: 24rem;
+  --measure-compact: 12rem;
+  --measure-detail: 24rem;
   --measure-summary-item: 10rem;
   --measure-theme-control: 7.5rem;
   --measure-theme-control-narrow: 5rem;
   --measure-mobile-title: 22rem;
   --measure-learning-content: 52rem;
   --measure-course-route: 18rem;
-  --measure-course-drawer: 23rem;
-  --measure-completion-control: 11rem;
-  --measure-visual-detail: 15rem;
   --measure-diagram-visual: 44rem;
-  --measure-chart-table: 36rem;
   --breakpoint-viewport-min: 320px;
   /* CSS custom properties cannot be used in media-query conditions. The
      repository contract treats these declared values as approved literals. */
@@ -110,6 +106,7 @@
   --sr-only-offset: -1px;
   --pattern-angle-diagonal: 135deg;
   --pattern-angle-crosshatch: 45deg;
+  --opacity-data-pattern: 0.72;
 
   /* Borders, radii, shadows, and controls */
   --border-width-thin: 0.0625rem;

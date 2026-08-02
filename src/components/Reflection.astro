@@ -62,7 +62,7 @@ const privacyId = `${reflectionId}-privacy`;
     aria-live="polite"
     aria-atomic="true"
   ></p>
-  <div class="reflection-actions" slot="actions">
+  <div class="reflection-actions cluster" slot="actions">
     <button type="button" data-reflection-copy disabled>Копировать</button>
     <button type="button" data-reflection-export disabled>Экспортировать</button>
     <button type="button" data-reflection-delete disabled>Удалить навсегда</button>
@@ -205,11 +205,6 @@ const privacyId = `${reflectionId}-privacy`;
     padding-left: var(--space-3);
     color: var(--color-muted);
     font-family: var(--font-sans);
-  }
-  .reflection-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-3);
   }
   .reflection-actions button:last-child:not(:disabled) {
     border: var(--border-width-thin) solid var(--color-error);

@@ -264,6 +264,36 @@ export const Opaque = () => <div style={presentation} />;
   );
 });
 
+test("rejects undocumented raw SVG presentation attributes", async () => {
+  await withUiFixture(
+    {
+      "src/components/RawSvg.astro": `
+<svg width="16" height="24" viewBox="0 0 16 24">
+  <circle r="1.5" fill="red" stroke-width="2" opacity=".72" />
+</svg>
+`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      for (const [property, value] of [
+        ["width", "16"],
+        ["height", "24"],
+        ["r", "1.5"],
+        ["fill", "red"],
+        ["stroke-width", "2"],
+        ["opacity", ".72"],
+      ]) {
+        assert.match(result.output, new RegExp(`${property}.*${value}`));
+      }
+      assert.match(
+        result.output,
+        /document this narrow SVG geometry exception/i,
+      );
+      assert.match(result.output, /use a central token/i);
+    },
+  );
+});
+
 test("accepts only breakpoints declared by the central token source", async () => {
   await withUiFixture(
     {

@@ -86,13 +86,7 @@ const ticks = Array.from({ length: 5 }, (_, index) => {
 }).reverse();
 // Technical exception: series colors are data-driven inline custom properties.
 // Values remain central semantic color tokens and repeat only when data exceeds them.
-const palette = [
-  "var(--color-data-series-1)",
-  "var(--color-data-series-2)",
-  "var(--color-data-series-3)",
-  "var(--color-data-series-4)",
-  "var(--color-data-series-5)",
-];
+const chartSeriesCount = 5;
 const patternKinds = ["solid", "diagonal", "dots", "crosshatch"];
 const chartKey = crypto.randomUUID();
 ---
@@ -109,11 +103,12 @@ const chartKey = crypto.randomUUID();
       width={svgWidth}
       height={svgHeight}
       viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+      data-ui-geometry-exception="chart coordinates and pattern geometry derive from rendered series"
       aria-hidden="true"
     >
       <defs>
         {series.map((_, index) => {
-          const color = palette[index % palette.length];
+          const color = `var(--color-data-series-${(index % chartSeriesCount) + 1})`;
           const pattern = patternKinds[index % patternKinds.length];
           return (
             <pattern
@@ -127,8 +122,8 @@ const chartKey = crypto.randomUUID();
                 <path
                   d="M-2 2 L2 -2 M0 10 L10 0 M8 12 L12 8"
                   stroke="var(--color-canvas)"
-                  stroke-width="2"
-                  opacity=".72"
+                  stroke-width="var(--border-width-emphasis)"
+                  opacity="var(--opacity-data-pattern)"
                 />
               )}
               {pattern === "dots" && (
@@ -137,15 +132,15 @@ const chartKey = crypto.randomUUID();
                   cy="5"
                   r="2"
                   fill="var(--color-canvas)"
-                  opacity=".78"
+                  opacity="var(--opacity-data-pattern)"
                 />
               )}
               {pattern === "crosshatch" && (
                 <path
                   d="M0 0 L10 10 M10 0 L0 10"
                   stroke="var(--color-canvas)"
-                  stroke-width="1.5"
-                  opacity=".68"
+                  stroke-width="var(--border-width-thin)"
+                  opacity="var(--opacity-data-pattern)"
                 />
               )}
             </pattern>
@@ -243,7 +238,7 @@ const chartKey = crypto.randomUUID();
     </svg>
   </div>
 
-  <div slot="details" class="chart-details">
+  <div slot="details" class="chart-details stack">
     <dl class="chart-axes">
       <div>
         <dt>Горизонтальная ось</dt>
@@ -259,7 +254,7 @@ const chartKey = crypto.randomUUID();
       {series.map((item, index) => (
         <li>
           <span
-            class={`chart-swatch chart-swatch-${patternKinds[index % patternKinds.length]} chart-series-${(index % palette.length) + 1}`}
+            class={`chart-swatch chart-swatch-${patternKinds[index % patternKinds.length]} chart-series-${(index % chartSeriesCount) + 1}`}
             aria-hidden="true"
           ></span>
           <span class="chart-series-key" aria-hidden="true">{index + 1}</span>
@@ -343,8 +338,6 @@ const chartKey = crypto.randomUUID();
     font-weight: var(--font-weight-semibold);
   }
   .chart-details {
-    display: grid;
-    gap: var(--space-4);
     border-top: var(--border-subtle);
     padding-block: var(--space-4);
   }
@@ -352,7 +345,7 @@ const chartKey = crypto.randomUUID();
     display: grid;
     grid-template-columns: repeat(
       auto-fit,
-      minmax(min(100%, var(--measure-visual-detail)), 1fr)
+      minmax(min(100%, var(--measure-compact)), 1fr)
     );
     gap: var(--space-3);
     margin: var(--space-0);
@@ -441,7 +434,7 @@ const chartKey = crypto.randomUUID();
   }
   table {
     width: 100%;
-    min-width: var(--measure-chart-table);
+    min-width: var(--measure-offline);
     border-collapse: collapse;
     font-size: var(--font-size-body);
     line-height: var(--line-height-body);

@@ -286,6 +286,30 @@ function findBreakpoints(css) {
   return breakpoints;
 }
 
+function findSvgPresentationAttributes(source) {
+  const attributes = [];
+  const svgPattern = /<svg\b([^>]*)>([\s\S]*?)<\/svg>/gi;
+  const attributePattern =
+    /\b(fill|stroke|stroke-width|opacity|width|height|r|rx|ry|x|y|x1|y1|x2|y2|cx|cy)\s*=\s*(["'])(.*?)\2/gi;
+
+  for (const svg of source.matchAll(svgPattern)) {
+    const block = svg[0];
+    const documentedGeometry = /data-ui-geometry-exception\s*=\s*["'][^"']+["']/i.test(
+      svg[1],
+    );
+    for (const attribute of block.matchAll(attributePattern)) {
+      attributes.push({
+        documentedGeometry,
+        index: svg.index + attribute.index,
+        property: attribute[1].toLowerCase(),
+        value: attribute[3].trim(),
+      });
+    }
+  }
+
+  return attributes;
+}
+
 let tokenSource;
 try {
   tokenSource = await readFile(tokenFile, "utf8");
@@ -347,6 +371,49 @@ for (const file of files) {
           "breakpoint",
           value,
           "declare this breakpoint in the central token source",
+        );
+      }
+    }
+  }
+
+  if (
+    extension === ".astro" ||
+    extension === ".jsx" ||
+    extension === ".tsx"
+  ) {
+    for (const attribute of findSvgPresentationAttributes(source)) {
+      if (
+        ["fill", "stroke", "stroke-width", "opacity"].includes(
+          attribute.property,
+        )
+      ) {
+        const violation =
+          attribute.property === "stroke-width"
+            ? !isSingleTokenReference(attribute.value) &&
+              !isZero(attribute.value)
+            : declarationViolation(attribute.property, attribute.value);
+        if (violation) {
+          report(
+            file,
+            lineAt(source, attribute.index),
+            attribute.property,
+            attribute.value,
+          );
+        }
+        continue;
+      }
+
+      if (
+        !attribute.documentedGeometry &&
+        !isSingleTokenReference(attribute.value) &&
+        !valueUsesOnlyContractGeometry(attribute.value)
+      ) {
+        report(
+          file,
+          lineAt(source, attribute.index),
+          attribute.property,
+          attribute.value,
+          "document this narrow SVG geometry exception",
         );
       }
     }
