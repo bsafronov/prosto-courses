@@ -1,4 +1,5 @@
 ---
+import { Maximize2, RotateCcw, X, ZoomIn, ZoomOut } from "@lucide/astro";
 import LearningVisual from "./LearningVisual.astro";
 
 interface Props {
@@ -12,6 +13,17 @@ const { title, description, howToRead, takeaway } = Astro.props;
 ---
 
 <LearningVisual title={title}>
+  <button
+    slot="actions"
+    class="button-secondary button-icon diagram-expand"
+    type="button"
+    aria-label={`Развернуть схему «${title}»`}
+    aria-haspopup="dialog"
+    data-diagram-open
+    disabled
+  >
+    <Maximize2 aria-hidden="true" />
+  </button>
   <div
     slot="visual"
     class="diagram-visual learning-visual__viewport"
@@ -31,11 +43,87 @@ const { title, description, howToRead, takeaway } = Astro.props;
     <p><strong>Как читать:</strong> {howToRead}</p>
     <p><strong>Главный вывод:</strong> {takeaway}</p>
   </div>
+  <dialog
+    slot="overlay"
+    class="diagram-dialog"
+    aria-label={`Развернутая схема «${title}»`}
+    data-diagram-dialog
+  >
+    <div class="diagram-dialog__frame">
+      <header class="diagram-dialog__header">
+        <strong class="diagram-dialog__title">{title}</strong>
+        <button
+          class="button-secondary button-icon"
+          type="button"
+          aria-label="Закрыть развернутую схему"
+          data-diagram-close
+        >
+          <X aria-hidden="true" />
+        </button>
+      </header>
+
+      <div class="diagram-dialog__toolbar" role="toolbar" aria-label="Масштаб схемы">
+        <button
+          class="button-secondary button-icon"
+          type="button"
+          aria-label="Уменьшить схему"
+          data-diagram-zoom-out
+        >
+          <ZoomOut aria-hidden="true" />
+        </button>
+        <button
+          class="button-secondary diagram-dialog__reset"
+          type="button"
+          aria-label="Сбросить масштаб схемы, сейчас 100 процентов"
+          data-diagram-zoom-reset
+        >
+          <RotateCcw aria-hidden="true" />
+          <span data-diagram-zoom-value>100%</span>
+        </button>
+        <button
+          class="button-secondary button-icon"
+          type="button"
+          aria-label="Увеличить схему"
+          data-diagram-zoom-in
+        >
+          <ZoomIn aria-hidden="true" />
+        </button>
+      </div>
+
+      <div
+        class="diagram-dialog__viewport"
+        tabindex="0"
+        data-diagram-dialog-viewport
+      >
+        <div class="diagram-dialog__surface" data-diagram-dialog-surface>
+          <div
+            class="diagram-dialog__canvas"
+            role="img"
+            aria-label={description}
+            aria-busy="true"
+            data-diagram-dialog-canvas
+          ></div>
+        </div>
+      </div>
+
+      <details class="diagram-dialog__interpretation">
+        <summary>Как читать схему</summary>
+        <div class="diagram-dialog__interpretation-body">
+          <p><strong>Описание:</strong> {description}</p>
+          <p><strong>Как читать:</strong> {howToRead}</p>
+          <p><strong>Главный вывод:</strong> {takeaway}</p>
+        </div>
+      </details>
+    </div>
+  </dialog>
 </LearningVisual>
 
 <script>
   import mermaid from "mermaid";
 
+  const MIN_ZOOM = 0.5;
+  const MAX_ZOOM = 3;
+  const ZOOM_STEP = 0.25;
   let renderVersion = 0;
 
   function initialiseTheme() {
@@ -64,17 +152,20 @@ const { title, description, howToRead, takeaway } = Astro.props;
   async function renderDiagram(
     container: HTMLElement,
     index: number,
+    sourceOverride?: string,
     force = false,
   ) {
-    if (container.dataset.mermaidRendered && !force) return;
+    if (container.dataset.mermaidRendered === "true" && !force) return true;
     const source =
+      sourceOverride ??
       container.dataset.mermaidSource ??
       container.querySelector(
         "pre[data-language='mermaid'] code, code.language-mermaid",
       )?.textContent;
-    if (!source?.trim()) return;
+    if (!source?.trim()) return false;
     container.dataset.mermaidSource = source;
     if (force) delete container.dataset.mermaidRendered;
+    container.setAttribute("aria-busy", "true");
 
     try {
       initialiseTheme();
@@ -90,26 +181,183 @@ const { title, description, howToRead, takeaway } = Astro.props;
       bindFunctions?.(container);
       container.dataset.mermaidRendered = "true";
       container.setAttribute("aria-busy", "false");
+      return true;
     } catch {
       container.dataset.mermaidRendered = "error";
       container.setAttribute("aria-busy", "false");
+      return false;
     }
   }
 
   document
     .querySelectorAll<HTMLElement>("[data-mermaid-container]")
-    .forEach((container, index) => void renderDiagram(container, index));
-  window.addEventListener("prosto-theme-change", () => {
-    document
-      .querySelectorAll<HTMLElement>("[data-mermaid-container]")
-      .forEach((container, index) => {
-        delete container.dataset.mermaidRendered;
-        void renderDiagram(container, index, true);
+    .forEach((container, index) => {
+      const root = container.closest<HTMLElement>(".learning-visual");
+      const dialogCandidate = root?.nextElementSibling;
+      const dialog =
+        dialogCandidate instanceof HTMLDialogElement &&
+        dialogCandidate.matches("[data-diagram-dialog]")
+          ? dialogCandidate
+          : null;
+      const openButton = root?.querySelector<HTMLButtonElement>(
+        "[data-diagram-open]",
+      );
+      const closeButton = dialog?.querySelector<HTMLButtonElement>(
+        "[data-diagram-close]",
+      );
+      const zoomOut = dialog?.querySelector<HTMLButtonElement>(
+        "[data-diagram-zoom-out]",
+      );
+      const zoomReset = dialog?.querySelector<HTMLButtonElement>(
+        "[data-diagram-zoom-reset]",
+      );
+      const zoomValue = dialog?.querySelector<HTMLElement>(
+        "[data-diagram-zoom-value]",
+      );
+      const zoomIn = dialog?.querySelector<HTMLButtonElement>(
+        "[data-diagram-zoom-in]",
+      );
+      const viewport = dialog?.querySelector<HTMLElement>(
+        "[data-diagram-dialog-viewport]",
+      );
+      const surface = dialog?.querySelector<HTMLElement>(
+        "[data-diagram-dialog-surface]",
+      );
+      const dialogCanvas = dialog?.querySelector<HTMLElement>(
+        "[data-diagram-dialog-canvas]",
+      );
+      const interpretation = dialog?.querySelector<HTMLDetailsElement>(
+        ".diagram-dialog__interpretation",
+      );
+      if (
+        !root ||
+        !openButton ||
+        !dialog ||
+        !closeButton ||
+        !zoomOut ||
+        !zoomReset ||
+        !zoomValue ||
+        !zoomIn ||
+        !viewport ||
+        !surface ||
+        !dialogCanvas
+      ) {
+        return;
+      }
+      const primaryContainer = container;
+      const expandButton = openButton;
+      const viewerDialog = dialog;
+      const viewerClose = closeButton;
+      const viewerZoomOut = zoomOut;
+      const viewerZoomReset = zoomReset;
+      const viewerZoomValue = zoomValue;
+      const viewerZoomIn = zoomIn;
+      const viewerViewport = viewport;
+      const viewerSurface = surface;
+      const viewerCanvas = dialogCanvas;
+
+      let zoom = 1;
+
+      function setZoom(nextZoom: number, preserveCenter = true) {
+        const previousWidth = viewerViewport.scrollWidth;
+        const previousHeight = viewerViewport.scrollHeight;
+        const horizontalCenter =
+          (viewerViewport.scrollLeft + viewerViewport.clientWidth / 2) /
+          previousWidth;
+        const verticalCenter =
+          (viewerViewport.scrollTop + viewerViewport.clientHeight / 2) /
+          previousHeight;
+        zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, nextZoom));
+        const percentage = `${Math.round(zoom * 100)}%`;
+
+        // ui-contract-exception data-driven-geometry: learner-selected zoom becomes percentage canvas width
+        viewerSurface.style.width = percentage;
+        viewerZoomValue.textContent = percentage;
+        viewerZoomReset.setAttribute(
+          "aria-label",
+          `Сбросить масштаб схемы, сейчас ${Math.round(zoom * 100)} процентов`,
+        );
+        viewerZoomOut.disabled = zoom <= MIN_ZOOM;
+        viewerZoomIn.disabled = zoom >= MAX_ZOOM;
+
+        if (!preserveCenter) {
+          viewerViewport.scrollTo({ left: 0, top: 0 });
+          return;
+        }
+        requestAnimationFrame(() => {
+          viewerViewport.scrollTo({
+            left:
+              horizontalCenter * viewerViewport.scrollWidth -
+              viewerViewport.clientWidth / 2,
+            top:
+              verticalCenter * viewerViewport.scrollHeight -
+              viewerViewport.clientHeight / 2,
+          });
+        });
+      }
+
+      function resetViewer() {
+        setZoom(1, false);
+        if (interpretation) interpretation.open = false;
+      }
+
+      async function openViewer() {
+        const source = primaryContainer.dataset.mermaidSource;
+        if (!source || viewerDialog.open) return;
+        resetViewer();
+        viewerDialog.showModal();
+        viewerClose.focus();
+        const rendered = await renderDiagram(viewerCanvas, index, source, true);
+        if (!rendered) viewerDialog.close();
+      }
+
+      expandButton.addEventListener("click", () => void openViewer());
+      viewerClose.addEventListener("click", () => viewerDialog.close());
+      viewerZoomOut.addEventListener("click", () => setZoom(zoom - ZOOM_STEP));
+      viewerZoomReset.addEventListener("click", () => setZoom(1));
+      viewerZoomIn.addEventListener("click", () => setZoom(zoom + ZOOM_STEP));
+      viewerDialog.addEventListener("keydown", (event) => {
+        if (event.ctrlKey || event.metaKey || event.altKey) return;
+        if (
+          event.key === "+" ||
+          event.key === "=" ||
+          event.code === "NumpadAdd"
+        ) {
+          event.preventDefault();
+          setZoom(zoom + ZOOM_STEP);
+        } else if (event.key === "-" || event.code === "NumpadSubtract") {
+          event.preventDefault();
+          setZoom(zoom - ZOOM_STEP);
+        } else if (event.key === "0") {
+          event.preventDefault();
+          setZoom(1);
+        }
       });
-  });
+      viewerDialog.addEventListener("close", () => expandButton.focus());
+
+      void renderDiagram(primaryContainer, index).then((rendered) => {
+        expandButton.disabled = !rendered;
+      });
+      window.addEventListener("prosto-theme-change", () => {
+        void renderDiagram(primaryContainer, index, undefined, true).then(
+          (rendered) => {
+            expandButton.disabled = !rendered;
+          },
+        );
+        if (viewerDialog.open) {
+          const source = primaryContainer.dataset.mermaidSource;
+          if (source) void renderDiagram(viewerCanvas, index, source, true);
+        }
+      });
+    });
 </script>
 
 <style>
+  .diagram-expand :global(svg),
+  .diagram-dialog :global(button svg) {
+    width: var(--target-min-size);
+    height: var(--target-min-size);
+  }
   .diagram-visual :global(pre) { display: none; }
   .diagram-visual :global(svg) {
     display: block;
@@ -119,6 +367,86 @@ const { title, description, howToRead, takeaway } = Astro.props;
     height: auto;
     margin-inline: auto;
   }
+  .diagram-dialog {
+    width: 100%;
+    max-width: none;
+    height: var(--viewport-height);
+    max-height: none;
+    margin: var(--space-0);
+    border: var(--space-0);
+    border-radius: var(--space-0);
+    padding: var(--space-0);
+    overflow: hidden;
+    background: var(--color-canvas);
+    color: var(--color-ink);
+  }
+  .diagram-dialog::backdrop { background: var(--color-backdrop); }
+  .diagram-dialog__frame {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+  }
+  .diagram-dialog__header,
+  .diagram-dialog__toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    border-bottom: var(--border-subtle);
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-canvas);
+  }
+  .diagram-dialog__header { justify-content: space-between; }
+  .diagram-dialog__title {
+    min-width: 0;
+    font-size: var(--font-size-component-title);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--line-height-component-title);
+    overflow-wrap: anywhere;
+  }
+  .diagram-dialog__toolbar { justify-content: flex-end; }
+  .diagram-dialog__reset { gap: var(--space-2); }
+  .diagram-dialog__viewport {
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: var(--space-4);
+    background: var(--color-canvas);
+    scrollbar-gutter: stable both-edges;
+  }
+  .diagram-dialog__surface { margin-inline: auto; }
+  .diagram-dialog__canvas :global(svg) {
+    display: block;
+    width: 100% !important;
+    min-width: 100%;
+    max-width: none;
+    height: auto;
+    margin-inline: auto;
+  }
+  .diagram-dialog__interpretation {
+    overflow-y: hidden;
+    border-top: var(--border-subtle);
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-size: var(--font-size-supporting);
+    line-height: var(--line-height-supporting);
+  }
+  .diagram-dialog__interpretation[open] {
+    max-height: 40%;
+    overflow-y: auto;
+  }
+  .diagram-dialog__interpretation summary {
+    padding: var(--space-3) var(--space-4);
+    cursor: pointer;
+    font-weight: var(--font-weight-semibold);
+  }
+  .diagram-dialog__interpretation-body {
+    display: grid;
+    gap: var(--space-2);
+    padding: var(--space-0) var(--space-4) var(--space-4);
+  }
+  .diagram-dialog__interpretation-body p { margin: var(--space-0); }
   @media (prefers-reduced-motion: reduce) {
     .diagram-visual,
     .diagram-visual :global(*) {

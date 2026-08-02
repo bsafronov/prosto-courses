@@ -10,7 +10,17 @@ if (!Astro.slots.has("visual") || !Astro.slots.has("details")) {
 ---
 
 <figure class="learning-visual" aria-label={title}>
-  <figcaption class="learning-visual__title">{title}</figcaption>
+  <figcaption class="learning-visual__title">
+    <span class="learning-visual__title-text">{title}</span>
+    {
+      Astro.slots.has("actions") && (
+        <span class="learning-visual__actions">
+          <slot name="actions" />
+        </span>
+      )
+    }
+  </figcaption>
   <slot name="visual" />
   <slot name="details" />
 </figure>
+<slot name="overlay" />

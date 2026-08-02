@@ -140,6 +140,105 @@ test("Diagram renders Mermaid with an equivalent visible interpretation", async 
   await expect(firstCheckOption).toBeFocused();
 });
 
+test("Diagram opens a full-viewport viewer with zoom and restores focus", async ({
+  page,
+}) => {
+  const diagram = page.getByRole("figure", {
+    name: "Как Markdown становится страницей",
+  });
+  const openViewer = diagram.getByRole("button", {
+    name: "Развернуть схему «Как Markdown становится страницей»",
+  });
+  await expect(openViewer).toBeEnabled();
+  await openViewer.click();
+
+  const viewer = page.getByRole("dialog", {
+    name: "Развернутая схема «Как Markdown становится страницей»",
+  });
+  const closeViewer = viewer.getByRole("button", {
+    name: "Закрыть развернутую схему",
+  });
+  await expect(viewer).toBeVisible();
+  await expect(closeViewer).toBeFocused();
+  await expect(
+    viewer.getByRole("img", {
+      name: "Содержание и знаки Markdown образуют исходник, который преобразователь превращает в структурированный документ.",
+    }),
+  ).toHaveAttribute("aria-busy", "false");
+
+  const viewport = page.viewportSize();
+  const viewerBox = await viewer.boundingBox();
+  expect(viewerBox).not.toBeNull();
+  expect(viewerBox?.x).toBe(0);
+  expect(viewerBox?.y).toBe(0);
+  expect(viewerBox?.width).toBe(viewport?.width);
+  expect(viewerBox?.height).toBe(viewport?.height);
+
+  const resetZoom = viewer.getByRole("button", {
+    name: /^Сбросить масштаб схемы/,
+  });
+  await expect(resetZoom).toContainText("100%");
+  await viewer.getByRole("button", { name: "Увеличить схему" }).click();
+  await expect(resetZoom).toContainText("125%");
+  await page.keyboard.press("Shift+=");
+  await expect(resetZoom).toContainText("150%");
+  await page.keyboard.press("-");
+  await expect(resetZoom).toContainText("125%");
+  await page.keyboard.press("0");
+  await expect(resetZoom).toContainText("100%");
+
+  await viewer.getByText("Как читать схему", { exact: true }).click();
+  await expect(viewer).toContainText(
+    "Markdown хранит структуру отдельно от оформления.",
+  );
+  await page.keyboard.press("Escape");
+  await expect(viewer).toBeHidden();
+  await expect(openViewer).toBeFocused();
+
+  await openViewer.click();
+  await expect(resetZoom).toContainText("100%");
+  await closeViewer.click();
+  await expect(openViewer).toBeFocused();
+});
+
+test("Diagram viewer keeps its canvas usable at a narrow width", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("./courses/markdown/lessons/vvedenie/");
+
+  const diagram = page.getByRole("figure", {
+    name: "Как Markdown становится страницей",
+  });
+  const openViewer = diagram.getByRole("button", {
+    name: "Развернуть схему «Как Markdown становится страницей»",
+  });
+  await expect(openViewer).toBeVisible();
+  await openViewer.click();
+
+  const viewer = page.getByRole("dialog", {
+    name: "Развернутая схема «Как Markdown становится страницей»",
+  });
+  const viewerBox = await viewer.boundingBox();
+  expect(viewerBox).not.toBeNull();
+  expect(viewerBox?.width).toBe(390);
+  expect(viewerBox?.height).toBe(844);
+  await expect(
+    viewer.getByRole("toolbar", { name: "Масштаб схемы" }),
+  ).toBeVisible();
+
+  const zoomIn = viewer.getByRole("button", { name: "Увеличить схему" });
+  await zoomIn.click();
+  await zoomIn.click();
+  const canvasViewport = viewer.locator("[data-diagram-dialog-viewport]");
+  expect(
+    await canvasViewport.evaluate(
+      (element) => element.scrollWidth > element.clientWidth,
+    ),
+  ).toBe(true);
+  await expectNoPageOverflow(page, 390);
+});
+
 test("canonical Chart exposes review evidence, table fallback, and provenance", async ({
   page,
 }) => {
@@ -409,7 +508,10 @@ for (const theme of Object.keys(visualThemes) as VisualTheme[]) {
     });
     await expect(diagram.locator("figcaption")).toBeVisible();
     await expect(diagram.getByText(/Содержание и знаки Markdown/)).toBeVisible();
-    const diagramLabels = await svgTextLayout(diagram.locator("svg"), "text");
+    const diagramLabels = await svgTextLayout(
+      diagram.locator("[data-mermaid-container] svg"),
+      "text",
+    );
     expect(diagramLabels.outside).toEqual([]);
     expect(diagramLabels.overlaps).toEqual([]);
     await expectNoPageOverflow(page, 320);
