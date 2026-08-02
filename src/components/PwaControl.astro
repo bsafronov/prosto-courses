@@ -1,4 +1,5 @@
 ---
+import Button from "./Button.astro";
 import { sitePath } from "../lib/courses";
 ---
 
@@ -24,13 +25,14 @@ import { sitePath } from "../lib/courses";
     id="pwa-action-detail"
     hidden
   ></span>
-  <button
-    class="pwa-action button-secondary"
+  <Button
+    class="pwa-action"
+    variant="ghost"
     data-pwa-action
     type="button"
     aria-describedby="pwa-action-detail"
     hidden
-  ></button>
+  ></Button>
 </div>
 
 <script>

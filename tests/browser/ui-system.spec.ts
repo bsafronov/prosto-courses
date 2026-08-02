@@ -708,7 +708,14 @@ for (const [theme, colors] of Object.entries(themes)) {
     await expect(deleteReflection).toHaveCSS("cursor", "not-allowed");
     await expect(deleteReflection).toHaveCSS("opacity", "1");
     await expect(deleteReflection).toHaveCSS("border-top-width", "1px");
-    await expect(deleteReflection).toHaveCSS("border-top-color", colors.muted);
+    await expect(deleteReflection).toHaveCSS(
+      "border-top-color",
+      "rgba(0, 0, 0, 0)",
+    );
+    await expect(deleteReflection).toHaveCSS(
+      "background-color",
+      "rgba(0, 0, 0, 0)",
+    );
     await expect(page.getByRole("textbox", { name: "Твоя заметка" })).toHaveCSS(
       "border-top-color",
       colors.muted,
@@ -717,6 +724,121 @@ for (const [theme, colors] of Object.entries(themes)) {
     await expect(page.locator(".privacy")).toHaveCSS("line-height", "19.6px");
   });
 }
+
+test("Ghost Button stays quiet until pointer interaction", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("./courses/markdown/lessons/vvedenie/");
+
+  const expandDiagram = page.getByRole("button", {
+    name: /^Развернуть схему/,
+  });
+  await expect(expandDiagram).toBeEnabled();
+  await expect(expandDiagram).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
+  await expect(expandDiagram).toHaveCSS(
+    "border-top-color",
+    "rgba(0, 0, 0, 0)",
+  );
+  await expect(expandDiagram).toHaveCSS("color", themes.light.muted);
+
+  const buttonBox = await expandDiagram.boundingBox();
+  const iconBox = await expandDiagram.locator("svg").boundingBox();
+  expect(buttonBox).toMatchObject({ width: 36, height: 36 });
+  expect(iconBox).toMatchObject({ width: 18, height: 18 });
+
+  await expandDiagram.focus();
+  await expect(expandDiagram).toHaveCSS("outline-color", themes.light.focus);
+  await expect(expandDiagram).toHaveCSS("outline-style", "solid");
+  await expect(expandDiagram).toHaveCSS("outline-width", "2px");
+  await expandDiagram.evaluate((button) => button.blur());
+
+  await expandDiagram.hover();
+  await expect(expandDiagram).toHaveCSS(
+    "background-color",
+    themes.light.border,
+  );
+  await expect(expandDiagram).toHaveCSS("color", themes.light.ink);
+
+  await page.mouse.down();
+  await expect(expandDiagram).toHaveCSS(
+    "background-color",
+    themes.light.border,
+  );
+  await expect(expandDiagram).toHaveCSS("color", themes.light.ink);
+  await page.mouse.move(0, 0);
+  await page.mouse.up();
+
+  await expandDiagram.evaluate((button: HTMLButtonElement) => {
+    button.disabled = true;
+  });
+  await expandDiagram.hover();
+  await expect(expandDiagram).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
+  await expect(expandDiagram).toHaveCSS(
+    "border-top-color",
+    "rgba(0, 0, 0, 0)",
+  );
+  await expect(expandDiagram).toHaveCSS("color", themes.light.muted);
+});
+
+test("icon-only primary and danger Buttons stay 44px square", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("./courses/markdown/lessons/vvedenie/");
+
+  const button = page.getByRole("button", {
+    name: /^Развернуть схему/,
+  });
+  for (const variant of ["primary", "danger"] as const) {
+    await button.evaluate((element, nextVariant) => {
+      element.classList.remove(
+        "button-control--ghost",
+        "button-control--primary",
+        "button-control--danger",
+      );
+      element.classList.add(`button-control--${nextVariant}`);
+    }, variant);
+    const box = await button.boundingBox();
+    expect(box).toMatchObject({ width: 44, height: 44 });
+  }
+});
+
+test("Ghost Button expands its target for touch input", async ({
+  browser,
+}, testInfo) => {
+  const baseURL = testInfo.project.use.baseURL;
+  if (typeof baseURL !== "string") {
+    throw new Error("Playwright baseURL is required");
+  }
+  const context = await browser.newContext({
+    baseURL,
+    hasTouch: true,
+    serviceWorkers: "block",
+    viewport: { width: 390, height: 844 },
+  });
+  const page = await context.newPage();
+  await page.goto("./courses/markdown/lessons/vvedenie/");
+
+  const expandDiagram = page.getByRole("button", {
+    name: /^Развернуть схему/,
+  });
+  const routeToggle = page.getByRole("button", {
+    name: "Открыть маршрут курса",
+  });
+  const buttonBox = await expandDiagram.boundingBox();
+  const iconBox = await expandDiagram.locator("svg").boundingBox();
+  const routeToggleBox = await routeToggle.boundingBox();
+  expect(buttonBox).toMatchObject({ width: 44, height: 44 });
+  expect(iconBox).toMatchObject({ width: 18, height: 18 });
+  expect(routeToggleBox).toMatchObject({ width: 44, height: 44 });
+
+  await context.close();
+});
 
 test("Long Lesson title keeps responsive Header and keyboard Course route", async ({
   page,
@@ -752,8 +874,7 @@ test("Long Lesson title keeps responsive Header and keyboard Course route", asyn
   expect(toggleBox).not.toBeNull();
   expect(titleBox).not.toBeNull();
   expect(themeBox).not.toBeNull();
-  expect(toggleBox!.width).toBeGreaterThanOrEqual(44);
-  expect(toggleBox!.height).toBeGreaterThanOrEqual(44);
+  expect(toggleBox).toMatchObject({ width: 36, height: 36 });
   expect(toggleBox!.x + toggleBox!.width).toBeLessThanOrEqual(titleBox!.x);
   expect(titleBox!.x + titleBox!.width).toBeLessThanOrEqual(themeBox!.x);
 
@@ -764,8 +885,7 @@ test("Long Lesson title keeps responsive Header and keyboard Course route", asyn
   await expect(close).toBeFocused();
   const closeBox = await close.boundingBox();
   expect(closeBox).not.toBeNull();
-  expect(closeBox!.width).toBeGreaterThanOrEqual(44);
-  expect(closeBox!.height).toBeGreaterThanOrEqual(44);
+  expect(closeBox).toMatchObject({ width: 36, height: 36 });
   await page.keyboard.press("Escape");
   await expect(routeToggle).toBeFocused();
   expect(

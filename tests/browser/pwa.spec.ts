@@ -87,7 +87,7 @@ async function expectQuietInstall(page: Page) {
   const target = await install.boundingBox();
   expect(target).not.toBeNull();
   expect(target!.width).toBeGreaterThanOrEqual(44);
-  expect(target!.height).toBeGreaterThanOrEqual(44);
+  expect(target!.height).toBeGreaterThanOrEqual(36);
   await expect(control).not.toContainText("Доступно офлайн");
   return control;
 }

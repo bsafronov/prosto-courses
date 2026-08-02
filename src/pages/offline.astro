@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import Button from "../components/Button.astro";
 import Card from "../components/Card.astro";
 import { sitePath } from "../lib/courses";
 ---
@@ -19,9 +20,9 @@ import { sitePath } from "../lib/courses";
         Адрес мог устареть после обновления Каталога. Сохранённые курсы
         по-прежнему доступны.
       </Fragment>
-      <a class="button" slot="actions" href={sitePath()}>
+      <Button variant="primary" slot="actions" href={sitePath()}>
         Перейти в Каталог курсов
-      </a>
+      </Button>
     </Card>
   </div>
 </BaseLayout>

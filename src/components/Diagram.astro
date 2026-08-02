@@ -1,5 +1,6 @@
 ---
 import { Maximize2, RotateCcw, X, ZoomIn, ZoomOut } from "@lucide/astro";
+import Button from "./Button.astro";
 import LearningVisual from "./LearningVisual.astro";
 
 interface Props {
@@ -13,9 +14,11 @@ const { title, description, howToRead, takeaway } = Astro.props;
 ---
 
 <LearningVisual title={title}>
-  <button
+  <Button
     slot="actions"
-    class="button-secondary button-icon diagram-expand"
+    class="diagram-expand"
+    variant="ghost"
+    iconOnly
     type="button"
     aria-label={`Развернуть схему «${title}»`}
     aria-haspopup="dialog"
@@ -23,7 +26,7 @@ const { title, description, howToRead, takeaway } = Astro.props;
     disabled
   >
     <Maximize2 aria-hidden="true" />
-  </button>
+  </Button>
   <div
     slot="visual"
     class="diagram-visual learning-visual__viewport"
@@ -52,42 +55,46 @@ const { title, description, howToRead, takeaway } = Astro.props;
     <div class="diagram-dialog__frame">
       <header class="diagram-dialog__header">
         <strong class="diagram-dialog__title">{title}</strong>
-        <button
-          class="button-secondary button-icon"
+        <Button
+          variant="ghost"
+          iconOnly
           type="button"
           aria-label="Закрыть развернутую схему"
           data-diagram-close
         >
           <X aria-hidden="true" />
-        </button>
+        </Button>
       </header>
 
       <div class="diagram-dialog__toolbar" role="toolbar" aria-label="Масштаб схемы">
-        <button
-          class="button-secondary button-icon"
+        <Button
+          variant="ghost"
+          iconOnly
           type="button"
           aria-label="Уменьшить схему"
           data-diagram-zoom-out
         >
           <ZoomOut aria-hidden="true" />
-        </button>
-        <button
-          class="button-secondary diagram-dialog__reset"
+        </Button>
+        <Button
+          class="diagram-dialog__reset"
+          variant="ghost"
           type="button"
           aria-label="Сбросить масштаб схемы, сейчас 100 процентов"
           data-diagram-zoom-reset
         >
           <RotateCcw aria-hidden="true" />
           <span data-diagram-zoom-value>100%</span>
-        </button>
-        <button
-          class="button-secondary button-icon"
+        </Button>
+        <Button
+          variant="ghost"
+          iconOnly
           type="button"
           aria-label="Увеличить схему"
           data-diagram-zoom-in
         >
           <ZoomIn aria-hidden="true" />
-        </button>
+        </Button>
       </div>
 
       <div
@@ -353,11 +360,6 @@ const { title, description, howToRead, takeaway } = Astro.props;
 </script>
 
 <style>
-  .diagram-expand :global(svg),
-  .diagram-dialog :global(button svg) {
-    width: var(--target-min-size);
-    height: var(--target-min-size);
-  }
   .diagram-visual :global(pre) { display: none; }
   .diagram-visual :global(svg) {
     display: block;

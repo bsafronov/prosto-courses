@@ -1,10 +1,12 @@
 ---
+import { X } from "@lucide/astro";
 import type {
   CoreDestinationLink,
   CourseEntry,
   CourseTree,
 } from "../lib/courses";
 import { coursePath, getCoreDestinationLinks } from "../lib/courses";
+import Button from "./Button.astro";
 import CourseOutline from "./CourseOutline.astro";
 
 interface Props {
@@ -31,12 +33,13 @@ const destinations = getCoreDestinationLinks(course.id, tree);
   <aside class="course-route-panel" id="course-route-panel" data-course-route-panel>
     <div class="route-mobile-head">
       <span id="course-route-title" class="type-supporting">Маршрут курса</span>
-      <button
-        class="button-secondary button-icon"
+      <Button
+        variant="ghost"
+        iconOnly
         type="button"
         data-course-route-close
         aria-label="Закрыть маршрут курса"
-      >×</button>
+      ><X aria-hidden="true" /></Button>
     </div>
     <nav aria-label="Навигация по курсу">
       <header class="route-head">
@@ -63,14 +66,15 @@ const destinations = getCoreDestinationLinks(course.id, tree);
 
   <div class="learning-content"><slot /></div>
 
-  <button
+  <Button
+    variant="bare"
     type="button"
     class="course-route-backdrop"
     data-course-route-backdrop
     aria-hidden="true"
     tabindex="-1"
     hidden
-  ></button>
+  ></Button>
 </div>
 
 <script>
@@ -274,11 +278,6 @@ const destinations = getCoreDestinationLinks(course.id, tree);
       margin-bottom: var(--space-4);
       background: var(--color-canvas);
       font-weight: var(--font-weight-semibold);
-    }
-    .route-mobile-head button {
-      width: var(--control-min-height);
-      min-height: var(--control-min-height);
-      font-size: var(--font-size-component-title);
     }
     .course-route-backdrop {
       position: fixed;

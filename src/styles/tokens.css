@@ -18,6 +18,7 @@
   --color-control-ink: var(--color-ink);
   --color-control-primary-background: var(--color-brand);
   --color-control-primary-ink: var(--color-canvas);
+  --color-control-ghost-hover-background: var(--color-border);
   --color-control-disabled-background: var(--color-canvas);
   --color-control-disabled-ink: var(--color-muted);
   --color-data-series-1: #3d566e;
@@ -119,8 +120,11 @@
   --shadow-card: none;
   --shadow: 0 1rem 3rem rgb(24 24 27 / 10%);
   --control-min-height: 2.75rem;
+  --control-compact-height: 2.25rem;
   --target-min-size: 1.5rem;
+  --icon-size-control: 1.125rem;
   --control-padding-block: 0.75rem;
+  --control-padding-block-compact: var(--space-2);
   --control-padding-inline: 1rem;
   --control-padding-inline-compact: var(--space-2);
   --control-border: var(--border-width-thin) solid var(--color-muted);

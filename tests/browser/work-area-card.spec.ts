@@ -217,13 +217,19 @@ for (const [theme, colors] of Object.entries(themes)) {
       name: "Удалить навсегда",
     });
     await expect(deleteNote).toBeDisabled();
-    await expect(deleteNote).toHaveCSS("background-color", colors.canvas);
+    await expect(deleteNote).toHaveCSS(
+      "background-color",
+      "rgba(0, 0, 0, 0)",
+    );
     await expect(deleteNote).toHaveCSS("color", colors.muted);
     await reflection
       .getByRole("textbox", { name: "Твоя заметка" })
       .fill("Проверить структуру заметки.");
     await expect(deleteNote).toBeEnabled();
-    await expect(deleteNote).toHaveCSS("border-top-color", colors.error);
+    await expect(deleteNote).toHaveCSS(
+      "border-top-color",
+      "rgba(0, 0, 0, 0)",
+    );
     await expect(deleteNote).toHaveCSS("color", colors.error);
 
     const toggle = completion.locator("[data-completion-toggle]");

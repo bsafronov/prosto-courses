@@ -1,5 +1,6 @@
 ---
 import { createHash } from "node:crypto";
+import Button from "./Button.astro";
 import Card from "./Card.astro";
 
 interface ChoiceOption {
@@ -199,28 +200,30 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
                   {String(index + 1).padStart(2, "0")}
                 </span>
                 <span data-ordering-text>{row.text}</span>
-                <button
+                <Button
                   class="ordering-handle"
+                  variant="ghost"
+                  iconOnly
                   type="button"
                   data-ordering-handle
                   aria-label={`Переместить «${row.text}». Позиция ${index + 1} из ${orderingRows.length}`}
                   aria-roledescription="рукоятка сортировки"
                 >
                   <svg
-                    viewBox="0 0 16 24"
-                    width="16"
-                    height="24"
+                    viewBox="0 0 18 18"
+                    width="18"
+                    height="18"
                     data-ui-geometry-exception="drag-handle glyph geometry"
                     aria-hidden="true"
                   >
-                    <circle cx="5" cy="5" r="1.5" />
-                    <circle cx="11" cy="5" r="1.5" />
-                    <circle cx="5" cy="12" r="1.5" />
-                    <circle cx="11" cy="12" r="1.5" />
-                    <circle cx="5" cy="19" r="1.5" />
-                    <circle cx="11" cy="19" r="1.5" />
+                    <circle cx="6" cy="4" r="1.25" />
+                    <circle cx="12" cy="4" r="1.25" />
+                    <circle cx="6" cy="9" r="1.25" />
+                    <circle cx="12" cy="9" r="1.25" />
+                    <circle cx="6" cy="14" r="1.25" />
+                    <circle cx="12" cy="14" r="1.25" />
                   </svg>
-                </button>
+                </Button>
               </li>
             ))}
           </ol>
@@ -275,7 +278,9 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
     aria-atomic="true"
   >
   </div>
-  <button slot="actions" type="submit">Проверить ответ</button>
+  <Button slot="actions" variant="primary" type="submit">
+    Проверить ответ
+  </Button>
 </Card>
 
 <script>
@@ -959,20 +964,8 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
     line-height: var(--line-height-body);
   }
   .ordering-handle {
-    width: var(--control-min-height);
-    min-height: var(--control-min-height);
-    border: var(--control-border);
-    border-radius: var(--radius-medium);
-    padding: var(--space-0);
-    background: var(--color-control-background);
-    color: var(--color-control-ink);
     cursor: grab;
     touch-action: none;
-  }
-  .ordering-handle:hover {
-    border-color: var(--color-muted);
-    background: var(--color-surface);
-    color: var(--color-ink);
   }
   .ordering-handle:active,
   .ordering-handle[aria-pressed="true"] {

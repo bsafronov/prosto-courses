@@ -22,9 +22,21 @@ test("Reflection keeps private-note controls readable in both themes", async ({
     name: "Удалить навсегда",
   });
 
-  for (const [theme, surface, muted] of [
-    ["light", "rgb(255, 255, 255)", "rgb(113, 113, 122)"],
-    ["dark", "rgb(24, 24, 27)", "rgb(161, 161, 170)"],
+  for (const [theme, surface, muted, border, error] of [
+    [
+      "light",
+      "rgb(255, 255, 255)",
+      "rgb(113, 113, 122)",
+      "rgb(228, 228, 231)",
+      "rgb(161, 40, 40)",
+    ],
+    [
+      "dark",
+      "rgb(24, 24, 27)",
+      "rgb(161, 161, 170)",
+      "rgb(39, 39, 42)",
+      "rgb(240, 154, 154)",
+    ],
   ] as const) {
     await page
       .getByRole("combobox", { name: "Тема оформления" })
@@ -34,9 +46,31 @@ test("Reflection keeps private-note controls readable in both themes", async ({
     await expect(reflection).toHaveCSS("border-top-width", "1px");
     await expect(copy).toHaveCSS("opacity", "1");
     await expect(copy).toHaveCSS("cursor", "not-allowed");
-    await expect(deleteNote).toHaveCSS("border-left-width", "1px");
+    await expect(deleteNote).toHaveCSS(
+      "border-left-color",
+      "rgba(0, 0, 0, 0)",
+    );
+    await expect(deleteNote).toHaveCSS(
+      "background-color",
+      "rgba(0, 0, 0, 0)",
+    );
     await expect(deleteNote).toHaveCSS("opacity", "1");
     await expect(deleteNote).toHaveCSS("color", muted);
+
+    await note.fill("Проверить опасное действие");
+    await expect(deleteNote).toBeEnabled();
+    await expect(deleteNote).toHaveCSS("color", error);
+    await expect(deleteNote).toHaveCSS(
+      "background-color",
+      "rgba(0, 0, 0, 0)",
+    );
+    await deleteNote.hover();
+    await expect(deleteNote).toHaveCSS(
+      "background-color",
+      border,
+    );
+    await page.mouse.move(0, 0);
+    await note.fill("");
 
     await note.focus();
     await expect(note).toBeFocused();

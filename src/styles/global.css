@@ -46,32 +46,6 @@ textarea {
   color: var(--color-control-ink);
   font: inherit;
 }
-button, .button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--control-min-height);
-  border: var(--border-width-thin) solid transparent;
-  border-radius: var(--radius-medium);
-  padding: var(--control-padding-block) var(--control-padding-inline);
-  background: var(--color-control-primary-background);
-  color: var(--color-control-primary-ink);
-  cursor: pointer;
-  font-weight: var(--font-weight-bold);
-  text-decoration: none;
-}
-button:hover, .button:hover {
-  background: var(--color-surface);
-  color: var(--color-ink);
-}
-button:disabled,
-button:disabled:hover {
-  border: var(--control-border);
-  background: var(--color-control-disabled-background);
-  color: var(--color-control-disabled-ink);
-  cursor: not-allowed;
-  opacity: 1;
-}
 :where(
   a,
   button,
@@ -97,23 +71,6 @@ button:disabled:hover {
 }
 :where(input[type="checkbox"], input[type="radio"]) {
   accent-color: var(--color-brand);
-}
-.button-secondary {
-  border: var(--control-border);
-  background: var(--color-control-background);
-  color: var(--color-control-ink);
-  font-weight: var(--font-weight-semibold);
-}
-.button-secondary:hover {
-  border-color: var(--color-muted);
-  background: var(--color-canvas);
-  color: var(--color-control-ink);
-}
-.button-icon {
-  flex: 0 0 var(--control-min-height);
-  width: var(--control-min-height);
-  min-height: var(--control-min-height);
-  padding: var(--space-0);
 }
 .select-quiet {
   max-width: var(--measure-theme-control);

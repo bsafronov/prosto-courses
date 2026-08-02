@@ -1,4 +1,5 @@
 ---
+import Button from "./Button.astro";
 import Card from "./Card.astro";
 import type { CoreDestinationKind } from "../lib/courses";
 import {
@@ -36,15 +37,16 @@ const headingId = `${kind}-completion-heading`;
     )}
     <span class="completion-description">{copy.description}</span>
   </Fragment>
-  <button
+  <Button
     slot="actions"
+    variant="primary"
     type="button"
     data-completion-toggle
     aria-pressed="false"
     disabled
   >
     {copy.complete}
-  </button>
+  </Button>
 </Card>
 
 <style>
@@ -76,11 +78,6 @@ const headingId = `${kind}-completion-heading`;
   }
   .completion-description { display: block; }
   :global(.completion button) { min-width: var(--measure-compact); }
-  :global(.completion button[aria-pressed="true"]) {
-    border: var(--border-subtle);
-    background: var(--color-canvas);
-    color: var(--color-ink);
-  }
   @media (max-width: 36rem) {
     :global(.completion) { grid-template-columns: minmax(0, 1fr); }
     :global(.completion [data-card-region="actions"]) {

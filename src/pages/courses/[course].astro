@@ -1,5 +1,6 @@
 ---
 import { getCollection, render, type CollectionEntry } from "astro:content";
+import Button from "../../components/Button.astro";
 import Card from "../../components/Card.astro";
 import CourseOutline from "../../components/CourseOutline.astro";
 import ContentFreshness from "../../components/ContentFreshness.astro";
@@ -54,12 +55,12 @@ const coreDestinations = getCoreDestinationLinks(course.id, tree);
       >
         0 из {coreDestinations.length} завершено
       </p>
-      <a
+      <Button
         slot="actions"
-        class="button"
+        variant="primary"
         data-course-action
         href={coreDestinations[0].href}
-      >{courseActionCopy.start}</a>
+      >{courseActionCopy.start}</Button>
     </Card>
     <Card as="section" headingId="route-heading" headingLevel={2}>
       <Fragment slot="title">Маршрут курса</Fragment>

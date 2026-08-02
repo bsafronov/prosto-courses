@@ -101,12 +101,14 @@ test("Knowledge Check feedback and ordering handles stay explicit in both themes
     .first()
     .locator("[data-ordering-handle]");
   const handleBox = await handle.boundingBox();
+  const glyphBox = await handle.locator("svg").boundingBox();
   expect(handleBox).not.toBeNull();
-  expect(handleBox!.width).toBeGreaterThanOrEqual(44);
-  expect(handleBox!.height).toBeGreaterThanOrEqual(44);
+  expect(handleBox).toMatchObject({ width: 36, height: 36 });
+  expect(glyphBox).toMatchObject({ width: 18, height: 18 });
   await expect(handle).toHaveCSS("cursor", "grab");
   await expect(handle).toHaveCSS("touch-action", "none");
   await expect(handle).toHaveCSS("border-left-width", "1px");
+  await expect(handle).toHaveCSS("border-left-color", "rgba(0, 0, 0, 0)");
   await expect(handle).toHaveAttribute(
     "aria-roledescription",
     "рукоятка сортировки",
@@ -649,6 +651,8 @@ test("ordering Knowledge Check requires an explicit keyboard drop or cancellatio
   await page.keyboard.press("Tab");
 
   await expect(handle).toHaveAttribute("aria-pressed", "true");
+  await expect(handle).toHaveCSS("background-color", "rgb(228, 228, 231)");
+  await expect(handle).toHaveCSS("color", "rgb(24, 24, 27)");
   await expect(list.locator("[data-ordering-text]")).not.toHaveText(
     initialOrder,
   );

@@ -1,4 +1,6 @@
 ---
+import { Menu } from "@lucide/astro";
+import Button from "../components/Button.astro";
 import PwaControl from "../components/PwaControl.astro";
 import ThemeControl from "../components/ThemeControl.astro";
 import { sitePath } from "../lib/courses";
@@ -82,14 +84,16 @@ const themeColors = { light: canvasColors[0], dark: canvasColors[1] };
       <div class="container header-inner">
         <div class="header-leading">
           {courseRouteControl && (
-            <button
+            <Button
               type="button"
-              class="course-route-toggle button-secondary button-icon"
+              class="course-route-toggle"
+              variant="ghost"
+              iconOnly
               data-course-route-toggle
               aria-label="Открыть маршрут курса"
               aria-controls="course-route-panel"
               aria-expanded="false"
-            >☰</button>
+            ><Menu aria-hidden="true" /></Button>
           )}
           <a class="brand" href={sitePath()}>Prosto.Courses</a>
           {mobileTitle && <span class="mobile-title">{mobileTitle}</span>}
@@ -145,8 +149,6 @@ const themeColors = { light: canvasColors[0], dark: canvasColors[1] };
   }
   .course-route-toggle {
     display: none;
-    width: var(--control-min-height);
-    min-height: var(--control-min-height);
   }
   .mobile-title { display: none; }
   .header-actions > a { color: var(--color-ink); text-decoration: none; }

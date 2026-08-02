@@ -1,0 +1,154 @@
+---
+type ButtonVariant = "primary" | "ghost" | "danger" | "bare";
+
+interface Props {
+  variant: ButtonVariant;
+  iconOnly?: boolean;
+  href?: string;
+  class?: string;
+  type?: "button" | "submit" | "reset";
+  [attribute: string]: unknown;
+}
+
+const {
+  variant,
+  iconOnly = false,
+  href,
+  class: className,
+  type = "button",
+  ...attributes
+} = Astro.props as Props;
+const classes = [
+  "button-control",
+  `button-control--${variant}`,
+  { "button-control--icon": iconOnly },
+  className,
+];
+---
+
+{
+  href !== undefined ? (
+    <a {...attributes} href={href} class:list={classes}>
+      <slot />
+    </a>
+  ) : (
+    <button {...attributes} type={type} class:list={classes}>
+      <slot />
+    </button>
+  )
+}
+
+<style>
+  .button-control {
+    display: inline-flex;
+    min-height: var(--control-min-height);
+    align-items: center;
+    justify-content: center;
+    border: var(--border-width-thin) solid transparent;
+    border-radius: var(--radius-medium);
+    padding: var(--control-padding-block) var(--control-padding-inline);
+    cursor: pointer;
+    font-weight: var(--font-weight-bold);
+    text-decoration: none;
+  }
+  .button-control.button-control--primary {
+    background: var(--color-control-primary-background);
+    color: var(--color-control-primary-ink);
+  }
+  .button-control.button-control--primary:hover:not(:disabled),
+  .button-control.button-control--primary:active:not(:disabled) {
+    background: var(--color-surface);
+    color: var(--color-ink);
+  }
+  .button-control.button-control--primary[aria-pressed="true"],
+  .button-control.button-control--primary[aria-pressed="true"]:hover,
+  .button-control.button-control--primary[aria-pressed="true"]:active {
+    border-color: var(--color-border);
+    background: var(--color-canvas);
+    color: var(--color-ink);
+  }
+  .button-control:disabled,
+  .button-control:disabled:hover {
+    border: var(--control-border);
+    background: var(--color-control-disabled-background);
+    color: var(--color-control-disabled-ink);
+    cursor: not-allowed;
+    opacity: 1;
+  }
+  .button-control.button-control--ghost {
+    min-height: var(--control-compact-height);
+    border-color: transparent;
+    padding:
+      var(--control-padding-block-compact)
+      var(--control-padding-inline-compact);
+    background: transparent;
+    color: var(--color-muted);
+    font-weight: var(--font-weight-semibold);
+  }
+  .button-control.button-control--ghost:hover:not(:disabled),
+  .button-control.button-control--ghost:active:not(:disabled),
+  .button-control.button-control--ghost[aria-pressed="true"],
+  .button-control.button-control--ghost[aria-pressed="true"]:hover,
+  .button-control.button-control--ghost[aria-pressed="true"]:active {
+    border-color: transparent;
+    background: var(--color-control-ghost-hover-background);
+    color: var(--color-ink);
+  }
+  .button-control.button-control--ghost:disabled,
+  .button-control.button-control--ghost:disabled:hover,
+  .button-control.button-control--danger:disabled,
+  .button-control.button-control--danger:disabled:hover {
+    border-color: transparent;
+    background: transparent;
+    color: var(--color-muted);
+  }
+  .button-control.button-control--danger {
+    border-color: transparent;
+    background: transparent;
+    color: var(--color-error);
+    font-weight: var(--font-weight-semibold);
+  }
+  .button-control.button-control--danger:hover:not(:disabled),
+  .button-control.button-control--danger:active:not(:disabled) {
+    border-color: transparent;
+    background: var(--color-control-ghost-hover-background);
+    color: var(--color-error);
+  }
+  .button-control--bare,
+  .button-control--bare:hover,
+  .button-control--bare:active {
+    min-height: var(--space-0);
+    border: var(--space-0);
+    border-radius: var(--space-0);
+    padding: var(--space-0);
+    background: transparent;
+    color: inherit;
+    font-weight: inherit;
+  }
+  .button-control.button-control--icon {
+    padding: var(--space-0);
+  }
+  .button-control.button-control--primary.button-control--icon,
+  .button-control.button-control--danger.button-control--icon {
+    width: var(--control-min-height);
+    flex: 0 0 var(--control-min-height);
+  }
+  .button-control.button-control--ghost.button-control--icon {
+    width: var(--control-compact-height);
+    flex: 0 0 var(--control-compact-height);
+  }
+  .button-control :global(svg) {
+    flex: 0 0 auto;
+    width: var(--icon-size-control);
+    height: var(--icon-size-control);
+  }
+  @media (any-pointer: coarse) {
+    .button-control.button-control--ghost {
+      min-height: var(--control-min-height);
+    }
+    .button-control.button-control--ghost.button-control--icon {
+      width: var(--control-min-height);
+      flex-basis: var(--control-min-height);
+    }
+  }
+</style>

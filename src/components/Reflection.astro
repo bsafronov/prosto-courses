@@ -1,4 +1,5 @@
 ---
+import Button from "./Button.astro";
 import Card from "./Card.astro";
 
 interface Props {
@@ -63,9 +64,15 @@ const privacyId = `${reflectionId}-privacy`;
     aria-atomic="true"
   ></p>
   <div class="reflection-actions cluster" slot="actions">
-    <button type="button" data-reflection-copy disabled>Копировать</button>
-    <button type="button" data-reflection-export disabled>Экспортировать</button>
-    <button type="button" data-reflection-delete disabled>Удалить навсегда</button>
+    <Button variant="primary" type="button" data-reflection-copy disabled>
+      Копировать
+    </Button>
+    <Button variant="primary" type="button" data-reflection-export disabled>
+      Экспортировать
+    </Button>
+    <Button variant="danger" type="button" data-reflection-delete disabled>
+      Удалить навсегда
+    </Button>
   </div>
 </Card>
 
@@ -206,11 +213,6 @@ const privacyId = `${reflectionId}-privacy`;
     color: var(--color-muted);
     font-family: var(--font-sans);
   }
-  .reflection-actions button:last-child:not(:disabled) {
-    border: var(--border-width-thin) solid var(--color-error);
-    color: var(--color-error);
-    background: var(--color-surface);
-  }
   .status {
     min-height: var(--space-6);
     margin: var(--space-3) var(--space-0) var(--space-0);
@@ -218,6 +220,6 @@ const privacyId = `${reflectionId}-privacy`;
   }
   @media (max-width: 36rem) {
     .reflection-actions { display: grid; width: 100%; }
-    .reflection-actions button { width: 100%; }
+    .reflection-actions :global(button) { width: 100%; }
   }
 </style>
