@@ -1,4 +1,4 @@
-import { defineConfig } from "@playwright/test";
+import { defineConfig, devices } from "@playwright/test";
 import { siteBasePath } from "./site.config.mjs";
 
 process.env.NO_PROXY = [process.env.NO_PROXY, "127.0.0.1", "localhost"]
@@ -15,9 +15,20 @@ export default defineConfig({
   workers: 1,
   use: {
     baseURL: siteRootUrl,
-    channel: "chrome",
     serviceWorkers: "block",
   },
+  projects: [
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"], channel: "chrome" },
+    },
+    ...(process.env.PLAYWRIGHT_CROSS_BROWSER === "1"
+      ? [
+          { name: "firefox", use: { ...devices["Desktop Firefox"] } },
+          { name: "webkit", use: { ...devices["Desktop Safari"] } },
+        ]
+      : []),
+  ],
   webServer: {
     command: "node tests/support/preview-content-fixtures.mjs",
     url: siteRootUrl,

@@ -191,7 +191,9 @@ const destinations = getCoreDestinationLinks(course.id, tree);
     position: sticky;
     top: calc(var(--shell-header-min-height) + var(--space-6));
     width: var(--measure-course-route);
-    max-height: calc(100vh - var(--shell-header-min-height) - var(--space-12));
+    max-height: calc(
+      var(--viewport-height) - var(--shell-header-min-height) - var(--space-12)
+    );
     padding-block: var(--space-10);
     overflow-y: auto;
     overscroll-behavior: contain;
@@ -228,7 +230,7 @@ const destinations = getCoreDestinationLinks(course.id, tree);
     width: 0;
     height: 100%;
     background: var(--color-ink);
-    transition: width 180ms ease-out;
+    transition: width var(--motion-duration) var(--motion-easing);
   }
   .learning-content { min-width: 0; }
   .course-route-backdrop[hidden] { display: none; }
@@ -238,7 +240,7 @@ const destinations = getCoreDestinationLinks(course.id, tree);
     }
     .course-route-panel {
       position: fixed;
-      z-index: 90;
+      z-index: var(--layer-drawer);
       top: var(--shell-header-min-height);
       bottom: 0;
       left: 0;
@@ -251,8 +253,8 @@ const destinations = getCoreDestinationLinks(course.id, tree);
       transform: translateX(-105%);
       visibility: hidden;
       transition:
-        transform 180ms ease-out,
-        visibility 0s linear 180ms;
+        transform var(--motion-duration) var(--motion-easing),
+        visibility 0s var(--motion-easing) var(--motion-duration);
     }
     body[data-course-route-open="true"] .course-route-panel {
       transform: translateX(0);
@@ -262,7 +264,7 @@ const destinations = getCoreDestinationLinks(course.id, tree);
     body[data-course-route-open="true"] { overflow: hidden; }
     .route-mobile-head {
       position: sticky;
-      z-index: 2;
+      z-index: var(--layer-raised);
       top: 0;
       display: flex;
       min-height: calc(var(--control-min-height) + var(--space-4));
@@ -280,7 +282,7 @@ const destinations = getCoreDestinationLinks(course.id, tree);
     }
     .course-route-backdrop {
       position: fixed;
-      z-index: 80;
+      z-index: var(--layer-backdrop);
       inset: var(--shell-header-min-height) 0 0;
       width: 100%;
       min-height: 0;

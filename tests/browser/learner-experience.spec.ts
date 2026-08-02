@@ -225,7 +225,7 @@ test("theme follows the system before paint and persists an explicit choice", as
   expect(await firstFrameTheme()).toEqual({
     theme: "dark",
     mode: "system",
-    themeColor: "#09090B",
+    themeColor: "#09090b",
   });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(page.locator("html")).toHaveAttribute(
@@ -237,7 +237,7 @@ test("theme follows the system before paint and persists an explicit choice", as
   ).toHaveValue("system");
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
     "content",
-    "#09090B",
+    "#09090b",
   );
 
   await page
@@ -248,7 +248,7 @@ test("theme follows the system before paint and persists an explicit choice", as
   expect(await firstFrameTheme()).toEqual({
     theme: "light",
     mode: "light",
-    themeColor: "#FAFAFA",
+    themeColor: "#fafafa",
   });
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await expect(page.locator("html")).toHaveAttribute(
@@ -260,7 +260,7 @@ test("theme follows the system before paint and persists an explicit choice", as
   ).toHaveValue("light");
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute(
     "content",
-    "#FAFAFA",
+    "#fafafa",
   );
 });
 

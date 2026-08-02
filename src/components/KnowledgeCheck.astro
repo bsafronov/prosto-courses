@@ -945,7 +945,7 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
     overflow-wrap: anywhere;
   }
   .ordering-position {
-    z-index: 1;
+    z-index: var(--layer-raised);
     display: grid;
     place-items: center;
     width: var(--space-8);
@@ -955,7 +955,7 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
     background: var(--color-surface);
     color: var(--color-muted);
     font-weight: var(--font-weight-semibold);
-    line-height: 1;
+    line-height: var(--line-height-body);
   }
   .ordering-handle {
     width: var(--control-min-height);
@@ -1019,6 +1019,7 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
       width: 100%;
     }
   }
+  /* ui-contract-exception component-geometry: ordering controls collapse only when their own container cannot fit both actions */
   @container (max-width: 16rem) {
     [data-ordering-item] {
       grid-template-columns: minmax(0, 1fr) var(--control-min-height);

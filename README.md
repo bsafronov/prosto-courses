@@ -1,5 +1,7 @@
 # Prosto.Courses
 
+UI architecture and contribution contract: [plain-CSS design system](docs/design-system.md).
+
 A static, serverless course platform built with Astro and MDX. Courses are authored as content-only directories; the platform supplies the Course Catalog, layouts, navigation, browser-local Lesson Progress and private Reflection notes, Knowledge Checks, and progressively supported Practice Tasks.
 
 ## Local development

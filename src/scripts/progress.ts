@@ -236,6 +236,7 @@ function refresh(root: HTMLElement, course: StoredCourse) {
   root
     .querySelectorAll<HTMLElement>("[data-course-progress-line]")
     .forEach((line) => {
+      // ui-contract-exception data-driven-geometry: completed destination ratio becomes percentage width
       line.style.width = destinations.length
         ? `${(completedCount / destinations.length) * 100}%`
         : "0";

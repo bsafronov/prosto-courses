@@ -156,6 +156,7 @@ const progressCatalog: HomeCatalogCourse[] = catalog.map(
                   {progressGroups.map((group) => (
                     <span
                       class="module-segment"
+                      data-ui-geometry-exception="destination count controls segment ratio"
                       style={`--segment-weight: ${group.destinations.length}`}
                       data-progress-module
                       data-module-id={group.id}
@@ -274,6 +275,7 @@ const progressCatalog: HomeCatalogCourse[] = catalog.map(
     padding: var(--space-0);
     list-style: none;
   }
+  .catalog-list > li { min-width: 0; }
   .catalog-title { color: var(--color-ink); text-decoration: none; }
   .catalog-card-content {
     display: flex;
@@ -289,7 +291,7 @@ const progressCatalog: HomeCatalogCourse[] = catalog.map(
   }
   .catalog-route {
     display: grid;
-    min-width: min(100%, var(--measure-card-route));
+    min-width: 0;
     flex: 1 1 var(--measure-card-route);
     gap: var(--space-3);
     color: var(--color-muted);
@@ -314,7 +316,7 @@ const progressCatalog: HomeCatalogCourse[] = catalog.map(
     height: 100%;
     border-radius: inherit;
     background: var(--color-ink);
-    transition: width 180ms ease-out;
+    transition: width var(--motion-duration) var(--motion-easing);
   }
   .capstone-marker {
     position: relative;
@@ -333,8 +335,10 @@ const progressCatalog: HomeCatalogCourse[] = catalog.map(
     background: var(--color-ink);
     content: "";
     opacity: 0;
-    transform: scale(.5);
-    transition: opacity 180ms ease-out, transform 180ms ease-out;
+    transform: scale(50%);
+    transition:
+      opacity var(--motion-duration) var(--motion-easing),
+      transform var(--motion-duration) var(--motion-easing);
   }
   .capstone-marker[data-state="completed"]::after {
     opacity: 1;

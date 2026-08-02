@@ -259,8 +259,7 @@ const chartKey = crypto.randomUUID();
       {series.map((item, index) => (
         <li>
           <span
-            class={`chart-swatch chart-swatch-${patternKinds[index % patternKinds.length]}`}
-            style={`--chart-color: ${palette[index % palette.length]}`}
+            class={`chart-swatch chart-swatch-${patternKinds[index % patternKinds.length]} chart-series-${(index % palette.length) + 1}`}
             aria-hidden="true"
           ></span>
           <span class="chart-series-key" aria-hidden="true">{index + 1}</span>
@@ -315,8 +314,14 @@ const chartKey = crypto.randomUUID();
   .chart-visual svg { display: block; max-width: none; }
   /* Technical exception: stroke widths and hatch dimensions encode SVG/data-mark
      geometry. UI color, typography, spacing, borders, and focus use system tokens. */
-  .chart-grid-line { stroke: var(--color-border); stroke-width: 1; }
-  .chart-axis-line { stroke: var(--color-ink); stroke-width: 1.5; }
+  .chart-grid-line {
+    stroke: var(--color-border);
+    stroke-width: var(--border-width-thin);
+  }
+  .chart-axis-line {
+    stroke: var(--color-ink);
+    stroke-width: var(--border-width-emphasis);
+  }
   .chart-tick-label,
   .chart-category-label,
   .chart-value-label,
@@ -403,23 +408,31 @@ const chartKey = crypto.randomUUID();
     border-radius: var(--radius);
     background-color: var(--chart-color);
   }
+  .chart-series-1 { --chart-color: var(--color-data-series-1); }
+  .chart-series-2 { --chart-color: var(--color-data-series-2); }
+  .chart-series-3 { --chart-color: var(--color-data-series-3); }
+  .chart-series-4 { --chart-color: var(--color-data-series-4); }
+  .chart-series-5 { --chart-color: var(--color-data-series-5); }
   .chart-swatch-diagonal {
     background-image: repeating-linear-gradient(
-      135deg,
-      transparent 0 4px,
-      var(--color-canvas) 4px 6px
+      var(--pattern-angle-diagonal),
+      transparent 0 var(--space-1),
+      var(--color-canvas) var(--space-1) var(--space-2)
     );
   }
   .chart-swatch-dots {
     background-image:
-      radial-gradient(var(--color-canvas) 1.5px, transparent 1.5px);
-    background-size: 7px 7px;
+      radial-gradient(
+        var(--color-canvas) var(--border-width-thin),
+        transparent var(--border-width-thin)
+      );
+    background-size: var(--space-2) var(--space-2);
   }
   .chart-swatch-crosshatch {
     background-image:
-      linear-gradient(45deg, transparent 44%, var(--color-canvas) 45% 55%, transparent 56%),
-      linear-gradient(-45deg, transparent 44%, var(--color-canvas) 45% 55%, transparent 56%);
-    background-size: 9px 9px;
+      linear-gradient(var(--pattern-angle-crosshatch), transparent 44%, var(--color-canvas) 45% 55%, transparent 56%),
+      linear-gradient(calc(-1 * var(--pattern-angle-crosshatch)), transparent 44%, var(--color-canvas) 45% 55%, transparent 56%);
+    background-size: var(--space-2) var(--space-2);
   }
   .chart-table-scroll {
     max-width: 100%;

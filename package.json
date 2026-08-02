@@ -7,12 +7,13 @@
   "scripts": {
     "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev",
     "generate:pwa-icons": "pwa-assets-generator",
-    "validate": "node scripts/validate-content.mjs && ASTRO_TELEMETRY_DISABLED=1 astro check",
+    "validate": "node scripts/validate-content.mjs && node scripts/validate-ui-contract.mjs && ASTRO_TELEMETRY_DISABLED=1 astro check",
     "build": "pnpm validate && ASTRO_TELEMETRY_DISABLED=1 astro build",
     "preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview",
     "test": "pnpm test:contract && pnpm test:browser",
     "test:contract": "node --test tests/*.test.mjs",
     "test:browser": "playwright test",
+    "test:browser:cross-browser": "PLAYWRIGHT_CROSS_BROWSER=1 playwright test tests/browser/canonical-course-qa.spec.ts --project=firefox --project=webkit",
     "typecheck": "ASTRO_TELEMETRY_DISABLED=1 astro check"
   },
   "dependencies": {

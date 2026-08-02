@@ -97,6 +97,19 @@
   --measure-diagram-visual: 44rem;
   --measure-chart-table: 36rem;
   --breakpoint-viewport-min: 320px;
+  /* CSS custom properties cannot be used in media-query conditions. The
+     repository contract treats these declared values as approved literals. */
+  --breakpoint-controls: 36rem;
+  --breakpoint-typography: 40rem;
+  --breakpoint-header: 42rem;
+  --breakpoint-navigation: 52rem;
+
+  /* Technical and viewport geometry */
+  --viewport-height: 100vh;
+  --sr-only-size: 1px;
+  --sr-only-offset: -1px;
+  --pattern-angle-diagonal: 135deg;
+  --pattern-angle-crosshatch: 45deg;
 
   /* Borders, radii, shadows, and controls */
   --border-width-thin: 0.0625rem;
@@ -125,6 +138,13 @@
   --space-learning-columns: clamp(var(--space-8), 4vw, var(--space-12));
   --progress-marker-size: 0.5rem;
   --progress-marker-dot-size: 0.1875rem;
+  /* Layers and motion */
+  --layer-raised: 1;
+  --layer-header: 50;
+  --layer-backdrop: 80;
+  --layer-drawer: 90;
+  --motion-duration: 180ms;
+  --motion-easing: ease-out;
 
   color-scheme: light;
   font-family: var(--font-sans);

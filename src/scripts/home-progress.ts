@@ -104,6 +104,7 @@ function refreshHome(root: HTMLElement) {
             "[data-progress-module-fill]",
           );
           if (fill) {
+            // ui-contract-exception data-driven-geometry: completed destination ratio becomes percentage width
             fill.style.width = ids.length
               ? `${(moduleCompleted / ids.length) * 100}%`
               : "0";
