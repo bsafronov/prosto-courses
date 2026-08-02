@@ -421,6 +421,17 @@ for (const file of files) {
         }
       }
     }
+
+    const opaqueStylePattern = /\bstyle\s*=\s*\{\s*([^"'`{][^}]*)\}/g;
+    for (const match of source.matchAll(opaqueStylePattern)) {
+      report(
+        file,
+        lineAt(source, match.index),
+        "style",
+        match[1].trim().replace(/\s+/g, " "),
+        "write explicit token-backed declarations; document narrow data-driven geometry inline",
+      );
+    }
   }
 
   if ([".astro", ".js", ".jsx", ".mjs", ".ts", ".tsx"].includes(extension)) {

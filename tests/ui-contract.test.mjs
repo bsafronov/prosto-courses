@@ -245,6 +245,25 @@ export const Dynamic = () => <div style={{ padding: gap }} />;
   );
 });
 
+test("rejects opaque inline presentation expressions", async () => {
+  await withUiFixture(
+    {
+      "src/components/Opaque.astro": `
+<div style={presentation}></div>
+`,
+      "src/components/Opaque.tsx": `
+export const Opaque = () => <div style={presentation} />;
+`,
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(result.output, /src\/components\/Opaque\.astro:\d+.*style.*presentation/i);
+      assert.match(result.output, /src\/components\/Opaque\.tsx:\d+.*style.*presentation/i);
+      assert.match(result.output, /explicit token-backed declarations/i);
+    },
+  );
+});
+
 test("accepts only breakpoints declared by the central token source", async () => {
   await withUiFixture(
     {
