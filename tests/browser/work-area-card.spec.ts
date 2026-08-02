@@ -68,8 +68,8 @@ for (const [theme, colors] of Object.entries(themes)) {
         .getByRole("combobox", { name: "Тема оформления" })
         .selectOption(theme);
 
-      const { knowledgeCheck, practiceTask, reflection, completion } =
-        workAreaCards(page);
+      const cards = workAreaCards(page);
+      const { knowledgeCheck, practiceTask, reflection, completion } = cards;
 
       expect(await cardSurface(knowledgeCheck)).toEqual(
         await cardSurface(practiceTask),
@@ -81,12 +81,7 @@ for (const [theme, colors] of Object.entries(themes)) {
         await cardSurface(practiceTask),
       );
 
-      for (const card of [
-        knowledgeCheck,
-        practiceTask,
-        reflection,
-        completion,
-      ]) {
+      for (const card of Object.values(cards)) {
         await expect(card).toHaveCSS("background-color", colors.surface);
         await expect(card.locator('[data-card-region="eyebrow"]')).toHaveCSS(
           "font-size",
@@ -122,7 +117,7 @@ for (const [theme, colors] of Object.entries(themes)) {
           .evaluateAll((regions) =>
             regions.map((region) => region.getAttribute("data-card-region")),
           ),
-      ).toEqual(["eyebrow", "title", "body"]);
+      ).toEqual(["eyebrow", "title", "body", "actions"]);
       expect(
         await practiceTask.locator("[data-card-region]").evaluateAll((regions) =>
           regions.map((region) => region.getAttribute("data-card-region")),
@@ -177,14 +172,9 @@ for (const [theme, colors] of Object.entries(themes)) {
         });
       }
 
-      const { knowledgeCheck, practiceTask, reflection, completion } =
-        workAreaCards(page);
-      for (const card of [
-        knowledgeCheck,
-        practiceTask,
-        reflection,
-        completion,
-      ]) {
+      const cards = workAreaCards(page);
+      const { reflection, completion } = cards;
+      for (const card of Object.values(cards)) {
         await expect(card).toBeVisible();
         const box = await card.boundingBox();
         expect(box).not.toBeNull();

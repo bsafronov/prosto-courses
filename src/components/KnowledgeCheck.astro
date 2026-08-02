@@ -265,7 +265,6 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
       )
     }
   </fieldset>
-  <button type="submit">Проверить ответ</button>
   <div
     class="feedback type-supporting"
     data-feedback
@@ -275,6 +274,7 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
     aria-atomic="true"
   >
   </div>
+  <button slot="actions" type="submit">Проверить ответ</button>
 </Card>
 
 <script>
@@ -843,6 +843,7 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
     overflow: hidden;
   }
   fieldset {
+    container-type: inline-size;
     min-width: 0;
     margin: var(--space-0);
     border: var(--space-0);
@@ -990,9 +991,6 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
     border-color: var(--color-focus);
     color: var(--color-ink);
   }
-  :global(.knowledge-check button[type="submit"]) {
-    margin-top: var(--space-5);
-  }
   .feedback {
     margin: var(--space-4) var(--space-0) var(--space-0);
     border-top: var(--border-subtle);
@@ -1017,9 +1015,11 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
   .response-feedback li + li { margin-top: var(--space-1); }
   .governing-idea { margin-top: var(--space-3); }
   @media (max-width: 36rem) {
-    :global(.knowledge-check button[type="submit"]) {
+    :global(.knowledge-check [data-card-region="actions"] button) {
       width: 100%;
     }
+  }
+  @container (max-width: 16rem) {
     [data-ordering-item] {
       grid-template-columns: minmax(0, 1fr) var(--control-min-height);
       gap: var(--space-2);
