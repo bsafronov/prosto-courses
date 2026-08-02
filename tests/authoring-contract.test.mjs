@@ -84,7 +84,7 @@ test("accepts the canonical Russian Courses through the public contract", async 
   assert.equal(result.exitCode, 0, result.output);
   assert.match(
     result.output,
-    /Validated 3 Courses, 13 Modules, 44 Lessons, 13 Module Checkpoints, and 3 Capstone Demonstrations/,
+    /Validated 4 Courses, 19 Modules, 56 Lessons, 19 Module Checkpoints, and 4 Capstone Demonstrations/,
   );
 });
 
@@ -99,7 +99,7 @@ test("accepts a fresh Course through the public authoring contract", async () =>
 
 test("uses an injected validation date without depending on the machine clock", async () => {
   const result = await validateFixture("valid-course", {
-    validationDate: "2026-10-22",
+    validationDate: "2026-08-29",
   });
   assert.equal(result.exitCode, 0, result.output);
   assert.doesNotMatch(result.output, /Content freshness warning/i);
@@ -281,14 +281,14 @@ test("uses a stale Lesson freshness override before the Course review deadline",
       assert.match(result.output, /Content freshness warning/i);
       assert.match(
         result.output,
-        /modules\/alt-text\/lessons\/describe-purpose\.mdx: Lesson review deadline 2026-10-22 has passed/i,
+        /modules\/alt-text\/lessons\/describe-purpose\.mdx: Lesson review deadline 2026-08-29 has passed/i,
       );
       assert.doesNotMatch(
         result.output,
         /index\.mdx: Course review deadline 2026-12-31 has passed/i,
       );
     },
-    { validationDate: "2026-10-23" },
+    { validationDate: "2026-08-30" },
   );
 });
 

@@ -88,7 +88,7 @@ const runBuild = ({ basePath, cacheRoot, contentRoot, outputRoot }) =>
         ...process.env,
         ASTRO_CACHE_DIR: cacheRoot,
         ASTRO_OUT_DIR: outputRoot,
-        CONTENT_VALIDATION_DATE: "2026-10-23",
+        CONTENT_VALIDATION_DATE: "2026-08-30",
         COURSE_CONTENT_ROOT: contentRoot,
         ...(basePath ? { SITE_BASE_PATH: basePath } : {}),
       },

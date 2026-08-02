@@ -51,7 +51,7 @@ test("Course Overview shows factual verification and its derived freshness state
   await expect(staleFreshness).toContainText(
     "Требуется повторная проверка",
   );
-  await expect(staleFreshness).toContainText("22 октября 2026 г.");
+  await expect(staleFreshness).toContainText("29 августа 2026 г.");
 
   await page.goto("./courses/accessible-images/modules/alt-text/");
   const moduleFreshness = page.getByRole("group", {
