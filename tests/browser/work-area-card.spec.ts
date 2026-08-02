@@ -42,6 +42,9 @@ async function cardSurface(locator: Locator) {
 
 function workAreaCards(page: Page) {
   return {
+    knowledgeCheck: page.locator(
+      '[data-knowledge-check][data-type="ordering"]',
+    ),
     practiceTask: page.getByRole("region", {
       name: "Собери структуру заметки",
     }),
@@ -65,8 +68,12 @@ for (const [theme, colors] of Object.entries(themes)) {
         .getByRole("combobox", { name: "Тема оформления" })
         .selectOption(theme);
 
-      const { practiceTask, reflection, completion } = workAreaCards(page);
+      const { knowledgeCheck, practiceTask, reflection, completion } =
+        workAreaCards(page);
 
+      expect(await cardSurface(knowledgeCheck)).toEqual(
+        await cardSurface(practiceTask),
+      );
       expect(await cardSurface(reflection)).toEqual(
         await cardSurface(practiceTask),
       );
@@ -74,7 +81,12 @@ for (const [theme, colors] of Object.entries(themes)) {
         await cardSurface(practiceTask),
       );
 
-      for (const card of [practiceTask, reflection, completion]) {
+      for (const card of [
+        knowledgeCheck,
+        practiceTask,
+        reflection,
+        completion,
+      ]) {
         await expect(card).toHaveCSS("background-color", colors.surface);
         await expect(card.locator('[data-card-region="eyebrow"]')).toHaveCSS(
           "font-size",
@@ -100,6 +112,17 @@ for (const [theme, colors] of Object.entries(themes)) {
         "font-size",
         "16px",
       );
+      await expect(knowledgeCheck.locator(".ordering-instructions")).toHaveCSS(
+        "font-size",
+        "14px",
+      );
+      expect(
+        await knowledgeCheck
+          .locator("[data-card-region]")
+          .evaluateAll((regions) =>
+            regions.map((region) => region.getAttribute("data-card-region")),
+          ),
+      ).toEqual(["eyebrow", "title", "body"]);
       expect(
         await practiceTask.locator("[data-card-region]").evaluateAll((regions) =>
           regions.map((region) => region.getAttribute("data-card-region")),
@@ -154,8 +177,14 @@ for (const [theme, colors] of Object.entries(themes)) {
         });
       }
 
-      const { practiceTask, reflection, completion } = workAreaCards(page);
-      for (const card of [practiceTask, reflection, completion]) {
+      const { knowledgeCheck, practiceTask, reflection, completion } =
+        workAreaCards(page);
+      for (const card of [
+        knowledgeCheck,
+        practiceTask,
+        reflection,
+        completion,
+      ]) {
         await expect(card).toBeVisible();
         const box = await card.boundingBox();
         expect(box).not.toBeNull();

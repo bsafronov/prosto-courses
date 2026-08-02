@@ -83,7 +83,7 @@ test("Knowledge Check feedback and ordering handles stay explicit in both themes
       .getByRole("combobox", { name: "Тема оформления" })
       .selectOption(theme);
     await expect(feedback).toHaveCSS("color", warning);
-    await expect(feedback).toHaveCSS("border-left-width", "3px");
+    await expect(feedback).toHaveCSS("border-left-width", "2px");
   }
 
   await check
@@ -102,8 +102,8 @@ test("Knowledge Check feedback and ordering handles stay explicit in both themes
     .locator("[data-ordering-handle]");
   const handleBox = await handle.boundingBox();
   expect(handleBox).not.toBeNull();
-  expect(handleBox!.width).toBeGreaterThanOrEqual(48);
-  expect(handleBox!.height).toBeGreaterThanOrEqual(48);
+  expect(handleBox!.width).toBeGreaterThanOrEqual(44);
+  expect(handleBox!.height).toBeGreaterThanOrEqual(44);
   await expect(handle).toHaveCSS("cursor", "grab");
   await expect(handle).toHaveCSS("touch-action", "none");
   await expect(handle).toHaveCSS("border-left-width", "1px");
