@@ -167,6 +167,21 @@ test("production build rejects a PDF that omits required repeated content", asyn
   );
 });
 
+test("production build accepts a PDF that omits aria-hidden presentation text", async () => {
+  await withPrintDocument(
+    `<span aria-hidden="true" style="display: block; text-transform: uppercase">ⓘ</span>
+    <p>Complete Course release</p>
+    <script>
+      addEventListener('beforeprint', () => {
+        document.querySelector('[aria-hidden="true"]').remove();
+      });
+    </script>`,
+    async (root) => {
+      await runProductionBuild(root);
+    },
+  );
+});
+
 test("production build rejects missing and orphaned Course print documents", async () => {
   await withPrintDocument("<p>Complete Course release</p>", async (root) => {
     await mkdir(path.join(root, "courses", "missing-course"), { recursive: true });

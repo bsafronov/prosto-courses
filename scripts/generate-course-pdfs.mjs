@@ -150,14 +150,36 @@ async function requiredCourseContent(page, courseSlug) {
     .evaluateAll((elements) => {
       const isVisible = (element) => {
         if (!(element instanceof HTMLElement) || element.hidden) return false;
+        if (element.closest('[aria-hidden="true"]')) return false;
         const style = getComputedStyle(element);
         return style.display !== "none" && style.visibility !== "hidden";
       };
-      const lines = (element) =>
-        element.innerText
-          .split("\n")
-          .map((line) => line.trim())
-          .filter(Boolean);
+      const lines = (element) => {
+        const ariaHiddenDescendants = [
+          ...element.querySelectorAll('[aria-hidden="true"]'),
+        ].filter((descendant) => descendant instanceof HTMLElement);
+        const originalStyles = ariaHiddenDescendants.map((descendant) =>
+          descendant.getAttribute("style"),
+        );
+        ariaHiddenDescendants.forEach((descendant) => {
+          descendant.style.setProperty("display", "none", "important");
+        });
+        try {
+          return element.innerText
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean);
+        } finally {
+          ariaHiddenDescendants.forEach((descendant, index) => {
+            const originalStyle = originalStyles[index];
+            if (originalStyle === null) {
+              descendant.removeAttribute("style");
+            } else {
+              descendant.setAttribute("style", originalStyle);
+            }
+          });
+        }
+      };
       return elements.filter(isVisible).map((element) => {
         const ownLines = lines(element);
         const nestedLines = [
