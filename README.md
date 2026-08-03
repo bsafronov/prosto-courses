@@ -10,6 +10,7 @@ Requires Node.js and pnpm.
 
 ```sh
 pnpm install --frozen-lockfile
+pnpm exec playwright install chromium
 pnpm dev
 ```
 
@@ -32,10 +33,11 @@ GitHub Actions publishes the static site to GitHub Pages at
 from other branches validate, test, and build the site, but only `main` uploads
 and deploys the Pages artifact.
 
-The workflow installs the lockfile with pnpm's frozen mode, validates the
-Authoring Agent contract, runs browser behavior against a production build at
-the `/prosto-courses` repository base path, and creates `dist`. The same `dist`
-directory is then uploaded without rebuilding or adding a server adapter.
+The workflow installs the lockfile and its version-pinned Playwright Chromium,
+validates the Authoring Agent contract, runs browser behavior against a
+production build at the `/prosto-courses` repository base path, and creates
+`dist`. The same `dist` directory is then uploaded without rebuilding or adding
+a server adapter.
 
 Repository settings must use **GitHub Actions** as the Pages source. Course
 authors do not need deployment-specific files or steps; merged content follows

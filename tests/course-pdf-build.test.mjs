@@ -487,8 +487,12 @@ test("production build emits A4 portrait pages with running furniture", async ()
           Math.abs(page.height - 841.89) < 1.5,
           `page ${index + 1} height: ${page.height}`,
         );
-        assert.match(page.text, /Readable A4 Course/);
-        assert.match(page.text, new RegExp(`${index + 1} \\/ 3`));
+      }
+      assert.doesNotMatch(pages[0].text, /Readable A4 Course \| Prosto\.Courses/);
+      assert.ok(!pages[0].text.includes("1 / 3"));
+      for (const [index, page] of pages.slice(1).entries()) {
+        assert.match(page.text, /Readable A4 Course \| Prosto\.Courses/);
+        assert.ok(page.text.includes(`${index + 2} / 3`));
       }
     },
   );

@@ -448,6 +448,15 @@ test("Course PDF identifies its release and provides complete document navigatio
     );
   }
 
+  for (const workloadText of [
+    "Объём и актуальность",
+    "3 Модуля",
+    "6 Уроков",
+    "3 ч 55 мин",
+  ]) {
+    expect(pdf.text).toContain(normalizePdfText(workloadText));
+  }
+
   for (const section of [
     "Содержание",
     "Модули и Уроки",
@@ -682,8 +691,6 @@ test("representative actual PDF pages rasterize as readable monochrome A4 output
       raster.sideGutterInkPixels,
       `page ${raster.pageNumber} stays inside printable side margins`,
     ).toBe(0);
-    expect(raster.text).toContain(normalizePdfText("Основы Markdown | Prosto.Courses"));
-    expect(raster.text).toContain(`${raster.pageNumber}/${raster.totalPages}`);
     expect(
       Math.abs(raster.width - 595.28),
       `page ${raster.pageNumber} A4 width`,
@@ -694,6 +701,19 @@ test("representative actual PDF pages rasterize as readable monochrome A4 output
     ).toBeLessThan(1.5);
     expect(raster.minFontSize, `page ${raster.pageNumber} remains legible`).toBeGreaterThanOrEqual(
       7.5,
+    );
+  }
+
+  expect(cover.text).not.toContain(
+    normalizePdfText("Основы Markdown | Prosto.Courses"),
+  );
+  expect(cover.text).not.toContain(`1/${cover.totalPages}`);
+  for (const raster of [toc, denseLesson, appendix]) {
+    expect(raster.text).toContain(
+      normalizePdfText("Основы Markdown | Prosto.Courses"),
+    );
+    expect(raster.text).toContain(
+      `${raster.pageNumber}/${raster.totalPages}`,
     );
   }
 

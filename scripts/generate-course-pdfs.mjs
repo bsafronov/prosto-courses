@@ -25,29 +25,6 @@ const nonblankSvgSelector =
   "svg path, svg rect, svg circle, svg line, svg polyline, svg polygon, svg text";
 const MAXIMUM_INSERTED_PDF_TEXT_TOKENS = 32;
 
-const escapeHtmlAttribute = (value) =>
-  value
-    .replaceAll("&", "&amp;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
-
-function runningFurnitureTemplate({ content, furniture, margin, textAlign }) {
-  const style = [
-    "box-sizing: border-box",
-    "width: 100%",
-    `padding-inline: ${margin.left}`,
-    `color: ${furniture.color}`,
-    `font-family: ${furniture.fontFamily}`,
-    `font-size: ${furniture.fontSize}`,
-    "overflow: hidden",
-    "text-overflow: ellipsis",
-    "white-space: nowrap",
-    `text-align: ${textAlign}`,
-  ].join("; ");
-  return `<div style="${escapeHtmlAttribute(style)}">${content}</div>`;
-}
-
 async function serveOutputFile(root, scope, request, response) {
   const url = new URL(request.url ?? "/", "http://127.0.0.1");
   let requestPath;
@@ -703,10 +680,38 @@ async function preparePrintDocument(page, courseSlug) {
       fontSize: furnitureStyles.fontSize,
     };
     probe.remove();
-    return {
-      furniture,
-      margin: { top: block, right: inline, bottom: block, left: inline },
-    };
+    const pagedMediaStyle = document.createElement("style");
+    pagedMediaStyle.dataset.coursePdfPagedMedia = "true";
+    pagedMediaStyle.textContent = `
+      @page {
+        size: A4 portrait;
+        margin: ${block} ${inline};
+
+        @top-left {
+          content: ${JSON.stringify(document.title)};
+          color: ${furniture.color};
+          font-family: ${furniture.fontFamily};
+          font-size: ${furniture.fontSize};
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        @bottom-right {
+          content: counter(page) " / " counter(pages);
+          color: ${furniture.color};
+          font-family: ${furniture.fontFamily};
+          font-size: ${furniture.fontSize};
+        }
+      }
+
+      @page :first {
+        @top-left { content: none; }
+        @bottom-right { content: none; }
+      }
+    `;
+    document.head.append(pagedMediaStyle);
+    return { margin: { top: block, right: inline, bottom: block, left: inline } };
   });
 }
 
@@ -886,7 +891,7 @@ async function generateCoursePdfs(root, scope, logger) {
     const outputServer = await startOutputServer(root, scope);
     const origin = outputServer.origin;
     server = outputServer.server;
-    browser = await chromium.launch({ channel: "chrome", headless: true });
+    browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
     await page.emulateMedia({ media: "print" });
     for (const documentSlug of documentSlugs) {
@@ -934,7 +939,7 @@ async function generateCoursePdfs(root, scope, logger) {
           );
         }
         assertResourcesLoaded();
-        const { furniture, margin } = await preparePrintDocument(
+        const { margin } = await preparePrintDocument(
           page,
           documentSlug,
         );
@@ -956,25 +961,11 @@ async function generateCoursePdfs(root, scope, logger) {
         }
         const stagedArtifact = path.join(stagingRoot, filename);
         await page.pdf({
-          displayHeaderFooter: true,
-          footerTemplate: runningFurnitureTemplate({
-            content:
-              '<span class="pageNumber"></span> / <span class="totalPages"></span>',
-            furniture,
-            margin,
-            textAlign: "right",
-          }),
           format: "A4",
-          headerTemplate: runningFurnitureTemplate({
-            content: '<span class="title"></span>',
-            furniture,
-            margin,
-            textAlign: "left",
-          }),
           landscape: false,
-          margin,
           outline: true,
           path: stagedArtifact,
+          preferCSSPageSize: true,
           printBackground: true,
           tagged: true,
         });

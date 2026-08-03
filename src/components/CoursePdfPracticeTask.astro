@@ -29,7 +29,10 @@ const {
 } = Astro.props;
 ---
 
-<article class="course-pdf-practice-task" data-course-pdf-practice-task>
+<article
+  class="course-pdf-activity course-pdf-practice-task"
+  data-course-pdf-practice-task
+>
   <p class="course-pdf-practice-task__label type-meta">
     {levelLabels[level]} · {estimatedMinutes} мин
   </p>
@@ -93,12 +96,6 @@ const {
 </article>
 
 <style>
-  .course-pdf-practice-task {
-    margin-block: var(--space-10);
-    border: var(--border-subtle);
-    padding: var(--space-card);
-  }
-
   .course-pdf-practice-task__label,
   .course-pdf-practice-task h2,
   .course-pdf-practice-task h3 {

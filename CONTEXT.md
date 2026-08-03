@@ -45,20 +45,12 @@ The most recently visited incomplete Lesson, Module Checkpoint, or Capstone Demo
 _Avoid_: Current Course, enrolled Course, homepage Course
 
 **Offline Availability**:
-The browser-local state in which the platform shell, lightweight Course Catalog, and each learner-selected Offline Course remain usable without a network connection. External References and Course PDFs are outside this guarantee; Offline Availability neither requires installation nor implies synchronization between browsers or devices.
-_Avoid_: Installation, synchronization, complete Catalog download
+The browser-local state in which the entire currently published Course Catalog and its platform-owned learner interactions remain usable without a network connection. External References and Course PDFs are outside this guarantee; Offline Availability neither requires installation nor implies synchronization between browsers or devices.
+_Avoid_: Installation, synchronization, downloaded Course, Course PDF
 
-**Offline Course**:
-A complete browser-local Course release that the learner explicitly prepares for Offline Availability, including its platform-owned content and learner interactions. Its presence is independent of browser-local learner progress and any Course PDF.
-_Avoid_: Course PDF, cached page, installed Course
-
-**Withdrawn Course**:
-A Course absent from the current Course Catalog whose Offline Course remains available until the learner removes it. It receives no updates and is visibly identified as withdrawn.
-_Avoid_: Deleted Course, current Course, hidden Course
-
-**Offline Course Update**:
-A browser-local transition from one complete Offline Course release to a newer complete release. A prepared release replaces the active release only after learner confirmation; an update may temporarily retain those two releases, successful activation removes the prior release, and failed preparation discards the candidate.
-_Avoid_: Catalog Update, release history, partial refresh, Content Revision
+**Catalog Update**:
+A browser-local transition from one complete offline-available Course Catalog release to a newer complete release. The prepared release replaces the active release only after the learner accepts it, so releases are never mixed during a learning session.
+_Avoid_: Partial refresh, automatic reload, Content Revision
 
 **External Reference**:
 A link from published course content to a resource the platform does not own or make available offline. It may supplement a Course but cannot be required to complete its core learning path.

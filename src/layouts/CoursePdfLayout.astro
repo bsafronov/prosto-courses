@@ -138,6 +138,12 @@ const { filename, title } = Astro.props as Props;
       color: var(--color-muted);
     }
 
+    .course-pdf-activity {
+      margin-block: var(--space-10);
+      border: var(--border-subtle);
+      padding: var(--space-card);
+    }
+
     .course-pdf .button-control,
     .course-pdf dialog,
     .course-pdf textarea,
@@ -174,9 +180,7 @@ const { filename, title } = Astro.props as Props;
       pre,
       table,
       .callout,
-      .course-pdf-knowledge-check,
-      .course-pdf-practice-task,
-      .course-pdf-reflection
+      .course-pdf-activity
     ) {
       break-inside: avoid-page;
     }

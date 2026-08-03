@@ -7,13 +7,18 @@ import CoursePdfTaskRubric from "../../components/CoursePdfTaskRubric.astro";
 import CoursePdfTaskSolution from "../../components/CoursePdfTaskSolution.astro";
 import ContentFreshness from "../../components/ContentFreshness.astro";
 import { semanticComponents } from "../../components/semantic-components";
+import WorkloadSummary from "../../components/WorkloadSummary.astro";
 import CoursePdfLayout from "../../layouts/CoursePdfLayout.astro";
 import { coursePdfFilename } from "../../lib/course-pdf";
 import {
   capstonePath,
   checkpointPath,
+  courseMinutes,
   courseFreshnessState,
   coursePath,
+  formatLessonCount,
+  formatMinutes,
+  formatModuleCount,
   getCourseTree,
   lessonPath,
   lessonSlug,
@@ -64,6 +69,7 @@ const modules = await Promise.all(
 const { Content: CapstoneContent } = await render(tree.capstone);
 const canonicalUrl = new URL(coursePath(course.id), Astro.site).href;
 const freshness = courseFreshnessState(course, tree);
+const lessons = tree.modules.flatMap((courseModule) => courseModule.lessons);
 ---
 
 <CoursePdfLayout
@@ -164,6 +170,15 @@ const freshness = courseFreshnessState(course, tree);
       <ul>
         {course.data.prerequisites.map((prerequisite) => <li>{prerequisite}</li>)}
       </ul>
+      <h2 class="type-section-title">Объём и актуальность</h2>
+      <WorkloadSummary
+        label="Объём курса"
+        items={[
+          { label: "Модули", value: formatModuleCount(tree.modules.length) },
+          { label: "Уроки", value: formatLessonCount(lessons.length) },
+          { label: "Общее время", value: formatMinutes(courseMinutes(tree)) },
+        ]}
+      />
     </section>
 
     {modules.map(({

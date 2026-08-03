@@ -10,7 +10,7 @@ interface Props {
 const { prompt, guidance = [] } = Astro.props;
 ---
 
-<section class="course-pdf-reflection">
+<section class="course-pdf-activity course-pdf-reflection">
   <p class="course-pdf-reflection__label type-meta">Осмысли опыт</p>
   <h2 class="type-component-title">{prompt}</h2>
   {
@@ -25,12 +25,6 @@ const { prompt, guidance = [] } = Astro.props;
 </section>
 
 <style>
-  .course-pdf-reflection {
-    margin-block: var(--space-10);
-    border: var(--border-subtle);
-    padding: var(--space-card);
-  }
-
   .course-pdf-reflection__label,
   .course-pdf-reflection h2,
   .course-pdf-reflection h3 {
