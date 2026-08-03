@@ -1253,6 +1253,8 @@ test("requires every Course Learning Outcome to be practiced", async () => {
           'outcomes={["identify-image-purpose", "write-concise-alt-text"]}',
           'outcomes={["identify-image-purpose"]}',
         ),
+      "modules/alt-text/lessons/edit-for-clarity.mdx": (source) =>
+        source.replace(/\n<PracticeTask[\s\S]*?<\/PracticeTask>\n?/, "\n"),
     },
     (result) => {
       assert.notEqual(result.exitCode, 0);
