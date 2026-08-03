@@ -20,8 +20,13 @@ async function withPrintDocument(body, run) {
 <html>
   <head>
     <meta name="course-pdf-filename" content="visual-course.pdf">
+    <title>Readable A4 Course | Prosto.Courses</title>
     <style>
       :root {
+        --color-muted: #707070;
+        --font-sans: sans-serif;
+        --font-size-meta: 0.75rem;
+        --font-size-print-min: 0.625rem;
         --print-page-margin-block: 16mm;
         --print-page-margin-inline: 14mm;
       }
@@ -55,10 +60,12 @@ async function inspectPdf(file) {
     const content = await page.getTextContent();
     const operators = await page.getOperatorList();
     pages.push({
+      height: page.view[3] - page.view[1],
       text: content.items
         .map((item) => ("str" in item ? item.str : ""))
         .join(" "),
       visualMarks: operators.fnArray.filter(isPdfVisualMark).length,
+      width: page.view[2] - page.view[0],
     });
   }
   await loadingTask.destroy();
@@ -258,6 +265,72 @@ test("production build rejects a failed local visual resource", async () => {
         () => runProductionBuild(root),
         /Course "visual-course".*resource.*missing-print-visual\.css.*404/i,
       );
+    },
+  );
+});
+
+test("production build rejects unreadable printable-width overflow", async () => {
+  await withPrintDocument(
+    `<section aria-label="Deliberate overflow fixture">
+      <div style="width: 260mm; min-width: 260mm">Too wide for A4</div>
+    </section>`,
+    async (root) => {
+      await assert.rejects(
+        () => runProductionBuild(root),
+        /Course "visual-course".*printable width.*Deliberate overflow fixture/i,
+      );
+    },
+  );
+});
+
+test("production build rejects a Learning Visual scaled below legibility", async () => {
+  await withPrintDocument(
+    `<style>
+      .learning-visual__viewport > svg {
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+      }
+    </style>
+    <figure class="learning-visual" aria-label="Unreadable dense visual">
+      <div class="learning-visual__viewport">
+        <svg width="2400" height="120" viewBox="0 0 2400 120">
+          <text x="10" y="20" style="font-size: 12px">Dense label</text>
+        </svg>
+      </div>
+    </figure>`,
+    async (root) => {
+      await assert.rejects(
+        () => runProductionBuild(root),
+        /Course "visual-course".*Learning Visual.*Unreadable dense visual.*legible/i,
+      );
+    },
+  );
+});
+
+test("production build emits A4 portrait pages with running furniture", async () => {
+  await withPrintDocument(
+    `<main>
+      <header style="break-after: page"><h1>Readable A4 Course</h1></header>
+      <section style="break-after: page"><h2>Module page</h2></section>
+      <article><h2>Lesson page</h2></article>
+    </main>`,
+    async (root) => {
+      await runProductionBuild(root);
+      const pages = await inspectPdf(path.join(root, "visual-course.pdf"));
+      assert.equal(pages.length, 3);
+      for (const [index, page] of pages.entries()) {
+        assert.ok(
+          Math.abs(page.width - 595.28) < 1.5,
+          `page ${index + 1} width: ${page.width}`,
+        );
+        assert.ok(
+          Math.abs(page.height - 841.89) < 1.5,
+          `page ${index + 1} height: ${page.height}`,
+        );
+        assert.match(page.text, /Readable A4 Course/);
+        assert.match(page.text, new RegExp(`${index + 1} \\/ 3`));
+      }
     },
   );
 });

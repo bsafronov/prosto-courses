@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { createCanvas } from "@napi-rs/canvas";
 import { expect, test } from "@playwright/test";
 import { getDocument, OPS } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { isPdfVisualMark } from "../support/pdf-inspection.mjs";
@@ -13,15 +14,41 @@ const exactUrlOccurrences = (text: string, url: string) =>
     new RegExp(`${url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![?#])`, "g"),
   ) ?? [];
 
+type PdfStructureNode = {
+  alt?: unknown;
+  children?: unknown;
+  lang?: unknown;
+  role?: unknown;
+};
+
+function walkPdfStructure(value: unknown, visit: (node: PdfStructureNode) => void) {
+  if (!value || typeof value !== "object") return;
+  const node = value as PdfStructureNode;
+  visit(node);
+  if (Array.isArray(node.children)) {
+    for (const child of node.children) walkPdfStructure(child, visit);
+  }
+}
+
 async function inspectPdf(pdf: Uint8Array) {
   const loadingTask = getDocument({ data: pdf });
   const document = await loadingTask.promise;
   const metadata = await document.getMetadata();
+  const markInfo = await document.getMarkInfo();
   const outline = await document.getOutline();
   const destinationPages: Record<string, number> = {};
   const pages = [];
+  const pageItems = [];
   const externalUrls: string[] = [];
   const internalLinkTargets: string[] = [];
+  const structureLanguages = new Set<string>();
+  const structureRoles = new Set<string>();
+
+  const collectStructure = (value: unknown) =>
+    walkPdfStructure(value, (node) => {
+      if (typeof node.lang === "string") structureLanguages.add(node.lang);
+      if (typeof node.role === "string") structureRoles.add(node.role);
+    });
 
   for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
     const page = await document.getPage(pageNumber);
@@ -32,6 +59,14 @@ async function inspectPdf(pdf: Uint8Array) {
         .map((item) => ("str" in item ? item.str : ""))
         .join(" "),
     );
+    pageItems.push(
+      content.items.flatMap((item) =>
+        "str" in item
+          ? [{ text: item.str, x: item.transform[4], y: item.transform[5] }]
+          : [],
+      ),
+    );
+    collectStructure(await page.getStructTree());
     for (const annotation of annotations) {
       if (annotation.subtype !== "Link") continue;
       if ("url" in annotation && typeof annotation.url === "string") {
@@ -58,10 +93,41 @@ async function inspectPdf(pdf: Uint8Array) {
     destinationPages,
     externalUrls,
     internalLinkTargets,
+    markInfo,
     metadata: metadata.info,
     outline,
+    pageItems,
+    pages: pages.map(normalizePdfText),
+    structureLanguages: [...structureLanguages],
+    structureRoles: [...structureRoles],
     text: normalizePdfText(pages.join("\n")),
   };
+}
+
+function hasFollowingAuthoredTextOnPage(
+  items: Array<{ text: string; x: number; y: number }>,
+  heading: string,
+) {
+  const expected = normalizePdfText(heading);
+  for (let start = 0; start < items.length; start += 1) {
+    let combined = "";
+    let headingBottom = Number.POSITIVE_INFINITY;
+    for (let end = start; end < items.length; end += 1) {
+      const part = normalizePdfText(items[end].text);
+      if (!part) continue;
+      combined += part;
+      if (!expected.startsWith(combined)) break;
+      headingBottom = Math.min(headingBottom, items[end].y);
+      if (combined !== expected) continue;
+      return items.slice(end + 1).some(
+        (item) =>
+          normalizePdfText(item.text) &&
+          item.y > 45 &&
+          item.y < headingBottom - 1,
+      );
+    }
+  }
+  return false;
 }
 
 function flattenOutlineTitles(
@@ -75,12 +141,9 @@ function flattenOutlineTitles(
 }
 
 function collectAlternativeText(value: unknown, result: string[]) {
-  if (!value || typeof value !== "object") return;
-  const node = value as { alt?: unknown; children?: unknown };
-  if (typeof node.alt === "string") result.push(node.alt);
-  if (Array.isArray(node.children)) {
-    for (const child of node.children) collectAlternativeText(child, result);
-  }
+  walkPdfStructure(value, (node) => {
+    if (typeof node.alt === "string") result.push(node.alt);
+  });
 }
 
 async function inspectVisualPdf(pdf: Uint8Array) {
@@ -118,6 +181,92 @@ async function inspectVisualPdf(pdf: Uint8Array) {
 
   await loadingTask.destroy();
   return pages;
+}
+
+async function rasterPageContaining(pdf: Uint8Array, expectedText: string) {
+  const loadingTask = getDocument({ data: pdf.slice() });
+  const document = await loadingTask.promise;
+  const normalizedExpected = normalizePdfText(expectedText);
+
+  try {
+    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+      const page = await document.getPage(pageNumber);
+      const content = await page.getTextContent();
+      const text = normalizePdfText(
+        content.items
+          .map((item) => ("str" in item ? item.str : ""))
+          .join(" "),
+      );
+      if (!text.includes(normalizedExpected)) continue;
+
+      const viewport = page.getViewport({ scale: 0.5 });
+      const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+      const context = canvas.getContext("2d");
+      await page.render({
+        canvas: canvas as unknown as HTMLCanvasElement,
+        canvasContext: context as unknown as CanvasRenderingContext2D,
+        viewport,
+      }).promise;
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      const colors = new Map<string, number>();
+      let chromaticPixels = 0;
+      let edgeInkPixels = 0;
+      let inkPixels = 0;
+      let sideGutterInkPixels = 0;
+      let sampledPixels = 0;
+      const sideGutter = Math.floor((14 * 72 * 0.5) / 25.4) - 2;
+      for (let y = 0; y < canvas.height; y += 2) {
+        for (let x = 0; x < canvas.width; x += 2) {
+          const offset = (y * canvas.width + x) * 4;
+          const red = pixels[offset];
+          const green = pixels[offset + 1];
+          const blue = pixels[offset + 2];
+          const color = `${red},${green},${blue}`;
+          colors.set(color, (colors.get(color) ?? 0) + 1);
+          sampledPixels += 1;
+          if (Math.max(red, green, blue) - Math.min(red, green, blue) > 8) {
+            chromaticPixels += 1;
+          }
+          if (red < 248 || green < 248 || blue < 248) {
+            inkPixels += 1;
+            if (
+              x < 2 ||
+              y < 2 ||
+              x >= canvas.width - 2 ||
+              y >= canvas.height - 2
+            ) {
+              edgeInkPixels += 1;
+            }
+            if (x < sideGutter || x >= canvas.width - sideGutter) {
+              sideGutterInkPixels += 1;
+            }
+          }
+        }
+      }
+      const [dominantColor] = [...colors.entries()].sort((a, b) => b[1] - a[1])[0];
+      const fontSizes = content.items.flatMap((item) =>
+        "str" in item && item.str.trim()
+          ? [Math.hypot(item.transform[2], item.transform[3])]
+          : [],
+      );
+      return {
+        chromaticShare: chromaticPixels / sampledPixels,
+        dominantColor,
+        edgeInkPixels,
+        height: page.view[3] - page.view[1],
+        inkShare: inkPixels / sampledPixels,
+        minFontSize: Math.min(...fontSizes),
+        pageNumber,
+        sideGutterInkPixels,
+        text,
+        totalPages: document.numPages,
+        width: page.view[2] - page.view[0],
+      };
+    }
+  } finally {
+    await loadingTask.destroy();
+  }
+  throw new Error(`PDF page containing “${expectedText}” was not found`);
 }
 
 const isMonochrome = (color: string) => {
@@ -235,9 +384,15 @@ test("Course PDF identifies its release and provides complete document navigatio
   const pdf = await inspectPdf(new Uint8Array(await response.body()));
 
   expect(pdf.metadata).toMatchObject({
+    Language: "ru",
     Title: "Основы Markdown | Prosto.Courses",
   });
   expect(pdf.metadata).toHaveProperty("CreationDate");
+  expect(pdf.markInfo).toMatchObject({ Marked: true, Suspects: false });
+  expect(pdf.structureLanguages).toContain("ru");
+  expect(pdf.structureRoles).toEqual(
+    expect.arrayContaining(["Document", "H1", "H2", "H3", "Link"]),
+  );
   const lowercaseText = pdf.text.toLocaleLowerCase("ru");
   for (const coverText of [
     "Проверено25июля2026г.",
@@ -283,6 +438,10 @@ test("Course PDF identifies its release and provides complete document navigatio
     "lesson-formatting",
     "lesson-links-code",
     "checkpoint-struktura",
+    "module-proverka",
+    "lesson-portability",
+    "lesson-review",
+    "checkpoint-proverka",
     "capstone",
     "knowledge-check-appendix",
     "practice-task-appendix",
@@ -299,25 +458,30 @@ test("Course PDF identifies its release and provides complete document navigatio
     previousDestinationPage = pageNumber;
   }
 
-  const outlineTitles = flattenOutlineTitles(pdf.outline);
-  const orderedOutline = [
-    "От исходника к структуре",
-    "Знакомство с Markdown",
-    "Как читать Markdown-исходник",
-    "Структура рабочей инструкции",
-    "Заголовки, выделение и списки",
-    "Ссылки и код",
-    "Проверка и переносимость",
-    "Где Markdown перестаёт быть одинаковым",
-    "Проверка инструкции перед публикацией",
+  const outlineTitles = flattenOutlineTitles(pdf.outline).map(normalizePdfText);
+  const headingChecks = [
+    { destination: "module-osnovy", title: "От исходника к структуре" },
+    { destination: "lesson-vvedenie", title: "Знакомство с Markdown" },
+    { destination: "lesson-source-render", title: "Как читать Markdown-исходник" },
+    { destination: "module-struktura", title: "Структура рабочей инструкции" },
+    { destination: "lesson-formatting", title: "Заголовки, выделение и списки" },
+    { destination: "lesson-links-code", title: "Ссылки и код" },
+    { destination: "module-proverka", title: "Проверка и переносимость" },
+    { destination: "lesson-portability", title: "Где Markdown перестаёт быть одинаковым" },
+    { destination: "lesson-review", title: "Проверка инструкции перед публикацией" },
   ];
   let previousOutlineIndex = -1;
-  for (const title of orderedOutline) {
-    const index = outlineTitles.indexOf(title);
+  for (const { destination, title } of headingChecks) {
+    const index = outlineTitles.indexOf(normalizePdfText(title));
     expect(index, `outline contains “${title}” in Course order`).toBeGreaterThan(
       previousOutlineIndex,
     );
     previousOutlineIndex = index;
+    const headingPage = pdf.pageItems[pdf.destinationPages[destination]];
+    expect(
+      hasFollowingAuthoredTextOnPage(headingPage, title),
+      `heading “${title}” is not orphaned`,
+    ).toBe(true);
   }
 
   const commonMarkUrl = "https://spec.commonmark.org/0.31.2/";
@@ -435,6 +599,69 @@ test("Course PDF preserves meaningful print presentation for every Learning Visu
     expect.arrayContaining(["#d02040", "#1466cc"]),
   );
   expect(imagePage!.visualMarks).toBeGreaterThan(0);
+});
+
+test("representative actual PDF pages rasterize as readable monochrome A4 output", async ({
+  page,
+}, testInfo) => {
+  const markdownResponse = await page.request.get(
+    new URL(coursePdfName, testInfo.project.use.baseURL!).href,
+  );
+  expect(markdownResponse.ok()).toBe(true);
+  const markdownPdf = new Uint8Array(await markdownResponse.body());
+  const searchableMarkdown = await inspectPdf(markdownPdf.slice());
+  expect(searchableMarkdown.text).toContain(
+    normalizePdfText('console.log("Привет!");'),
+  );
+  const [cover, toc, denseLesson, appendix] = await Promise.all(
+    [
+      "Научись создавать, проверять и улучшать рабочие инструкции",
+      "Модули и Уроки",
+      "Короткую команду или имя файла",
+      "Проверка знаний 1 Задание",
+    ].map((label) => rasterPageContaining(markdownPdf, label)),
+  );
+
+  expect(cover.pageNumber).toBe(1);
+  expect(cover.inkShare).toBeLessThan(toc.inkShare);
+
+  for (const raster of [cover, toc, denseLesson, appendix]) {
+    expect(raster.dominantColor, `page ${raster.pageNumber} canvas`).toBe(
+      "255,255,255",
+    );
+    expect(raster.inkShare, `page ${raster.pageNumber} is nonblank`).toBeGreaterThan(
+      0.005,
+    );
+    expect(raster.chromaticShare, `page ${raster.pageNumber} is monochrome`).toBe(0);
+    expect(raster.edgeInkPixels, `page ${raster.pageNumber} is not clipped`).toBe(0);
+    expect(
+      raster.sideGutterInkPixels,
+      `page ${raster.pageNumber} stays inside printable side margins`,
+    ).toBe(0);
+    expect(raster.text).toContain(normalizePdfText("Основы Markdown | Prosto.Courses"));
+    expect(raster.text).toContain(`${raster.pageNumber}/${raster.totalPages}`);
+    expect(
+      Math.abs(raster.width - 595.28),
+      `page ${raster.pageNumber} A4 width`,
+    ).toBeLessThan(1.5);
+    expect(
+      Math.abs(raster.height - 841.89),
+      `page ${raster.pageNumber} A4 height`,
+    ).toBeLessThan(1.5);
+    expect(raster.minFontSize, `page ${raster.pageNumber} remains legible`).toBeGreaterThanOrEqual(
+      7.5,
+    );
+  }
+
+  const imageResponse = await page.request.get(
+    new URL("prosto-courses-accessible-images.pdf", testInfo.project.use.baseURL!).href,
+  );
+  expect(imageResponse.ok()).toBe(true);
+  const authoredImage = await rasterPageContaining(
+    new Uint8Array(await imageResponse.body()),
+    "Illustrative context label used to test sourced-image alternatives.",
+  );
+  expect(authoredImage.chromaticShare).toBeGreaterThan(0.001);
 });
 
 test("Knowledge Checks remain answerable on paper and link to a spoiler appendix", async ({

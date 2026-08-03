@@ -17,6 +17,29 @@ const contentTypes = new Map([
 const nonblankSvgSelector =
   "svg path, svg rect, svg circle, svg line, svg polyline, svg polygon, svg text";
 
+const escapeHtmlAttribute = (value) =>
+  value
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+
+function runningFurnitureTemplate({ content, furniture, margin, textAlign }) {
+  const style = [
+    "box-sizing: border-box",
+    "width: 100%",
+    `padding-inline: ${margin.left}`,
+    `color: ${furniture.color}`,
+    `font-family: ${furniture.fontFamily}`,
+    `font-size: ${furniture.fontSize}`,
+    "overflow: hidden",
+    "text-overflow: ellipsis",
+    "white-space: nowrap",
+    `text-align: ${textAlign}`,
+  ].join("; ");
+  return `<div style="${escapeHtmlAttribute(style)}">${content}</div>`;
+}
+
 async function serveOutputFile(root, scope, request, response) {
   const url = new URL(request.url ?? "/", "http://127.0.0.1");
   let requestPath;
@@ -430,8 +453,131 @@ async function preparePrintDocument(page, courseSlug) {
     const block = styles.getPropertyValue("--print-page-margin-block").trim();
     const inline = styles.getPropertyValue("--print-page-margin-inline").trim();
     if (!block || !inline) throw new Error("Course PDF page margins are missing");
-    return { top: block, right: inline, bottom: block, left: inline };
+    const probe = document.createElement("span");
+    probe.style.cssText = [
+      "position: fixed",
+      "visibility: hidden",
+      "color: var(--color-muted)",
+      "font-family: var(--font-sans)",
+      "font-size: var(--font-size-meta)",
+    ].join(";");
+    (document.querySelector(".course-pdf") ?? document.body).append(probe);
+    const furnitureStyles = getComputedStyle(probe);
+    const furniture = {
+      color: furnitureStyles.color,
+      fontFamily: furnitureStyles.fontFamily,
+      fontSize: furnitureStyles.fontSize,
+    };
+    probe.remove();
+    return {
+      furniture,
+      margin: { top: block, right: inline, bottom: block, left: inline },
+    };
   });
+}
+
+async function assertPrintableLayout(page, courseSlug, margin) {
+  const viewport = await page.evaluate(({ block, inline }) => {
+    const ruler = document.createElement("div");
+    ruler.style.cssText = [
+      "position: fixed",
+      "visibility: hidden",
+      `width: calc(210mm - 2 * ${inline})`,
+      `height: calc(297mm - 2 * ${block})`,
+    ].join(";");
+    document.body.append(ruler);
+    const { width, height } = ruler.getBoundingClientRect();
+    ruler.remove();
+    return { width: Math.floor(width), height: Math.floor(height) };
+  }, { block: margin.top, inline: margin.left });
+  await page.setViewportSize(viewport);
+
+  const overflow = await page.evaluate(() => {
+    const tolerance = 1;
+    const pageLeft = document.documentElement.getBoundingClientRect().left;
+    const pageRight = pageLeft + document.documentElement.clientWidth;
+    const candidates = [...document.body.querySelectorAll("*")];
+    const element = candidates.find((candidate) => {
+      if (!(candidate instanceof HTMLElement || candidate instanceof SVGElement)) {
+        return false;
+      }
+      const style = getComputedStyle(candidate);
+      if (
+        style.display === "none" ||
+        style.visibility === "hidden" ||
+        style.position === "fixed"
+      ) {
+        return false;
+      }
+      const bounds = candidate.getBoundingClientRect();
+      return (
+        bounds.width > tolerance &&
+        (bounds.left < pageLeft - tolerance || bounds.right > pageRight + tolerance)
+      );
+    });
+    if (!element) return null;
+
+    const context = element.closest(
+      "[aria-label], [data-course-pdf-route], section, article, figure",
+    );
+    const heading = context?.querySelector("h1, h2, h3, h4, h5, h6");
+    const label =
+      context?.getAttribute("aria-label") ??
+      heading?.textContent?.trim() ??
+      context?.id ??
+      element.getAttribute("aria-label") ??
+      element.id ??
+      element.tagName.toLowerCase();
+    return { label, element: element.tagName.toLowerCase() };
+  });
+  if (overflow) {
+    throw new Error(
+      `Course "${courseSlug}" exceeds printable width in ${overflow.label} (${overflow.element})`,
+    );
+  }
+
+  const unreadableVisual = await page.evaluate(() => {
+    const course = document.querySelector(".course-pdf") ?? document.body;
+    const probe = document.createElement("span");
+    probe.style.cssText = [
+      "position: fixed",
+      "visibility: hidden",
+      "font-size: var(--font-size-print-min)",
+    ].join(";");
+    course.append(probe);
+    const minimumPixels = Number.parseFloat(getComputedStyle(probe).fontSize);
+    probe.remove();
+
+    for (const visual of document.querySelectorAll(".learning-visual")) {
+      const svg = visual.querySelector("svg");
+      if (!(svg instanceof SVGSVGElement) || !svg.viewBox.baseVal.width) continue;
+      const bounds = svg.getBoundingClientRect();
+      const scale = Math.min(
+        bounds.width / svg.viewBox.baseVal.width,
+        svg.viewBox.baseVal.height
+          ? bounds.height / svg.viewBox.baseVal.height
+          : Number.POSITIVE_INFINITY,
+      );
+      for (const label of svg.querySelectorAll("text")) {
+        const renderedPixels = Number.parseFloat(getComputedStyle(label).fontSize) * scale;
+        if (renderedPixels + 0.1 >= minimumPixels) continue;
+        return {
+          fontSize: `${(renderedPixels * 0.75).toFixed(1)}pt`,
+          label:
+            visual.getAttribute("aria-label") ??
+            visual.querySelector("figcaption")?.textContent?.trim() ??
+            "unlabelled visual",
+          minimum: `${(minimumPixels * 0.75).toFixed(1)}pt`,
+        };
+      }
+    }
+    return null;
+  });
+  if (unreadableVisual) {
+    throw new Error(
+      `Course "${courseSlug}" Learning Visual ${unreadableVisual.label} is not legible at ${unreadableVisual.fontSize}; minimum is ${unreadableVisual.minimum}`,
+    );
+  }
 }
 
 async function generateCoursePdfs(root, scope, logger) {
@@ -486,7 +632,8 @@ async function generateCoursePdfs(root, scope, logger) {
           );
         }
         assertResourcesLoaded();
-        const margin = await preparePrintDocument(page, document.name);
+        const { furniture, margin } = await preparePrintDocument(page, document.name);
+        await assertPrintableLayout(page, document.name, margin);
         assertResourcesLoaded();
         const filename = await page
           .locator('meta[name="course-pdf-filename"]')
@@ -495,7 +642,21 @@ async function generateCoursePdfs(root, scope, logger) {
           throw new Error(`Print document ${document.name} has no PDF filename`);
         }
         await page.pdf({
+          displayHeaderFooter: true,
+          footerTemplate: runningFurnitureTemplate({
+            content: '<span class="pageNumber"></span> / <span class="totalPages"></span>',
+            furniture,
+            margin,
+            textAlign: "right",
+          }),
           format: "A4",
+          headerTemplate: runningFurnitureTemplate({
+            content: '<span class="title"></span>',
+            furniture,
+            margin,
+            textAlign: "left",
+          }),
+          landscape: false,
           margin,
           outline: true,
           path: path.join(root, filename),

@@ -31,7 +31,7 @@
   --color-print-data-series-3: #707070;
   --color-print-data-series-4: #989898;
   --color-print-data-series-5: #c0c0c0;
-  --color-print-canvas: #fafafa;
+  --color-print-canvas: #ffffff;
   --color-print-surface: #ffffff;
   --color-print-ink: #181818;
   --color-print-muted: #707070;
@@ -49,6 +49,7 @@
 
   /* Eight composite typography roles */
   --font-size-meta: 0.75rem;
+  --font-size-print-min: 0.625rem;
   --line-height-meta: 1.4;
   --font-size-supporting: 0.875rem;
   --line-height-supporting: 1.4;

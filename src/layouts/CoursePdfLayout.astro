@@ -30,10 +30,14 @@ const { filename, title } = Astro.props as Props;
 
 <style is:global>
   @media print {
+    @page {
+      size: A4 portrait;
+    }
+
     html,
     body {
-      background: var(--color-canvas);
-      color: var(--color-ink);
+      background: var(--color-print-canvas);
+      color: var(--color-print-ink);
     }
 
     body {
@@ -48,6 +52,10 @@ const { filename, title } = Astro.props as Props;
       --color-border: var(--color-print-border);
       --color-brand: var(--color-print-brand);
       --color-brand-dark: var(--color-print-ink);
+      --color-warning: var(--color-print-ink);
+      --color-error: var(--color-print-ink);
+      --color-completed: var(--color-print-surface);
+      --color-completed-ink: var(--color-print-ink);
       --border-subtle: var(--border-print-subtle);
       --color-data-series-1: var(--color-print-data-series-1);
       --color-data-series-2: var(--color-print-data-series-2);
@@ -56,11 +64,13 @@ const { filename, title } = Astro.props as Props;
       --color-data-series-5: var(--color-print-data-series-5);
 
       font-family: var(--font-sans);
+      background: var(--color-canvas);
       color: var(--color-ink);
     }
 
     .course-pdf__cover {
       break-after: page;
+      border-block-start: var(--border-width-emphasis) solid var(--color-muted);
       padding-block: var(--space-page-start) var(--space-page-end);
     }
 
@@ -147,6 +157,78 @@ const { filename, title } = Astro.props as Props;
     .course-pdf pre,
     .course-pdf table {
       overflow: visible;
+    }
+
+    .course-pdf :where(h1, h2, h3, h4, h5, h6) {
+      break-after: avoid-page;
+    }
+
+    .course-pdf :where(p, li) {
+      orphans: 3;
+      widows: 3;
+    }
+
+    .course-pdf :where(
+      blockquote,
+      figure,
+      pre,
+      table,
+      .callout,
+      .course-pdf-knowledge-check,
+      .course-pdf-practice-task,
+      .course-pdf-reflection
+    ) {
+      break-inside: avoid-page;
+    }
+
+    .course-pdf pre,
+    .course-pdf pre code {
+      background: var(--color-surface) !important;
+      color: var(--color-ink) !important;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: normal;
+    }
+
+    .course-pdf pre code span {
+      background: var(--color-surface) !important;
+      color: var(--color-ink) !important;
+    }
+
+    .course-pdf :where(.learning-visual, .learning-visual__viewport) {
+      max-width: 100%;
+    }
+
+    .course-pdf .learning-visual {
+      margin-inline: var(--space-0);
+    }
+
+    .course-pdf .learning-visual .chart-visual :where(
+      .chart-tick-label,
+      .chart-category-label,
+      .chart-value-label
+    ) {
+      font-size: var(--font-size-supporting);
+    }
+
+    .course-pdf .learning-visual__viewport > svg {
+      width: auto !important;
+      height: auto;
+      min-width: 0 !important;
+      max-width: 100% !important;
+    }
+
+    .course-pdf .chart-table-scroll table {
+      min-width: 0;
+      table-layout: fixed;
+    }
+
+    .course-pdf table thead {
+      display: table-header-group;
+    }
+
+    .course-pdf table tr {
+      break-inside: avoid-page;
     }
 
     .course-pdf a {
