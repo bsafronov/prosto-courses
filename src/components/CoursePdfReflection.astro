@@ -1,4 +1,6 @@
 ---
+import CoursePdfWorkSpace from "./CoursePdfWorkSpace.astro";
+
 interface Props {
   prompt: string;
   outcomes: string[];
@@ -19,15 +21,7 @@ const { prompt, guidance = [] } = Astro.props;
       </div>
     )
   }
-  <section
-    class="course-pdf-reflection__work-space"
-    aria-label="Место для записи"
-  >
-    <h3 class="type-body">Место для записи</h3>
-    <div aria-hidden="true">
-      {Array.from({ length: 7 }, () => <span />)}
-    </div>
-  </section>
+  <CoursePdfWorkSpace label="Место для записи" lines={7} />
 </section>
 
 <style>
@@ -44,7 +38,7 @@ const { prompt, guidance = [] } = Astro.props;
   }
 
   .course-pdf-reflection__guidance,
-  .course-pdf-reflection__work-space {
+  :global(.course-pdf-reflection > .course-pdf-work-space) {
     margin-top: var(--space-5);
     border-top: var(--border-subtle);
     padding-top: var(--space-4);
@@ -59,15 +53,4 @@ const { prompt, guidance = [] } = Astro.props;
     margin-bottom: var(--space-0);
   }
 
-  .course-pdf-reflection__work-space div {
-    display: grid;
-    gap: var(--space-3);
-    margin-top: var(--space-3);
-  }
-
-  .course-pdf-reflection__work-space span {
-    display: block;
-    min-height: var(--space-6);
-    border-bottom: var(--border-subtle);
-  }
 </style>

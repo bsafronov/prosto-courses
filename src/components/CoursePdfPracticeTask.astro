@@ -1,4 +1,6 @@
 ---
+import CoursePdfWorkSpace from "./CoursePdfWorkSpace.astro";
+
 interface Props {
   title: string;
   level: "core" | "challenge" | "stretch";
@@ -53,15 +55,7 @@ const {
     <slot />
   </section>
 
-  <section
-    class="course-pdf-practice-task__work-space"
-    aria-label="Место для работы"
-  >
-    <h3 class="type-body">Место для работы</h3>
-    <div aria-hidden="true">
-      {Array.from({ length: 6 }, () => <span />)}
-    </div>
-  </section>
+  <CoursePdfWorkSpace label="Место для работы" lines={6} />
 
   <p class="course-pdf-practice-task__appendix-link">
     <a data-course-pdf-practice-task-link>
@@ -112,6 +106,7 @@ const {
   }
 
   .course-pdf-practice-task > section,
+  :global(.course-pdf-practice-task > .course-pdf-work-space),
   .course-pdf-practice-task__appendix-link {
     margin-top: var(--space-5);
     border-top: var(--border-subtle);
@@ -124,18 +119,6 @@ const {
 
   .course-pdf-practice-task__prompt :global(p:first-of-type) {
     margin-top: var(--space-2);
-  }
-
-  .course-pdf-practice-task__work-space div {
-    display: grid;
-    gap: var(--space-3);
-    margin-top: var(--space-3);
-  }
-
-  .course-pdf-practice-task__work-space span {
-    display: block;
-    min-height: var(--space-6);
-    border-bottom: var(--border-subtle);
   }
 
   .course-pdf-practice-task__appendix-link {

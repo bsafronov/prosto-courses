@@ -84,148 +84,107 @@ const closeServer = (server) =>
 
 async function preparePrintDocument(page, courseSlug) {
   await page.evaluate(() => {
-    const appendix = document.querySelector(
-      "[data-course-pdf-knowledge-check-appendix]",
-    );
-    const answerList = appendix?.querySelector(
-      "[data-course-pdf-knowledge-check-answers]",
-    );
-    const checks = [
-      ...document.querySelectorAll("[data-course-pdf-knowledge-check]"),
-    ];
-    const prepareKnowledgeChecks = () => {
+    const prepareLinkedAppendix = ({
+      activityIdPrefix,
+      appendixSelector,
+      destinationSelector,
+      entryIdPrefix,
+      entrySelector,
+      numberSelector,
+      prepareEntry = () => {},
+      returnLinkSelector,
+      sourceLinkSelector,
+      sourceSelector,
+      templateSelector,
+    }) => {
+      const appendix = document.querySelector(appendixSelector);
+      const destination = appendix?.querySelector(destinationSelector);
+      const sources = [...document.querySelectorAll(sourceSelector)];
       if (
         !(appendix instanceof HTMLElement) ||
-        !answerList ||
-        checks.length === 0
+        !destination ||
+        sources.length === 0
       ) {
         return;
       }
 
-      const setKnowledgeCheckNumber = (root, number) => {
-        root
-          .querySelectorAll("[data-course-pdf-knowledge-check-number]")
-          .forEach((label) => {
-            label.textContent = String(number);
-          });
+      const setNumber = (root, number) => {
+        root.querySelectorAll(numberSelector).forEach((label) => {
+          label.textContent = String(number);
+        });
       };
 
-      for (const [index, check] of checks.entries()) {
+      for (const [index, source] of sources.entries()) {
         const number = index + 1;
-        const activityId = `knowledge-check-${number}`;
-        const answerId = `knowledge-check-answer-${number}`;
-        check.id = activityId;
-        setKnowledgeCheckNumber(check, number);
+        const activityId = `${activityIdPrefix}-${number}`;
+        const entryId = `${entryIdPrefix}-${number}`;
+        source.id = activityId;
+        setNumber(source, number);
 
-        const answerLink = check.querySelector(
-          "[data-course-pdf-knowledge-check-link]",
-        );
-        if (answerLink instanceof HTMLAnchorElement) {
-          answerLink.href = `#${answerId}`;
+        const sourceLink = source.querySelector(sourceLinkSelector);
+        if (sourceLink instanceof HTMLAnchorElement) {
+          sourceLink.href = `#${entryId}`;
         }
 
-        const template = check.querySelector(
-          "template[data-course-pdf-knowledge-check-answer]",
-        );
+        const template = source.querySelector(templateSelector);
         if (!(template instanceof HTMLTemplateElement)) continue;
-        const answer = template.content.cloneNode(true);
-        if (!(answer instanceof DocumentFragment)) continue;
-        const entry = answer.querySelector(
-          "[data-course-pdf-knowledge-check-answer-entry]",
-        );
+        const fragment = template.content.cloneNode(true);
+        if (!(fragment instanceof DocumentFragment)) continue;
+        const entry = fragment.querySelector(entrySelector);
         if (!(entry instanceof HTMLElement)) continue;
-        entry.id = answerId;
-        setKnowledgeCheckNumber(entry, number);
-        const returnLink = entry.querySelector(
-          "[data-course-pdf-knowledge-check-return-link]",
-        );
+        entry.id = entryId;
+        setNumber(entry, number);
+        prepareEntry({ entry, source });
+
+        const returnLink = entry.querySelector(returnLinkSelector);
         if (returnLink instanceof HTMLAnchorElement) {
           returnLink.href = `#${activityId}`;
         }
-        answerList.append(answer);
+        destination.append(fragment);
         template.remove();
       }
 
       appendix.hidden = false;
     };
-    prepareKnowledgeChecks();
 
-    const practiceAppendix = document.querySelector(
-      "[data-course-pdf-practice-task-appendix]",
-    );
-    const supportList = practiceAppendix?.querySelector(
-      "[data-course-pdf-practice-task-support-list]",
-    );
-    const tasks = [
-      ...document.querySelectorAll("[data-course-pdf-practice-task]"),
-    ];
-    if (
-      !(practiceAppendix instanceof HTMLElement) ||
-      !supportList ||
-      tasks.length === 0
-    ) {
-      return;
-    }
+    prepareLinkedAppendix({
+      activityIdPrefix: "knowledge-check",
+      appendixSelector: "[data-course-pdf-knowledge-check-appendix]",
+      destinationSelector: "[data-course-pdf-knowledge-check-answers]",
+      entryIdPrefix: "knowledge-check-answer",
+      entrySelector: "[data-course-pdf-knowledge-check-answer-entry]",
+      numberSelector: "[data-course-pdf-knowledge-check-number]",
+      returnLinkSelector: "[data-course-pdf-knowledge-check-return-link]",
+      sourceLinkSelector: "[data-course-pdf-knowledge-check-link]",
+      sourceSelector: "[data-course-pdf-knowledge-check]",
+      templateSelector: "template[data-course-pdf-knowledge-check-answer]",
+    });
 
-    const setPracticeTaskNumber = (root, number) => {
-      root
-        .querySelectorAll("[data-course-pdf-practice-task-number]")
-        .forEach((label) => {
-          label.textContent = String(number);
-        });
-    };
-
-    for (const [index, task] of tasks.entries()) {
-      const number = index + 1;
-      const activityId = `practice-task-${number}`;
-      const supportId = `practice-task-support-${number}`;
-      task.id = activityId;
-      setPracticeTaskNumber(task, number);
-
-      const supportLink = task.querySelector(
-        "[data-course-pdf-practice-task-link]",
-      );
-      if (supportLink instanceof HTMLAnchorElement) {
-        supportLink.href = `#${supportId}`;
-      }
-
-      const template = task.querySelector(
-        "template[data-course-pdf-practice-task-support]",
-      );
-      if (!(template instanceof HTMLTemplateElement)) continue;
-      const support = template.content.cloneNode(true);
-      if (!(support instanceof DocumentFragment)) continue;
-      const entry = support.querySelector(
-        "[data-course-pdf-practice-task-support-entry]",
-      );
-      if (!(entry instanceof HTMLElement)) continue;
-      entry.id = supportId;
-      setPracticeTaskNumber(entry, number);
-
-      const authoredSupport = entry.querySelector(
-        "[data-course-pdf-practice-task-authored-support]",
-      );
-      if (authoredSupport) {
-        task
+    prepareLinkedAppendix({
+      activityIdPrefix: "practice-task",
+      appendixSelector: "[data-course-pdf-practice-task-appendix]",
+      destinationSelector: "[data-course-pdf-practice-task-support-list]",
+      entryIdPrefix: "practice-task-support",
+      entrySelector: "[data-course-pdf-practice-task-support-entry]",
+      numberSelector: "[data-course-pdf-practice-task-number]",
+      prepareEntry: ({ entry, source }) => {
+        const authoredSupport = entry.querySelector(
+          "[data-course-pdf-practice-task-authored-support]",
+        );
+        if (!authoredSupport) return;
+        source
           .querySelectorAll("template[data-course-pdf-task-support]")
           .forEach((authoredTemplate) => {
             if (!(authoredTemplate instanceof HTMLTemplateElement)) return;
             authoredSupport.append(authoredTemplate.content.cloneNode(true));
             authoredTemplate.remove();
           });
-      }
-
-      const returnLink = entry.querySelector(
-        "[data-course-pdf-practice-task-return-link]",
-      );
-      if (returnLink instanceof HTMLAnchorElement) {
-        returnLink.href = `#${activityId}`;
-      }
-      supportList.append(support);
-      template.remove();
-    }
-
-    practiceAppendix.hidden = false;
+      },
+      returnLinkSelector: "[data-course-pdf-practice-task-return-link]",
+      sourceLinkSelector: "[data-course-pdf-practice-task-link]",
+      sourceSelector: "[data-course-pdf-practice-task]",
+      templateSelector: "template[data-course-pdf-practice-task-support]",
+    });
   });
   await page.locator("details").evaluateAll((details) => {
     details.forEach((detail) => {

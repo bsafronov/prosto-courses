@@ -12,7 +12,7 @@ async function inspectPdf(pdf: Uint8Array) {
   const loadingTask = getDocument({ data: pdf });
   const document = await loadingTask.promise;
   const pages = [];
-  const internalDestinations: string[] = [];
+  const internalLinkTargets: string[] = [];
 
   for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
     const page = await document.getPage(pageNumber);
@@ -26,14 +26,14 @@ async function inspectPdf(pdf: Uint8Array) {
     for (const annotation of annotations) {
       if (annotation.subtype !== "Link" || !("dest" in annotation)) continue;
       if (typeof annotation.dest === "string") {
-        internalDestinations.push(annotation.dest);
+        internalLinkTargets.push(annotation.dest);
       }
     }
   }
 
   await loadingTask.destroy();
   return {
-    internalDestinations,
+    internalLinkTargets,
     text: normalizePdfText(pages.join("\n")),
   };
 }
@@ -392,14 +392,14 @@ test("Knowledge Checks remain answerable on paper and link to a spoiler appendix
 
   expect(
     new Set(
-      markdown.internalDestinations.filter((destination) =>
+      markdown.internalLinkTargets.filter((destination) =>
         /^knowledge-check-answer-\d+$/.test(destination),
       ),
     ).size,
   ).toBe(9);
   expect(
     new Set(
-      markdown.internalDestinations.filter((destination) =>
+      markdown.internalLinkTargets.filter((destination) =>
         /^knowledge-check-\d+$/.test(destination),
       ),
     ).size,
@@ -432,22 +432,22 @@ test("Knowledge Checks remain answerable on paper and link to a spoiler appendix
   expect(numeric.text.slice(numericAppendix)).toContain(
     `Проверказнаний${numericCheckNumber}Задание:Каковавыручкапервогорегионапослеrevenue.sum(axis=1)?Правильныйответ:31200₽`,
   );
-  expect(numeric.internalDestinations).toContain(
+  expect(numeric.internalLinkTargets).toContain(
     `knowledge-check-answer-${numericCheckNumber}`,
   );
-  expect(numeric.internalDestinations).toContain(
+  expect(numeric.internalLinkTargets).toContain(
     `knowledge-check-${numericCheckNumber}`,
   );
   expect(
     new Set(
-      numeric.internalDestinations.filter((destination) =>
+      numeric.internalLinkTargets.filter((destination) =>
         /^knowledge-check-answer-\d+$/.test(destination),
       ),
     ).size,
   ).toBe(17);
   expect(
     new Set(
-      numeric.internalDestinations.filter((destination) =>
+      numeric.internalLinkTargets.filter((destination) =>
         /^knowledge-check-\d+$/.test(destination),
       ),
     ).size,
@@ -461,7 +461,9 @@ test("Practice Tasks keep their contract and working space while revealable supp
     new URL(coursePdfName, testInfo.project.use.baseURL!).href,
   );
   expect(response.ok()).toBe(true);
-  const pdf = await inspectPdf(new Uint8Array(await response.body()));
+  const responseBody = await response.body();
+  const pdf = await inspectPdf(Uint8Array.from(responseBody));
+  const visualPages = await inspectVisualPdf(Uint8Array.from(responseBody));
   const appendixStart = pdf.text.lastIndexOf("Поддержкаисамопроверка");
   expect(appendixStart).toBeGreaterThan(0);
 
@@ -482,6 +484,20 @@ test("Practice Tasks keep their contract and working space while revealable supp
     "Разбериэтотисходникбезпредварительногопросмотра:",
   );
   expect(solutionTask.text).toContain("Местодляработы");
+  const solutionTaskPageIndex = visualPages.findIndex((page) =>
+    page.text.includes("Разметькартуисходника"),
+  );
+  expect(solutionTaskPageIndex).toBeGreaterThanOrEqual(0);
+  const solutionTaskPages = visualPages.slice(
+    solutionTaskPageIndex,
+    solutionTaskPageIndex + 2,
+  );
+  expect(solutionTaskPages.map((page) => page.text).join()).toContain(
+    "Местодляработы",
+  );
+  expect(
+    solutionTaskPages.reduce((total, page) => total + page.visualMarks, 0),
+  ).toBeGreaterThanOrEqual(8);
 
   const rubricTask = practiceTaskMain(mainFlow, "Собери памятку перед выпуском");
   expect(rubricTask.text).toContain("Основнаяпрактика·20мин");
@@ -510,11 +526,33 @@ test("Practice Tasks keep their contract and working space while revealable supp
   expect(appendix).toContain("Структураведёткрезультату");
 
   for (const number of [solutionTask.number, rubricTask.number]) {
-    expect(pdf.internalDestinations).toContain(`practice-task-${number}`);
-    expect(pdf.internalDestinations).toContain(
-      `practice-task-support-${number}`,
-    );
+    expect(
+      pdf.internalLinkTargets.filter(
+        (target) => target === `practice-task-${number}`,
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
+      pdf.internalLinkTargets.filter(
+        (target) => target === `practice-task-support-${number}`,
+      ).length,
+    ).toBeGreaterThan(0);
   }
+
+  expect(pdf.text).toContain("ДОПОЛНИТЕЛЬНО—НЕОБЯЗАТЕЛЬНО");
+
+  const stretchResponse = await page.request.get(
+    new URL(
+      "prosto-courses-accessible-images.pdf",
+      testInfo.project.use.baseURL!,
+    ).href,
+  );
+  expect(stretchResponse.ok()).toBe(true);
+  const stretchPdf = await inspectPdf(
+    Uint8Array.from(await stretchResponse.body()),
+  );
+  expect(stretchPdf.text).toContain(
+    "Дополнительнаяпрактика·5минPolishanoptionaldescription",
+  );
 });
 
 test("Reflections provide guided paper space without browser-local state or controls", async ({
@@ -526,12 +564,18 @@ test("Reflections provide guided paper space without browser-local state or cont
   await expect(page.locator("[data-reflection-status]")).toContainText(
     "Черновик сохранён",
   );
+  await page.getByRole("button", { name: "Завершить урок" }).click();
+  await expect(
+    page.locator("header").getByLabel("Статус урока: Завершён"),
+  ).toBeVisible();
 
   const response = await page.request.get(
     new URL(coursePdfName, testInfo.project.use.baseURL!).href,
   );
   expect(response.ok()).toBe(true);
-  const { text } = await inspectPdf(new Uint8Array(await response.body()));
+  const responseBody = await response.body();
+  const { text } = await inspectPdf(Uint8Array.from(responseBody));
+  const visualPages = await inspectVisualPdf(Uint8Array.from(responseBody));
 
   for (const expected of [
     "Осмыслиопыт",
@@ -543,6 +587,13 @@ test("Reflections provide guided paper space without browser-local state or cont
   ]) {
     expect(text).toContain(expected);
   }
+  const reflectionPage = visualPages.find((page) =>
+    page.text.includes(
+      "КакдвухпроходнаяпроверкаизмениттвойспособчитатьMarkdown-исходник?",
+    ),
+  );
+  expect(reflectionPage?.text).toContain("Местодлязаписи");
+  expect(reflectionPage?.visualMarks).toBeGreaterThanOrEqual(9);
 
   for (const browserOnlyText of [
     normalizePdfText(localReflection),
@@ -550,9 +601,16 @@ test("Reflections provide guided paper space without browser-local state or cont
     "Текстостаётсятольковэтомбраузереиникуданеотправляется.",
     "Экспортировать",
     "Удалитьнавсегда",
+    "КопироватьЭкспортировать",
+    "Показатьподсказку",
+    "Всеподсказкиоткрыты",
     "Отметитькакзавершённый",
+    "Завершитьурок",
+    "Статусурока:Завершён",
+    "Курсзавершён",
     "Переключитьтему",
     "Установитьприложение",
+    "Открытьнавигациюпокурсу",
   ]) {
     expect(text).not.toContain(browserOnlyText);
   }

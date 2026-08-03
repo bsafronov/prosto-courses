@@ -1,0 +1,33 @@
+---
+interface Props {
+  label: string;
+  lines: number;
+}
+
+const { label, lines } = Astro.props;
+---
+
+<section class="course-pdf-work-space" aria-label={label}>
+  <h3 class="type-body">{label}</h3>
+  <div aria-hidden="true">
+    {Array.from({ length: lines }, () => <span />)}
+  </div>
+</section>
+
+<style>
+  .course-pdf-work-space h3 {
+    margin-block: var(--space-0);
+  }
+
+  .course-pdf-work-space div {
+    display: grid;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+  }
+
+  .course-pdf-work-space span {
+    display: block;
+    min-height: var(--space-6);
+    border-bottom: var(--border-subtle);
+  }
+</style>
