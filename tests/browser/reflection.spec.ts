@@ -22,19 +22,19 @@ test("Reflection keeps private-note controls readable in both themes", async ({
     name: "Удалить навсегда",
   });
 
-  for (const [theme, surface, muted, border, error] of [
+  for (const [theme, surface, muted, controlHover, error] of [
     [
       "light",
       "rgb(255, 255, 255)",
       "rgb(113, 113, 122)",
-      "rgb(228, 228, 231)",
+      "rgb(244, 244, 245)",
       "rgb(161, 40, 40)",
     ],
     [
       "dark",
       "rgb(24, 24, 27)",
       "rgb(161, 161, 170)",
-      "rgb(39, 39, 42)",
+      "rgba(39, 39, 42, 0.5)",
       "rgb(240, 154, 154)",
     ],
   ] as const) {
@@ -67,7 +67,7 @@ test("Reflection keeps private-note controls readable in both themes", async ({
     await deleteNote.hover();
     await expect(deleteNote).toHaveCSS(
       "background-color",
-      border,
+      controlHover,
     );
     await page.mouse.move(0, 0);
     await note.fill("");
