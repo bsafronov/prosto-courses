@@ -1,0 +1,335 @@
+---
+interface ChoiceOption {
+  id: string;
+  text: string;
+  feedback: string;
+}
+
+interface MatchingPair {
+  id: string;
+  left: string;
+  right: string;
+  feedback: string;
+}
+
+interface OrderingItem {
+  id: string;
+  text: string;
+}
+
+interface ExactNormalization {
+  trim: boolean;
+  case: "sensitive" | "insensitive";
+}
+
+interface SharedProps {
+  prompt: string;
+  outcomes: string[];
+  explanation: string;
+}
+
+type Props =
+  | (SharedProps & {
+      type: "single";
+      options: ChoiceOption[];
+      answer: string;
+    })
+  | (SharedProps & {
+      type: "multiple";
+      options: ChoiceOption[];
+      answer: string[];
+    })
+  | (SharedProps & { type: "matching"; pairs: MatchingPair[] })
+  | (SharedProps & { type: "ordering"; items: OrderingItem[] })
+  | (SharedProps & {
+      type: "exact";
+      acceptedAnswers: string[];
+      normalization: ExactNormalization;
+    })
+  | (SharedProps & {
+      type: "numeric";
+      answer: number;
+      tolerance: number;
+      unit?: string;
+    });
+
+function rotate<T>(values: T[]) {
+  return values.length > 1 ? [...values.slice(1), values[0]] : [...values];
+}
+
+const props = Astro.props as Props;
+const { type, prompt, explanation } = props;
+const choiceOptions = "options" in props ? props.options : [];
+const correctChoiceIds =
+  type === "single"
+    ? [props.answer]
+    : type === "multiple"
+      ? props.answer
+      : [];
+const correctChoiceOptions = choiceOptions.filter((option) =>
+  correctChoiceIds.includes(option.id),
+);
+const printableMatchingOptions =
+  type === "matching" ? rotate(props.pairs.map((pair) => pair.right)) : [];
+const printableOrderingItems =
+  type === "ordering" ? rotate(props.items) : [];
+---
+
+<article
+  class="course-pdf-knowledge-check"
+  data-course-pdf-knowledge-check
+>
+  <p class="course-pdf-knowledge-check__label type-meta">Проверка знаний</p>
+  <p class="course-pdf-knowledge-check__prompt">{prompt}</p>
+
+  {
+    type === "single" && (
+      <>
+        <p>Отметь один ответ.</p>
+        <ul class="course-pdf-knowledge-check__choices">
+          {choiceOptions.map((option) => (
+            <li><span aria-hidden="true">○</span> {option.text}</li>
+          ))}
+        </ul>
+      </>
+    )
+  }
+  {
+    type === "multiple" && (
+      <>
+        <p>Отметь все подходящие ответы.</p>
+        <ul class="course-pdf-knowledge-check__choices">
+          {choiceOptions.map((option) => (
+            <li><span aria-hidden="true">□</span> {option.text}</li>
+          ))}
+        </ul>
+      </>
+    )
+  }
+  {
+    type === "matching" && (
+      <>
+        <p>Соедини каждую строку с одним вариантом ответа.</p>
+        <ol class="course-pdf-knowledge-check__matching-prompts">
+          {props.pairs.map((pair) => (
+            <li>
+              {pair.left}
+              <span class="course-pdf-knowledge-check__response-line" />
+            </li>
+          ))}
+        </ol>
+        <p class="course-pdf-knowledge-check__subheading">Варианты ответов:</p>
+        <ol type="A">
+          {printableMatchingOptions.map((option) => <li>{option}</li>)}
+        </ol>
+      </>
+    )
+  }
+  {
+    type === "ordering" && (
+      <>
+        <p>
+          Укажи порядок шагов: впиши номер позиции рядом с каждым шагом.
+        </p>
+        <ul class="course-pdf-knowledge-check__ordering">
+          {printableOrderingItems.map((item) => (
+            <li>
+              <span
+                class="course-pdf-knowledge-check__position"
+                aria-label="Позиция"
+              >
+                __
+              </span>
+              {item.text}
+            </li>
+          ))}
+        </ul>
+      </>
+    )
+  }
+  {
+    type === "exact" && (
+      <>
+        <p>Запиши точный ответ.</p>
+        <p class="course-pdf-knowledge-check__answer-line">Ответ:</p>
+      </>
+    )
+  }
+  {
+    type === "numeric" && (
+      <>
+        <p>
+          Запиши числовой ответ.
+          {props.unit && <> Единица измерения: {props.unit}.</>}
+        </p>
+        <p class="course-pdf-knowledge-check__answer-line">Ответ:</p>
+      </>
+    )
+  }
+
+  <p class="course-pdf-knowledge-check__appendix-link">
+    <a data-course-pdf-knowledge-check-link>
+      Ответ и объяснение: проверка знаний{" "}
+      <span data-course-pdf-knowledge-check-number />
+    </a>
+  </p>
+
+  <template data-course-pdf-knowledge-check-answer>
+    <section
+      class="course-pdf-knowledge-check-answer"
+      data-course-pdf-knowledge-check-answer-entry
+    >
+      <h3 class="type-section-title">
+        Проверка знаний <span data-course-pdf-knowledge-check-number />
+      </h3>
+      <p><strong>Задание:</strong> {prompt}</p>
+
+      {
+        (type === "single" || type === "multiple") && (
+          <p>
+            <strong>Правильный ответ:</strong>{" "}
+            {correctChoiceOptions.map((option) => option.text).join("; ")}
+          </p>
+        )
+      }
+      {
+        type === "matching" && (
+          <>
+            <p><strong>Правильные соответствия:</strong></p>
+            <ul>
+              {props.pairs.map((pair) => (
+                <li>
+                  {pair.left} — {pair.right}
+                </li>
+              ))}
+            </ul>
+          </>
+        )
+      }
+      {
+        type === "ordering" && (
+          <>
+            <p><strong>Правильный порядок:</strong></p>
+            <ol>
+              {props.items.map((item) => <li>{item.text}</li>)}
+            </ol>
+          </>
+        )
+      }
+      {
+        type === "exact" && (
+          <p>
+            <strong>Правильный ответ:</strong>{" "}
+            {props.acceptedAnswers.join("; ")}
+          </p>
+        )
+      }
+      {
+        type === "numeric" && (
+          <p>
+            <strong>Правильный ответ:</strong> {props.answer}
+            {props.unit && <> {props.unit}</>}
+          </p>
+        )
+      }
+
+      {
+        correctChoiceOptions.length > 0 && (
+          <>
+            <p><strong>Обратная связь:</strong></p>
+            <ul>
+              {correctChoiceOptions.map((option) => (
+                <li>{option.feedback}</li>
+              ))}
+            </ul>
+          </>
+        )
+      }
+      {
+        type === "matching" && (
+          <>
+            <p><strong>Обратная связь:</strong></p>
+            <ul>
+              {props.pairs.map((pair) => <li>{pair.feedback}</li>)}
+            </ul>
+          </>
+        )
+      }
+
+      <p><strong>Объяснение:</strong> {explanation}</p>
+      <p>
+        <a data-course-pdf-knowledge-check-return-link>
+          Вернуться к заданию{" "}
+          <span data-course-pdf-knowledge-check-number />
+        </a>
+      </p>
+    </section>
+  </template>
+</article>
+
+<style>
+  .course-pdf-knowledge-check {
+    margin-block: var(--space-10);
+    border: var(--border-subtle);
+    padding: var(--space-card);
+    break-inside: avoid;
+  }
+
+  .course-pdf-knowledge-check__label,
+  .course-pdf-knowledge-check__prompt,
+  .course-pdf-knowledge-check__subheading {
+    margin-block: var(--space-0);
+  }
+
+  .course-pdf-knowledge-check__prompt,
+  .course-pdf-knowledge-check__subheading {
+    font-weight: var(--font-weight-bold);
+  }
+
+  .course-pdf-knowledge-check__choices,
+  .course-pdf-knowledge-check__ordering {
+    list-style: none;
+    padding-left: var(--space-0);
+  }
+
+  .course-pdf-knowledge-check__choices li,
+  .course-pdf-knowledge-check__ordering li {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .course-pdf-knowledge-check__matching-prompts li {
+    margin-block: var(--space-3);
+  }
+
+  .course-pdf-knowledge-check__response-line {
+    display: block;
+    min-height: var(--space-6);
+    border-bottom: var(--border-subtle);
+  }
+
+  .course-pdf-knowledge-check__position {
+    flex: 0 0 var(--space-8);
+    border-bottom: var(--border-subtle);
+    text-align: center;
+  }
+
+  .course-pdf-knowledge-check__answer-line {
+    min-height: var(--space-8);
+    border-bottom: var(--border-subtle);
+  }
+
+  .course-pdf-knowledge-check__appendix-link {
+    margin-bottom: var(--space-0);
+  }
+
+  :global(.course-pdf-knowledge-check-answer) {
+    break-inside: avoid;
+  }
+
+  :global(.course-pdf-knowledge-check-answer + .course-pdf-knowledge-check-answer) {
+    margin-top: var(--space-10);
+    border-top: var(--border-subtle);
+    padding-top: var(--space-8);
+  }
+</style>

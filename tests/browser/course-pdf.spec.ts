@@ -4,26 +4,37 @@ import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 
 const coursePdfName = "prosto-courses-markdown.pdf";
 
-async function extractPdfText(pdf: Uint8Array) {
+async function inspectPdf(pdf: Uint8Array) {
   const loadingTask = getDocument({ data: pdf });
   const document = await loadingTask.promise;
   const pages = [];
+  const internalDestinations: string[] = [];
 
   for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
     const page = await document.getPage(pageNumber);
     const content = await page.getTextContent();
+    const annotations = await page.getAnnotations();
     pages.push(
       content.items
         .map((item) => ("str" in item ? item.str : ""))
         .join(" "),
     );
+    for (const annotation of annotations) {
+      if (annotation.subtype !== "Link" || !("dest" in annotation)) continue;
+      if (typeof annotation.dest === "string") {
+        internalDestinations.push(annotation.dest);
+      }
+    }
   }
 
   await loadingTask.destroy();
-  return pages
-    .join("\n")
-    .normalize("NFKC")
-    .replaceAll(/[\s\u00ad]+/g, "");
+  return {
+    internalDestinations,
+    text: pages
+      .join("\n")
+      .normalize("NFKC")
+      .replaceAll(/[\s\u00ad]+/g, ""),
+  };
 }
 
 test("learner downloads the complete searchable Course PDF from its Overview", async ({
@@ -52,7 +63,7 @@ test("learner downloads the complete searchable Course PDF from its Overview", a
   const pdf = await readFile(downloadedPath!);
   expect(pdf.subarray(0, 5).toString()).toBe("%PDF-");
 
-  const text = await extractPdfText(new Uint8Array(pdf));
+  const { text } = await inspectPdf(new Uint8Array(pdf));
   const orderedHeadings = [
     "Основы Markdown",
     "Markdown помогает хранить структуру документа прямо в обычном тексте.",
@@ -79,6 +90,88 @@ test("learner downloads the complete searchable Course PDF from its Overview", a
     );
     previousIndex = index;
   }
+});
+
+test("Knowledge Checks remain answerable on paper and link to a spoiler appendix", async ({
+  page,
+}, testInfo) => {
+  await page.goto("./courses/markdown/");
+  await page.evaluate(() => {
+    localStorage.setItem(
+      "knowledge-check-attempt",
+      "ЛОКАЛЬНЫЙ ОТВЕТ НЕ ДОЛЖЕН ПОПАСТЬ В PDF",
+    );
+  });
+
+  const markdownResponse = await page.request.get(
+    new URL(coursePdfName, testInfo.project.use.baseURL!).href,
+  );
+  expect(markdownResponse.ok()).toBe(true);
+  const markdown = await inspectPdf(
+    new Uint8Array(await markdownResponse.body()),
+  );
+  const appendixStart = markdown.text.indexOf("Ответыкпроверкамзнаний");
+  expect(appendixStart).toBeGreaterThan(0);
+
+  const mainFlow = markdown.text.slice(0, appendixStart);
+  const appendix = markdown.text.slice(appendixStart);
+  expect(mainFlow).toContain("Отметьодинответ.");
+  expect(mainFlow).toContain("Отметьвсеподходящиеответы.");
+  expect(mainFlow).toContain(
+    "Соединикаждуюстрокусоднимвариантомответа.",
+  );
+  expect(mainFlow).toContain("Запишиточныйответ.");
+  expect(mainFlow).toContain(
+    "Укажипорядокшагов:впишиномерпозициирядомскаждымшагом.",
+  );
+  expect(mainFlow).not.toContain("Перетащишагизаполосусправа.");
+  expect(mainFlow).not.toContain("Проверитьответ");
+  expect(mainFlow).not.toContain("ЛОКАЛЬНЫЙОТВЕТНЕДОЛЖЕНПОПАСТЬВPDF");
+
+  expect(appendix).toContain("Правильныйответ:CommonMark");
+  expect(appendix).toContain(
+    "GFMописываетрасширенияповерхспецификацииCommonMark.",
+  );
+  expect(appendix).toContain(
+    "Да:этоттекстобъясняетчитателюназначениессылки.",
+  );
+  expect(appendix).toContain("Правильныйпорядок:");
+  expect(appendix).toContain(
+    "1.Назватьцелевуюсредупубликации2.Выделитьконструкции,откоторыхзависитсмысл",
+  );
+  expect(appendix).not.toContain("knowledge-check-attempt");
+
+  expect(
+    new Set(markdown.internalDestinations.filter((destination) =>
+      /^knowledge-check-answer-\d+$/.test(destination),
+    )).size,
+  ).toBe(9);
+  expect(
+    new Set(markdown.internalDestinations.filter((destination) =>
+      /^knowledge-check-\d+$/.test(destination),
+    )).size,
+  ).toBe(9);
+
+  const numericResponse = await page.request.get(
+    new URL(
+      "prosto-courses-python-dlya-analitika.pdf",
+      testInfo.project.use.baseURL!,
+    ).href,
+  );
+  expect(numericResponse.ok()).toBe(true);
+  const numeric = await inspectPdf(new Uint8Array(await numericResponse.body()));
+  const numericPrompt = numeric.text.indexOf(
+    "Каковавыручкапервогорегионапослеrevenue.sum(axis=1)?",
+  );
+  const numericAppendix = numeric.text.indexOf("Ответыкпроверкамзнаний");
+  expect(numericPrompt).toBeGreaterThan(0);
+  expect(numericPrompt).toBeLessThan(numericAppendix);
+  expect(numeric.text.slice(numericPrompt, numericAppendix)).toContain(
+    "Запишичисловойответ.Единицаизмерения:₽.",
+  );
+  expect(numeric.text.slice(numericAppendix)).toContain(
+    "Правильныйответ:31200₽",
+  );
 });
 
 test("production build emits one Course PDF for every Catalog Course", async ({

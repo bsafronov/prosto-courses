@@ -81,6 +81,66 @@ const closeServer = (server) =>
   });
 
 async function preparePrintDocument(page) {
+  await page.evaluate(() => {
+    const appendix = document.querySelector(
+      "[data-course-pdf-knowledge-check-appendix]",
+    );
+    const answerList = appendix?.querySelector(
+      "[data-course-pdf-knowledge-check-answers]",
+    );
+    const checks = [
+      ...document.querySelectorAll("[data-course-pdf-knowledge-check]"),
+    ];
+    if (!(appendix instanceof HTMLElement) || !answerList || checks.length === 0) {
+      return;
+    }
+
+    for (const [index, check] of checks.entries()) {
+      const number = index + 1;
+      const activityId = `knowledge-check-${number}`;
+      const answerId = `knowledge-check-answer-${number}`;
+      check.id = activityId;
+      check
+        .querySelectorAll("[data-course-pdf-knowledge-check-number]")
+        .forEach((label) => {
+          label.textContent = String(number);
+        });
+
+      const answerLink = check.querySelector(
+        "[data-course-pdf-knowledge-check-link]",
+      );
+      if (answerLink instanceof HTMLAnchorElement) {
+        answerLink.href = `#${answerId}`;
+      }
+
+      const template = check.querySelector(
+        "template[data-course-pdf-knowledge-check-answer]",
+      );
+      if (!(template instanceof HTMLTemplateElement)) continue;
+      const answer = template.content.cloneNode(true);
+      if (!(answer instanceof DocumentFragment)) continue;
+      const entry = answer.querySelector(
+        "[data-course-pdf-knowledge-check-answer-entry]",
+      );
+      if (!(entry instanceof HTMLElement)) continue;
+      entry.id = answerId;
+      entry
+        .querySelectorAll("[data-course-pdf-knowledge-check-number]")
+        .forEach((label) => {
+          label.textContent = String(number);
+        });
+      const returnLink = entry.querySelector(
+        "[data-course-pdf-knowledge-check-return-link]",
+      );
+      if (returnLink instanceof HTMLAnchorElement) {
+        returnLink.href = `#${activityId}`;
+      }
+      answerList.append(answer);
+      template.remove();
+    }
+
+    appendix.hidden = false;
+  });
   await page.locator("details").evaluateAll((details) => {
     details.forEach((detail) => {
       detail.open = true;

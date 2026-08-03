@@ -1,5 +1,6 @@
 ---
 import { getCollection, render, type CollectionEntry } from "astro:content";
+import CoursePdfKnowledgeCheck from "../../components/CoursePdfKnowledgeCheck.astro";
 import { semanticComponents } from "../../components/semantic-components";
 import CoursePdfLayout from "../../layouts/CoursePdfLayout.astro";
 import { coursePdfFilename } from "../../lib/course-pdf";
@@ -21,6 +22,10 @@ type Props = {
 };
 
 const { course, tree } = Astro.props as Props;
+const coursePdfSemanticComponents = {
+  ...semanticComponents,
+  KnowledgeCheck: CoursePdfKnowledgeCheck,
+};
 const { Content: CourseContent } = await render(course);
 const modules = await Promise.all(
   tree.modules.map(async ({ module, lessons, checkpoint }) => ({
@@ -52,7 +57,7 @@ const { Content: CapstoneContent } = await render(tree.capstone);
 
     <section class="course-pdf__overview">
       <h2 class="type-section-title">О курсе</h2>
-      <CourseContent components={semanticComponents} />
+      <CourseContent components={coursePdfSemanticComponents} />
       <h2 class="type-section-title">Чему ты научишься</h2>
       <ul>
         {course.data.outcomes.map((outcome) => <li>{outcome.statement}</li>)}
@@ -78,7 +83,7 @@ const { Content: CapstoneContent } = await render(tree.capstone);
         </p>
         <h2 class="type-page-title">{module.data.title}</h2>
         <p class="course-pdf__summary">{module.data.summary}</p>
-        <ModuleContent components={semanticComponents} />
+        <ModuleContent components={coursePdfSemanticComponents} />
 
         {lessons.map(({ lesson, LessonContent }, lessonIndex) => (
           <article class="course-pdf__lesson">
@@ -86,14 +91,14 @@ const { Content: CapstoneContent } = await render(tree.capstone);
               Урок {lessonIndex + 1}
             </p>
             <h3 class="type-section-title">{lesson.data.title}</h3>
-            <LessonContent components={semanticComponents} />
+            <LessonContent components={coursePdfSemanticComponents} />
           </article>
         ))}
 
         <article class="course-pdf__checkpoint">
           <p class="course-pdf__section-label type-meta">Проверка Модуля</p>
           <h3 class="type-section-title">{checkpoint.data.title}</h3>
-          <CheckpointContent components={semanticComponents} />
+          <CheckpointContent components={coursePdfSemanticComponents} />
         </article>
       </section>
     ))}
@@ -101,7 +106,16 @@ const { Content: CapstoneContent } = await render(tree.capstone);
     <section class="course-pdf__capstone">
       <p class="course-pdf__section-label type-meta">Итоговая работа</p>
       <h2 class="type-page-title">{tree.capstone.data.title}</h2>
-      <CapstoneContent components={semanticComponents} />
+      <CapstoneContent components={coursePdfSemanticComponents} />
+    </section>
+
+    <section
+      class="course-pdf__knowledge-check-appendix"
+      data-course-pdf-knowledge-check-appendix
+      hidden
+    >
+      <h2 class="type-page-title">Ответы к проверкам знаний</h2>
+      <div data-course-pdf-knowledge-check-answers />
     </section>
   </main>
 </CoursePdfLayout>
