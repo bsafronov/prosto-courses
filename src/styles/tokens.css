@@ -18,7 +18,7 @@
   --color-control-ink: var(--color-ink);
   --color-control-primary-background: var(--color-brand);
   --color-control-primary-ink: var(--color-canvas);
-  --color-control-ghost-hover-background: var(--color-border);
+  --color-control-ghost-hover-background: #f4f4f5;
   --color-control-disabled-background: var(--color-canvas);
   --color-control-disabled-ink: var(--color-muted);
   --color-data-series-1: #3d566e;
@@ -178,6 +178,7 @@ html[data-theme="dark"] {
   --color-completed-ink: #9bd4ab;
   --color-warning: #e8bb66;
   --color-error: #f09a9a;
+  --color-control-ghost-hover-background: rgb(39 39 42 / 50%);
   --color-data-series-1: #a8bfd3;
   --color-data-series-2: #c9bba8;
   --color-data-series-3: #a9c8bc;

@@ -23,6 +23,7 @@ const themes = {
     brand: "rgb(39, 39, 42)",
     error: "rgb(161, 40, 40)",
     focus: "rgb(63, 63, 70)",
+    ghostHover: "rgb(244, 244, 245)",
     ink: "rgb(24, 24, 27)",
     muted: "rgb(113, 113, 122)",
     surface: "rgb(255, 255, 255)",
@@ -34,6 +35,7 @@ const themes = {
     brand: "rgb(228, 228, 231)",
     error: "rgb(240, 154, 154)",
     focus: "rgb(212, 212, 216)",
+    ghostHover: "rgba(39, 39, 42, 0.5)",
     ink: "rgb(250, 250, 250)",
     muted: "rgb(161, 161, 170)",
     surface: "rgb(24, 24, 27)",
@@ -757,14 +759,14 @@ test("Ghost Button stays quiet until pointer interaction", async ({ page }) => {
   await expandDiagram.hover();
   await expect(expandDiagram).toHaveCSS(
     "background-color",
-    themes.light.border,
+    themes.light.ghostHover,
   );
   await expect(expandDiagram).toHaveCSS("color", themes.light.ink);
 
   await page.mouse.down();
   await expect(expandDiagram).toHaveCSS(
     "background-color",
-    themes.light.border,
+    themes.light.ghostHover,
   );
   await expect(expandDiagram).toHaveCSS("color", themes.light.ink);
   await page.mouse.move(0, 0);
@@ -783,6 +785,23 @@ test("Ghost Button stays quiet until pointer interaction", async ({ page }) => {
     "rgba(0, 0, 0, 0)",
   );
   await expect(expandDiagram).toHaveCSS("color", themes.light.muted);
+
+  await expandDiagram.evaluate((button: HTMLButtonElement) => {
+    button.disabled = false;
+  });
+  await selectTheme(page, "dark");
+  await page.mouse.move(0, 0);
+  await expect(expandDiagram).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
+  await expect(expandDiagram).toHaveCSS("color", themes.dark.muted);
+  await expandDiagram.hover();
+  await expect(expandDiagram).toHaveCSS(
+    "background-color",
+    themes.dark.ghostHover,
+  );
+  await expect(expandDiagram).toHaveCSS("color", themes.dark.ink);
 });
 
 test("icon-only primary and danger Buttons stay 44px square", async ({

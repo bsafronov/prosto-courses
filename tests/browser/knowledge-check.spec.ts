@@ -651,7 +651,7 @@ test("ordering Knowledge Check requires an explicit keyboard drop or cancellatio
   await page.keyboard.press("Tab");
 
   await expect(handle).toHaveAttribute("aria-pressed", "true");
-  await expect(handle).toHaveCSS("background-color", "rgb(228, 228, 231)");
+  await expect(handle).toHaveCSS("background-color", "rgb(244, 244, 245)");
   await expect(handle).toHaveCSS("color", "rgb(24, 24, 27)");
   await expect(list.locator("[data-ordering-text]")).not.toHaveText(
     initialOrder,
