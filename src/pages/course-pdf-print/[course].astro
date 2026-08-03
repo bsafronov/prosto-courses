@@ -71,7 +71,7 @@ const freshness = courseFreshnessState(course, tree);
   title={`${course.data.title} | Prosto.Courses`}
 >
   <main class="course-pdf type-reading reading-flow">
-    <header class="course-pdf__cover">
+    <header class="course-pdf__cover" data-course-pdf-required-section>
       <p class="course-pdf__section-label type-meta">Курс</p>
       <h1 class="type-page-title">{course.data.title}</h1>
       <p class="course-pdf__summary">{course.data.summary}</p>
@@ -90,7 +90,11 @@ const freshness = courseFreshnessState(course, tree);
       </div>
     </header>
 
-    <nav class="course-pdf__toc" aria-labelledby="course-pdf-toc-title">
+    <nav
+      class="course-pdf__toc"
+      aria-labelledby="course-pdf-toc-title"
+      data-course-pdf-required-section
+    >
       <h2 id="course-pdf-toc-title" class="type-page-title">Содержание</h2>
       <ol>
         <li><a href="#course-overview">О Курсе</a></li>
@@ -146,6 +150,7 @@ const freshness = courseFreshnessState(course, tree);
       id="course-overview"
       class="course-pdf__overview"
       data-course-pdf-route={coursePath(course.id)}
+      data-course-pdf-required-section
     >
       <h2 class="type-section-title">О курсе</h2>
       <CourseContent components={coursePdfSemanticComponents} />
@@ -174,6 +179,7 @@ const freshness = courseFreshnessState(course, tree);
         id={`module-${currentModuleSlug}`}
         class="course-pdf__module"
         data-course-pdf-route={modulePath(course.id, currentModuleSlug)}
+        data-course-pdf-required-section
       >
         <p class="course-pdf__section-label type-meta">
           Модуль {moduleIndex + 1}
@@ -187,6 +193,7 @@ const freshness = courseFreshnessState(course, tree);
             id={`lesson-${lessonSlug(lesson)}`}
             class="course-pdf__lesson"
             data-course-pdf-route={lessonPath(course.id, lessonSlug(lesson))}
+            data-course-pdf-required-section
           >
             <p class="course-pdf__section-label type-meta">
               Урок {lessonIndex + 1}
@@ -200,6 +207,7 @@ const freshness = courseFreshnessState(course, tree);
           id={`checkpoint-${currentModuleSlug}`}
           class="course-pdf__checkpoint"
           data-course-pdf-route={checkpointPath(course.id, currentModuleSlug)}
+          data-course-pdf-required-section
         >
           <p class="course-pdf__section-label type-meta">Проверка Модуля</p>
           <h3 class="type-section-title">{checkpoint.data.title}</h3>
@@ -212,6 +220,7 @@ const freshness = courseFreshnessState(course, tree);
       id="capstone"
       class="course-pdf__capstone"
       data-course-pdf-route={capstonePath(course.id)}
+      data-course-pdf-required-section
     >
       <p class="course-pdf__section-label type-meta">Итоговая работа</p>
       <h2 class="type-page-title">{tree.capstone.data.title}</h2>
@@ -222,6 +231,7 @@ const freshness = courseFreshnessState(course, tree);
       id="knowledge-check-appendix"
       class="course-pdf__knowledge-check-appendix"
       data-course-pdf-knowledge-check-appendix
+      data-course-pdf-required-section
       hidden
     >
       <h2 class="type-page-title">Ответы к проверкам знаний</h2>
@@ -232,13 +242,20 @@ const freshness = courseFreshnessState(course, tree);
       id="practice-task-appendix"
       class="course-pdf__practice-task-appendix"
       data-course-pdf-practice-task-appendix
+      data-course-pdf-required-section
       hidden
     >
       <h2 class="type-page-title">Поддержка и самопроверка</h2>
       <div data-course-pdf-practice-task-support-list />
     </section>
 
-    <section id="sources" class="course-pdf__sources" hidden data-course-pdf-sources>
+    <section
+      id="sources"
+      class="course-pdf__sources"
+      data-course-pdf-required-section
+      data-course-pdf-sources
+      hidden
+    >
       <h2 class="type-page-title">Источники</h2>
       <ol data-course-pdf-source-list></ol>
     </section>

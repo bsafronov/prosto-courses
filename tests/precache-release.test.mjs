@@ -1,5 +1,12 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, truncate, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  truncate,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -67,5 +74,33 @@ test("fails the production build for an oversized complete release", async () =>
       () => runBuildBudget(root),
       /complete precache release.*30\.00 MiB.*25 MiB limit/i,
     );
+  });
+});
+
+test("offline release metadata excludes Course PDFs and print documents", async () => {
+  await withTemporaryRelease(async (root) => {
+    await writeSizedFile(
+      path.join(root, "prosto-courses-representative.pdf"),
+      MAX_PRECACHE_TOTAL_BYTES,
+    );
+    const printDirectory = path.join(
+      root,
+      "course-pdf-print",
+      "representative",
+    );
+    await mkdir(printDirectory, { recursive: true });
+    await writeSizedFile(
+      path.join(printDirectory, "index.html"),
+      MAX_PRECACHE_FILE_BYTES + 1,
+    );
+    await writeFile(path.join(root, "index.html"), "Course Catalog");
+
+    await runBuildBudget(root);
+
+    const metadata = JSON.parse(
+      await readFile(path.join(root, "offline-release.json"), "utf8"),
+    );
+    assert.equal(metadata.fileCount, 2);
+    assert.ok(metadata.totalBytes < 1024);
   });
 });

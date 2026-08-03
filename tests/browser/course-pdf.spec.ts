@@ -2,12 +2,10 @@ import { readFile } from "node:fs/promises";
 import { createCanvas } from "@napi-rs/canvas";
 import { expect, test } from "@playwright/test";
 import { getDocument, OPS } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { normalizePdfText } from "../../scripts/course-pdf-artifacts.mjs";
 import { isPdfVisualMark } from "../support/pdf-inspection.mjs";
 
 const coursePdfName = "prosto-courses-markdown.pdf";
-
-const normalizePdfText = (value: string) =>
-  value.normalize("NFKC").replaceAll(/[\s\u00ad]+/g, "");
 
 const exactUrlOccurrences = (text: string, url: string) =>
   text.match(
@@ -334,6 +332,18 @@ test("learner downloads the complete searchable Course PDF from its Overview", a
     new RegExp(`/${coursePdfName}$`),
   );
   expect(pdfRequests).toEqual([]);
+  await expect(
+    page.locator(
+      'link[rel="preload"][href$=".pdf"], link[rel="prefetch"][href$=".pdf"]',
+    ),
+  ).toHaveCount(0);
+  expect(
+    await page.evaluate(() =>
+      performance
+        .getEntriesByType("resource")
+        .some((entry) => entry.name.endsWith(".pdf")),
+    ),
+  ).toBe(false);
 
   const downloadPromise = page.waitForEvent("download");
   await downloadLink.click();
@@ -371,6 +381,40 @@ test("learner downloads the complete searchable Course PDF from its Overview", a
       previousIndex,
     );
     previousIndex = index;
+  }
+});
+
+test("root and repository base paths expose scoped PDF and canonical URLs", async ({
+  page,
+}, testInfo) => {
+  const deployments = [
+    {
+      baseUrl: testInfo.project.use.baseURL!,
+      canonicalCourseUrl:
+        "https://bsafronov.github.io/prosto-courses/courses/markdown/",
+    },
+    {
+      baseUrl: "http://127.0.0.1:4323/",
+      canonicalCourseUrl: "https://bsafronov.github.io/courses/markdown/",
+    },
+  ];
+
+  for (const deployment of deployments) {
+    await page.goto(new URL("courses/markdown/", deployment.baseUrl).href);
+    const link = page.getByRole("link", { name: "Скачать PDF" });
+    await expect(link).toHaveAttribute(
+      "href",
+      new URL(coursePdfName, deployment.baseUrl).pathname,
+    );
+    await expect(link).toHaveAttribute("download", coursePdfName);
+    const artifact = await page.request.get(
+      new URL(coursePdfName, deployment.baseUrl).href,
+    );
+    expect(artifact.ok()).toBe(true);
+    const inspected = await inspectPdf(new Uint8Array(await artifact.body()));
+    expect(inspected.text).toContain(
+      deployment.canonicalCourseUrl.replaceAll(/\s+/g, ""),
+    );
   }
 });
 
