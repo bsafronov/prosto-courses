@@ -14,6 +14,7 @@ import path from "node:path";
 import process from "node:process";
 import { spawn } from "node:child_process";
 import { siteBasePath } from "../../site.config.mjs";
+import { isCoursePdfOfflineExcluded } from "../../scripts/course-pdf-artifacts.mjs";
 import { completeContentRootAuthoringArtifacts } from "./complete-authoring-artifacts.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname, "../..");
@@ -140,6 +141,7 @@ const contentTypes = new Map([
   [".js", "text/javascript; charset=utf-8"],
   [".json", "application/json; charset=utf-8"],
   [".png", "image/png"],
+  [".pdf", "application/pdf"],
   [".svg", "image/svg+xml; charset=utf-8"],
   [".webmanifest", "application/manifest+json; charset=utf-8"],
   [".woff", "font/woff"],
@@ -166,7 +168,8 @@ const collectReleaseInventory = async (root, directory = root) => {
       .join("/");
     if (
       relativePath === "sw.js" ||
-      /^workbox-[\w-]+\.js$/.test(relativePath)
+      /^workbox-[\w-]+\.js$/.test(relativePath) ||
+      isCoursePdfOfflineExcluded(relativePath)
     ) {
       continue;
     }

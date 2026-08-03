@@ -3,6 +3,8 @@ import { unified } from "@astrojs/markdown-remark";
 import AstroPWA from "@vite-pwa/astro";
 import { defineConfig } from "astro/config";
 import path from "node:path";
+import { COURSE_PDF_PRECACHE_GLOB_IGNORES } from "./scripts/course-pdf-artifacts.mjs";
+import { coursePdfBuild } from "./scripts/generate-course-pdfs.mjs";
 import {
   MAX_PRECACHE_FILE_BYTES,
   precacheReleaseBudget,
@@ -72,11 +74,13 @@ export default defineConfig({
       },
       workbox: {
         cleanupOutdatedCaches: true,
+        globIgnores: COURSE_PDF_PRECACHE_GLOB_IGNORES,
         globPatterns: ["**/*"],
         maximumFileSizeToCacheInBytes: MAX_PRECACHE_FILE_BYTES,
         navigateFallback: `${siteScope}offline/`,
         runtimeCaching: [],
       },
     }),
+    coursePdfBuild({ siteBasePath }),
   ],
 });

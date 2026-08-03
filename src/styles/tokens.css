@@ -108,6 +108,8 @@
   --pattern-angle-diagonal: 135deg;
   --pattern-angle-crosshatch: 45deg;
   --opacity-data-pattern: 0.72;
+  --print-page-margin-block: 16mm;
+  --print-page-margin-inline: 14mm;
 
   /* Borders, radii, shadows, and controls */
   --border-width-thin: 0.0625rem;

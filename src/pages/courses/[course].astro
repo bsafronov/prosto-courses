@@ -7,6 +7,7 @@ import ContentFreshness from "../../components/ContentFreshness.astro";
 import { semanticComponents } from "../../components/semantic-components";
 import WorkloadSummary from "../../components/WorkloadSummary.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import { coursePdfFilename, coursePdfPath } from "../../lib/course-pdf";
 import {
   getCourseTree,
   getCoreDestinationLinks,
@@ -28,7 +29,7 @@ export async function getStaticPaths() {
 }
 
 interface Props { course: CollectionEntry<"courses">; tree: CourseTree }
-const { course, tree } = Astro.props;
+const { course, tree } = Astro.props as Props;
 const { Content } = await render(course);
 const lessons = tree.modules.flatMap((module) => module.lessons);
 const coreDestinations = getCoreDestinationLinks(course.id, tree);
@@ -94,6 +95,11 @@ const coreDestinations = getCoreDestinationLinks(course.id, tree);
         ]}
       />
       <ContentFreshness state={courseFreshnessState(course, tree)} />
+      <Button
+        variant="ghost"
+        href={coursePdfPath(course.id)}
+        download={coursePdfFilename(course.id)}
+      >Скачать PDF</Button>
       <p class="completion-note type-supporting muted">
         Чтобы завершить Курс, закончи все основные Уроки, проверки Модулей и
         итоговую работу. Это не оценка и не сертификат.

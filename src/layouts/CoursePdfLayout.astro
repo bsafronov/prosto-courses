@@ -1,0 +1,96 @@
+---
+import "@fontsource/onest/400.css";
+import "@fontsource/onest/500.css";
+import "@fontsource/onest/600.css";
+import "@fontsource/onest/700.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
+import "../styles/global.css";
+
+interface Props {
+  filename: string;
+  title: string;
+}
+
+const { filename, title } = Astro.props as Props;
+---
+
+<!doctype html>
+<html lang="ru" data-theme="light" data-theme-mode="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="course-pdf-filename" content={filename} />
+    <title>{title}</title>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  @media print {
+    html,
+    body {
+      background: var(--color-canvas);
+      color: var(--color-ink);
+    }
+
+    body {
+      print-color-adjust: exact;
+    }
+
+    .course-pdf {
+      font-family: var(--font-sans);
+    }
+
+    .course-pdf__cover {
+      break-after: page;
+      padding-block: var(--space-page-start) var(--space-page-end);
+    }
+
+    .course-pdf__overview,
+    .course-pdf__module,
+    .course-pdf__lesson,
+    .course-pdf__checkpoint,
+    .course-pdf__capstone {
+      break-before: page;
+    }
+
+    .course-pdf__section-label {
+      color: var(--color-muted);
+      text-transform: uppercase;
+    }
+
+    .course-pdf__summary {
+      color: var(--color-muted);
+    }
+
+    .course-pdf .button-control,
+    .course-pdf dialog,
+    .course-pdf textarea,
+    .course-pdf [role="status"] {
+      display: none;
+    }
+
+    .course-pdf details > * {
+      display: block;
+    }
+
+    .course-pdf .learning-visual__viewport,
+    .course-pdf pre,
+    .course-pdf table {
+      overflow: visible;
+    }
+
+    .course-pdf a {
+      color: var(--color-ink);
+      overflow-wrap: anywhere;
+    }
+
+    .course-pdf img,
+    .course-pdf svg {
+      max-width: 100%;
+    }
+  }
+</style>

@@ -1,6 +1,7 @@
 import { readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { isCoursePdfOfflineExcluded } from "./course-pdf-artifacts.mjs";
 
 const MIB = 1024 * 1024;
 
@@ -46,9 +47,11 @@ async function collectFiles(root, directory = root) {
       continue;
     }
     if (!item.isFile()) continue;
+    const url = path.relative(root, absolutePath).split(path.sep).join("/");
+    if (isCoursePdfOfflineExcluded(url)) continue;
     const file = await stat(absolutePath);
     entries.push({
-      url: path.relative(root, absolutePath).split(path.sep).join("/"),
+      url,
       size: file.size,
     });
   }

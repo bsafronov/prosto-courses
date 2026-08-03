@@ -1,0 +1,107 @@
+---
+import { getCollection, render, type CollectionEntry } from "astro:content";
+import { semanticComponents } from "../../components/semantic-components";
+import CoursePdfLayout from "../../layouts/CoursePdfLayout.astro";
+import { coursePdfFilename } from "../../lib/course-pdf";
+import { getCourseTree, type CourseTree } from "../../lib/courses";
+
+export async function getStaticPaths() {
+  const courses = await getCollection("courses");
+  return Promise.all(
+    courses.map(async (course) => ({
+      params: { course: course.id },
+      props: { course, tree: await getCourseTree(course.id) },
+    })),
+  );
+}
+
+type Props = {
+  course: CollectionEntry<"courses">;
+  tree: CourseTree;
+};
+
+const { course, tree } = Astro.props as Props;
+const { Content: CourseContent } = await render(course);
+const modules = await Promise.all(
+  tree.modules.map(async ({ module, lessons, checkpoint }) => ({
+    module,
+    ModuleContent: (await render(module)).Content,
+    lessons: await Promise.all(
+      lessons.map(async (lesson) => ({
+        lesson,
+        LessonContent: (await render(lesson)).Content,
+      })),
+    ),
+    checkpoint,
+    CheckpointContent: (await render(checkpoint)).Content,
+  })),
+);
+const { Content: CapstoneContent } = await render(tree.capstone);
+---
+
+<CoursePdfLayout
+  filename={coursePdfFilename(course.id)}
+  title={`${course.data.title} | Prosto.Courses`}
+>
+  <main class="course-pdf type-reading reading-flow">
+    <header class="course-pdf__cover">
+      <p class="course-pdf__section-label type-meta">Курс</p>
+      <h1 class="type-page-title">{course.data.title}</h1>
+      <p class="course-pdf__summary">{course.data.summary}</p>
+    </header>
+
+    <section class="course-pdf__overview">
+      <h2 class="type-section-title">О курсе</h2>
+      <CourseContent components={semanticComponents} />
+      <h2 class="type-section-title">Чему ты научишься</h2>
+      <ul>
+        {course.data.outcomes.map((outcome) => <li>{outcome.statement}</li>)}
+      </ul>
+      <h2 class="type-section-title">Для кого этот курс</h2>
+      <p>{course.data.learnerProfile}</p>
+      <h2 class="type-section-title">Что нужно уметь</h2>
+      <ul>
+        {course.data.prerequisites.map((prerequisite) => <li>{prerequisite}</li>)}
+      </ul>
+    </section>
+
+    {modules.map(({
+      module,
+      ModuleContent,
+      lessons,
+      checkpoint,
+      CheckpointContent,
+    }, moduleIndex) => (
+      <section class="course-pdf__module">
+        <p class="course-pdf__section-label type-meta">
+          Модуль {moduleIndex + 1}
+        </p>
+        <h2 class="type-page-title">{module.data.title}</h2>
+        <p class="course-pdf__summary">{module.data.summary}</p>
+        <ModuleContent components={semanticComponents} />
+
+        {lessons.map(({ lesson, LessonContent }, lessonIndex) => (
+          <article class="course-pdf__lesson">
+            <p class="course-pdf__section-label type-meta">
+              Урок {lessonIndex + 1}
+            </p>
+            <h3 class="type-section-title">{lesson.data.title}</h3>
+            <LessonContent components={semanticComponents} />
+          </article>
+        ))}
+
+        <article class="course-pdf__checkpoint">
+          <p class="course-pdf__section-label type-meta">Проверка Модуля</p>
+          <h3 class="type-section-title">{checkpoint.data.title}</h3>
+          <CheckpointContent components={semanticComponents} />
+        </article>
+      </section>
+    ))}
+
+    <section class="course-pdf__capstone">
+      <p class="course-pdf__section-label type-meta">Итоговая работа</p>
+      <h2 class="type-page-title">{tree.capstone.data.title}</h2>
+      <CapstoneContent components={semanticComponents} />
+    </section>
+  </main>
+</CoursePdfLayout>
