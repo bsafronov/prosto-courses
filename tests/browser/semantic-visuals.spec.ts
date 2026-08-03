@@ -380,7 +380,7 @@ test("sourced images expose alternative text, caption, provenance, and illustrat
     name: "Illustrative context label used to test sourced-image alternatives.",
   });
   await expect(
-    figure.getByRole("img", { name: "A gray rectangle labeled Context" }),
+    figure.getByRole("img", { name: "A red and blue rectangle labeled Context" }),
   ).toBeVisible();
   await expect(figure).toContainText("Generated platform fixture");
   await expect(figure).toContainText("Course-owned");

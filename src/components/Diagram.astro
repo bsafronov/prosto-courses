@@ -133,8 +133,9 @@ const { title, description, howToRead, takeaway } = Astro.props;
   const ZOOM_STEP = 0.25;
   let renderVersion = 0;
 
-  function initialiseTheme() {
-    const styles = getComputedStyle(document.documentElement);
+  function initialiseTheme(container: HTMLElement) {
+    const printDocument = container.closest<HTMLElement>(".course-pdf");
+    const styles = getComputedStyle(printDocument ?? document.documentElement);
     const tokenValue = (name: string) => styles.getPropertyValue(name).trim();
     mermaid.initialize({
       startOnLoad: false,
@@ -171,11 +172,14 @@ const { title, description, howToRead, takeaway } = Astro.props;
       )?.textContent;
     if (!source?.trim()) return false;
     container.dataset.mermaidSource = source;
-    if (force) delete container.dataset.mermaidRendered;
+    if (force) {
+      delete container.dataset.mermaidRendered;
+      delete container.dataset.mermaidError;
+    }
     container.setAttribute("aria-busy", "true");
 
     try {
-      initialiseTheme();
+      initialiseTheme(container);
       renderVersion += 1;
       const { svg, bindFunctions } = await mermaid.render(
         `course-diagram-${index}-${renderVersion}`,
@@ -189,8 +193,10 @@ const { title, description, howToRead, takeaway } = Astro.props;
       container.dataset.mermaidRendered = "true";
       container.setAttribute("aria-busy", "false");
       return true;
-    } catch {
+    } catch (error) {
       container.dataset.mermaidRendered = "error";
+      container.dataset.mermaidError =
+        error instanceof Error ? error.message : String(error);
       container.setAttribute("aria-busy", "false");
       return false;
     }

@@ -41,7 +41,22 @@ const { filename, title } = Astro.props as Props;
     }
 
     .course-pdf {
+      --color-canvas: var(--color-print-canvas);
+      --color-surface: var(--color-print-surface);
+      --color-ink: var(--color-print-ink);
+      --color-muted: var(--color-print-muted);
+      --color-border: var(--color-print-border);
+      --color-brand: var(--color-print-brand);
+      --color-brand-dark: var(--color-print-ink);
+      --border-subtle: var(--border-print-subtle);
+      --color-data-series-1: var(--color-print-data-series-1);
+      --color-data-series-2: var(--color-print-data-series-2);
+      --color-data-series-3: var(--color-print-data-series-3);
+      --color-data-series-4: var(--color-print-data-series-4);
+      --color-data-series-5: var(--color-print-data-series-5);
+
       font-family: var(--font-sans);
+      color: var(--color-ink);
     }
 
     .course-pdf__cover {

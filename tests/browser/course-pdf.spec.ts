@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
-import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { getDocument, OPS } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { isPdfVisualMark } from "../support/pdf-inspection.mjs";
 
 const coursePdfName = "prosto-courses-markdown.pdf";
 
@@ -36,6 +37,63 @@ async function inspectPdf(pdf: Uint8Array) {
     text: normalizePdfText(pages.join("\n")),
   };
 }
+
+function collectAlternativeText(value: unknown, result: string[]) {
+  if (!value || typeof value !== "object") return;
+  const node = value as { alt?: unknown; children?: unknown };
+  if (typeof node.alt === "string") result.push(node.alt);
+  if (Array.isArray(node.children)) {
+    for (const child of node.children) collectAlternativeText(child, result);
+  }
+}
+
+async function inspectVisualPdf(pdf: Uint8Array) {
+  const loadingTask = getDocument({ data: pdf });
+  const document = await loadingTask.promise;
+  const pages = [];
+
+  for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+    const page = await document.getPage(pageNumber);
+    const content = await page.getTextContent();
+    const operators = await page.getOperatorList();
+    const alternativeText: string[] = [];
+    collectAlternativeText(await page.getStructTree(), alternativeText);
+    const colors = operators.fnArray.flatMap((operator, index) => {
+      if (
+        operator !== OPS.setFillRGBColor &&
+        operator !== OPS.setStrokeRGBColor
+      ) {
+        return [];
+      }
+      const color = operators.argsArray[index]?.[0];
+      return typeof color === "string" ? [color] : [];
+    });
+    pages.push({
+      alternativeText,
+      colors,
+      text: normalizePdfText(
+        content.items
+          .map((item) => ("str" in item ? item.str : ""))
+          .join(" "),
+      ),
+      visualMarks: operators.fnArray.filter(isPdfVisualMark).length,
+    });
+  }
+
+  await loadingTask.destroy();
+  return pages;
+}
+
+const isMonochrome = (color: string) => {
+  const match = /^#(?<red>[\da-f]{2})(?<green>[\da-f]{2})(?<blue>[\da-f]{2})$/i.exec(
+    color,
+  );
+  return Boolean(
+    match?.groups &&
+      match.groups.red === match.groups.green &&
+      match.groups.green === match.groups.blue,
+  );
+};
 
 function knowledgeCheckMain(
   mainFlow: string,
@@ -106,6 +164,91 @@ test("learner downloads the complete searchable Course PDF from its Overview", a
     );
     previousIndex = index;
   }
+});
+
+test("Course PDF preserves meaningful print presentation for every Learning Visual", async ({
+  page,
+}, testInfo) => {
+  const pdfResponse = async (filename: string) => {
+    const response = await page.request.get(
+      new URL(filename, testInfo.project.use.baseURL!).href,
+    );
+    expect(response.ok(), filename).toBe(true);
+    return inspectVisualPdf(new Uint8Array(await response.body()));
+  };
+
+  const markdownPages = await pdfResponse(coursePdfName);
+  const markdownText = markdownPages.map((candidate) => candidate.text).join("");
+  const chartPage = markdownPages.find((candidate) =>
+    candidate.text.includes(
+      normalizePdfText("Данные: Проблемы учебной инструкции по этапам проверки"),
+    ),
+  );
+  expect(chartPage).toBeDefined();
+  for (const expected of [
+    "Проблемы учебной инструкции по этапам проверки",
+    "Этап (этап)",
+    "Число найденных проблем (проблема)",
+    "Структура",
+    "Точность",
+    "Черновик 4 3",
+    "1: 4",
+    "2: 3",
+    "Самопроверка 2 2",
+    "Проверка коллегой 1 1",
+    "После самопроверки остаются четыре проблемы",
+    "Смоделированный журнал проверки в исходнике этого Урока",
+  ]) {
+    expect(markdownText).toContain(normalizePdfText(expected));
+  }
+  expect(chartPage!.visualMarks).toBeGreaterThan(10);
+  expect(chartPage!.colors.every(isMonochrome)).toBe(true);
+
+  const diagramTitle = "Как Markdown становится страницей";
+  const diagramPage = markdownPages.find((candidate) =>
+    candidate.text.includes(normalizePdfText(diagramTitle)),
+  );
+  expect(diagramPage).toBeDefined();
+  for (const expected of [
+    "Содержание",
+    "Исходник с разметкой",
+    "Преобразователь",
+    "Структурированный документ",
+    "Содержание и знаки Markdown образуют исходник",
+    "Читай схему слева направо",
+    "Markdown хранит структуру отдельно от оформления",
+  ]) {
+    expect(diagramPage!.text).toContain(normalizePdfText(expected));
+  }
+  expect(diagramPage!.alternativeText).toContain(diagramTitle);
+  expect(diagramPage!.visualMarks).toBeGreaterThan(10);
+  expect(diagramPage!.colors.every(isMonochrome)).toBe(true);
+  expect(markdownText).not.toContain(normalizePdfText("Увеличить схему"));
+  expect(markdownText).not.toContain(
+    normalizePdfText("Закрыть развернутую схему"),
+  );
+
+  const imagePages = await pdfResponse(
+    "prosto-courses-accessible-images.pdf",
+  );
+  const imageText = imagePages.map((candidate) => candidate.text).join("");
+  const imageAlt = "A red and blue rectangle labeled Context";
+  const imagePage = imagePages.find((candidate) =>
+    candidate.alternativeText.includes(imageAlt),
+  );
+  expect(imagePage).toBeDefined();
+  for (const expected of [
+    "Illustrative context label used to test sourced-image alternatives.",
+    "Generated platform fixture",
+    "Course-owned",
+    "Иллюстративное сгенерированное изображение.",
+  ]) {
+    expect(imageText).toContain(normalizePdfText(expected));
+  }
+  expect(imagePage!.colors).toEqual(
+    expect.arrayContaining(["#d02040", "#1466cc"]),
+  );
+  expect(imagePage!.visualMarks).toBeGreaterThan(0);
 });
 
 test("Knowledge Checks remain answerable on paper and link to a spoiler appendix", async ({

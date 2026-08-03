@@ -26,6 +26,17 @@
   --color-data-series-3: #47665b;
   --color-data-series-4: #625771;
   --color-data-series-5: #704f5c;
+  --color-print-data-series-1: #181818;
+  --color-print-data-series-2: #484848;
+  --color-print-data-series-3: #707070;
+  --color-print-data-series-4: #989898;
+  --color-print-data-series-5: #c0c0c0;
+  --color-print-canvas: #fafafa;
+  --color-print-surface: #ffffff;
+  --color-print-ink: #181818;
+  --color-print-muted: #707070;
+  --color-print-border: #e4e4e4;
+  --color-print-brand: #272727;
   --color-backdrop: rgb(9 9 11 / 56%);
 
   /* Families and allowed weights */
@@ -116,6 +127,7 @@
   --border-width-emphasis: 0.125rem;
   --border-width-progress: 0.1875rem;
   --border-subtle: var(--border-width-thin) solid var(--color-border);
+  --border-print-subtle: var(--border-width-thin) solid var(--color-print-border);
   --radius: 0.25rem;
   --radius-medium: 0.5rem;
   --radius-round: 999px;

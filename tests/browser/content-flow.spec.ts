@@ -137,7 +137,7 @@ test("Learning Visuals remain unboxed and focusable in both themes", async ({
       name: "Illustrative context label used to test sourced-image alternatives.",
     });
     const image = imageFigure.getByRole("img", {
-      name: "A gray rectangle labeled Context",
+      name: "A red and blue rectangle labeled Context",
     });
     const imagePresentation = await image.evaluate((element) => {
       const style = getComputedStyle(element);

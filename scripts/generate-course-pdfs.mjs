@@ -14,6 +14,8 @@ const contentTypes = new Map([
   [".woff", "font/woff"],
   [".woff2", "font/woff2"],
 ]);
+const nonblankSvgSelector =
+  "svg path, svg rect, svg circle, svg line, svg polyline, svg polygon, svg text";
 
 async function serveOutputFile(root, scope, request, response) {
   const url = new URL(request.url ?? "/", "http://127.0.0.1");
@@ -80,7 +82,7 @@ const closeServer = (server) =>
     server.close((error) => (error ? reject(error) : resolve()));
   });
 
-async function preparePrintDocument(page) {
+async function preparePrintDocument(page, courseSlug) {
   await page.evaluate(() => {
     const appendix = document.querySelector(
       "[data-course-pdf-knowledge-check-appendix]",
@@ -146,15 +148,108 @@ async function preparePrintDocument(page) {
       detail.open = true;
     });
   });
-  await page.evaluate(() => document.fonts.ready);
-  await page.waitForFunction(() =>
-    [...document.images].every((image) => image.complete),
-  );
-  await page.waitForFunction(
-    () => !document.querySelector('[data-mermaid-container][aria-busy="true"]'),
-    undefined,
-    { timeout: 15_000 },
-  );
+  const failedFont = await page.evaluate(async () => {
+    const fonts = [...document.fonts];
+    for (const font of fonts) {
+      try {
+        await font.load();
+      } catch {
+        return font.family;
+      }
+    }
+    await document.fonts.ready;
+    return fonts.find((font) => font.status !== "loaded")?.family ?? null;
+  });
+  if (failedFont) {
+    throw new Error(
+      `Course "${courseSlug}" local font failed to load: ${failedFont}`,
+    );
+  }
+  try {
+    await page.waitForFunction(
+      () => [...document.images].every((image) => image.complete),
+      undefined,
+      { timeout: 15_000 },
+    );
+  } catch (error) {
+    throw new Error(
+      `Course "${courseSlug}" authored images did not finish loading within 15 seconds`,
+      { cause: error },
+    );
+  }
+  const failedImage = await page.evaluate(async () => {
+    for (const image of document.images) {
+      try {
+        await image.decode();
+      } catch {
+        return image.getAttribute("src") ?? "image without a source";
+      }
+      if (image.naturalWidth === 0) {
+        return image.getAttribute("src") ?? "image without a source";
+      }
+    }
+    return null;
+  });
+  if (failedImage) {
+    throw new Error(
+      `Course "${courseSlug}" authored image failed to load: ${failedImage}`,
+    );
+  }
+  try {
+    await page.waitForFunction(
+      () => !document.querySelector('[data-mermaid-container][aria-busy="true"]'),
+      undefined,
+      { timeout: 15_000 },
+    );
+  } catch (error) {
+    throw new Error(
+      `Course "${courseSlug}" Diagram did not finish rendering within 15 seconds`,
+      { cause: error },
+    );
+  }
+  const failedDiagram = await page.evaluate((visualSelector) => {
+    const diagram = [...document.querySelectorAll("[data-mermaid-container]")]
+      .find(
+        (candidate) =>
+          candidate.getAttribute("data-mermaid-rendered") !== "true" ||
+          !candidate.querySelector(visualSelector),
+      );
+    if (!diagram) return null;
+    return {
+      label:
+        diagram.getAttribute("aria-label") ??
+        diagram.closest(".learning-visual")?.getAttribute("aria-label") ??
+        "unlabelled Diagram",
+      reason: diagram.getAttribute("data-mermaid-error"),
+      rendered: diagram.getAttribute("data-mermaid-rendered") === "true",
+    };
+  }, nonblankSvgSelector);
+  if (failedDiagram) {
+    if (failedDiagram.rendered) {
+      throw new Error(
+        `Course "${courseSlug}" Diagram ${failedDiagram.label} has no nonblank output`,
+      );
+    }
+    throw new Error(
+      `Course "${courseSlug}" Diagram failed to render: ${failedDiagram.label}${
+        failedDiagram.reason ? `. ${failedDiagram.reason}` : ""
+      }`,
+    );
+  }
+  const unresolvedChart = await page.evaluate((visualSelector) => {
+    const chart = [...document.querySelectorAll('[data-course-pdf-visual="chart"]')]
+      .find((candidate) => !candidate.querySelector(visualSelector));
+    if (!chart) return null;
+    return (
+      chart.closest(".learning-visual")?.getAttribute("aria-label") ??
+      "unlabelled Chart"
+    );
+  }, nonblankSvgSelector);
+  if (unresolvedChart) {
+    throw new Error(
+      `Course "${courseSlug}" Chart ${unresolvedChart} has no nonblank output`,
+    );
+  }
   return page.evaluate(() => {
     const styles = getComputedStyle(document.documentElement);
     const block = styles.getPropertyValue("--print-page-margin-block").trim();
@@ -175,31 +270,67 @@ async function generateCoursePdfs(root, scope, logger) {
   try {
     browser = await chromium.launch({ channel: "chrome", headless: true });
     const page = await browser.newPage();
+    await page.emulateMedia({ media: "print" });
     for (const document of documents) {
-      const response = await page.goto(
-        `${origin}${scope}${COURSE_PDF_PRINT_DIRECTORY}/${encodeURIComponent(document.name)}/`,
-        { waitUntil: "networkidle" },
-      );
-      if (!response?.ok()) {
-        throw new Error(
-          `Could not load print document ${document.name}: ${response?.status() ?? "no response"}`,
+      const failedResources = [];
+      const trackableResource = (request) =>
+        !["document", "font", "image"].includes(request.resourceType()) &&
+        request.url().startsWith(origin);
+      const recordFailedResponse = (resourceResponse) => {
+        if (!resourceResponse.ok() && trackableResource(resourceResponse.request())) {
+          failedResources.push(
+            `${new URL(resourceResponse.url()).pathname} (${resourceResponse.status()})`,
+          );
+        }
+      };
+      const recordFailedRequest = (request) => {
+        if (trackableResource(request)) {
+          failedResources.push(
+            `${new URL(request.url()).pathname} (${request.failure()?.errorText ?? "request failed"})`,
+          );
+        }
+      };
+      const assertResourcesLoaded = () => {
+        if (failedResources.length > 0) {
+          throw new Error(
+            `Course "${document.name}" print resource failed: ${failedResources.join(", ")}`,
+          );
+        }
+      };
+      page.on("response", recordFailedResponse);
+      page.on("requestfailed", recordFailedRequest);
+
+      try {
+        const response = await page.goto(
+          `${origin}${scope}${COURSE_PDF_PRINT_DIRECTORY}/${encodeURIComponent(document.name)}/`,
+          { waitUntil: "networkidle" },
         );
+        if (!response?.ok()) {
+          throw new Error(
+            `Could not load print document ${document.name}: ${response?.status() ?? "no response"}`,
+          );
+        }
+        assertResourcesLoaded();
+        const margin = await preparePrintDocument(page, document.name);
+        assertResourcesLoaded();
+        const filename = await page
+          .locator('meta[name="course-pdf-filename"]')
+          .getAttribute("content");
+        if (!filename) {
+          throw new Error(`Print document ${document.name} has no PDF filename`);
+        }
+        await page.pdf({
+          format: "A4",
+          margin,
+          outline: true,
+          path: path.join(root, filename),
+          printBackground: true,
+          tagged: true,
+        });
+      } finally {
+        page.off("response", recordFailedResponse);
+        page.off("requestfailed", recordFailedRequest);
       }
-      const margin = await preparePrintDocument(page);
-      const filename = await page
-        .locator('meta[name="course-pdf-filename"]')
-        .getAttribute("content");
-      if (!filename) {
-        throw new Error(`Print document ${document.name} has no PDF filename`);
-      }
-      await page.pdf({
-        format: "A4",
-        margin,
-        outline: true,
-        path: path.join(root, filename),
-        printBackground: true,
-        tagged: true,
-      });
     }
     logger.info(`Generated ${documents.length} Course PDF artifacts.`);
   } finally {

@@ -23,7 +23,12 @@ const metadata = JSON.parse(title) as ImageMetadata;
 ---
 
 <figure class="authored-image learning-visual" aria-label={metadata.caption}>
-  <img src={src} alt={alt} loading="lazy" decoding="async" />
+  <img
+    src={src}
+    alt={alt}
+    loading="lazy"
+    decoding="async"
+  />
   <figcaption class="learning-visual__image-caption">
     <span>{metadata.caption}</span>
     <span class="provenance learning-visual__meta">
