@@ -111,6 +111,29 @@ function knowledgeCheckMain(
   return mainFlow.slice(start, end + link.length);
 }
 
+function practiceTaskMain(mainFlow: string, title: string) {
+  const titleStart = mainFlow.indexOf(normalizePdfText(title));
+  expect(
+    titleStart,
+    `main flow contains Practice Task “${title}”`,
+  ).toBeGreaterThanOrEqual(0);
+  const start = Math.max(
+    mainFlow.lastIndexOf("Основнаяпрактика", titleStart),
+    mainFlow.lastIndexOf("Практикасвызовом", titleStart),
+    mainFlow.lastIndexOf("Дополнительнаяпрактика", titleStart),
+  );
+  const match = mainFlow
+    .slice(start)
+    .match(/Поддержкаисамопроверка:практика(\d+)/);
+  expect(
+    match,
+    `Practice Task “${title}” links to its appendix entry`,
+  ).not.toBeNull();
+  const number = match![1];
+  const end = mainFlow.indexOf(match![0], start) + match![0].length;
+  return { number, text: mainFlow.slice(start, end) };
+}
+
 test("learner downloads the complete searchable Course PDF from its Overview", async ({
   page,
 }) => {
@@ -429,6 +452,112 @@ test("Knowledge Checks remain answerable on paper and link to a spoiler appendix
       ),
     ).size,
   ).toBe(17);
+});
+
+test("Practice Tasks keep their contract and working space while revealable support moves to the appendix", async ({
+  page,
+}, testInfo) => {
+  const response = await page.request.get(
+    new URL(coursePdfName, testInfo.project.use.baseURL!).href,
+  );
+  expect(response.ok()).toBe(true);
+  const pdf = await inspectPdf(new Uint8Array(await response.body()));
+  const appendixStart = pdf.text.lastIndexOf("Поддержкаисамопроверка");
+  expect(appendixStart).toBeGreaterThan(0);
+
+  const mainFlow = pdf.text.slice(0, appendixStart);
+  const appendix = pdf.text.slice(appendixStart);
+  const solutionTask = practiceTaskMain(mainFlow, "Разметь карту исходника");
+  expect(solutionTask.text).toContain("Практикасвызовом·10мин");
+  expect(solutionTask.text).toContain(
+    "Цель:РазложитьMarkdown-фрагментнаблокиистрочныеэлементы",
+  );
+  expect(solutionTask.text).toContain(
+    "ОграниченияНезапускайпредварительныйпросмотр",
+  );
+  expect(solutionTask.text).toContain(
+    "КритерииготовностиКаждыйблокназванвпорядкечтения",
+  );
+  expect(solutionTask.text).toContain(
+    "Разбериэтотисходникбезпредварительногопросмотра:",
+  );
+  expect(solutionTask.text).toContain("Местодляработы");
+
+  const rubricTask = practiceTaskMain(mainFlow, "Собери памятку перед выпуском");
+  expect(rubricTask.text).toContain("Основнаяпрактика·20мин");
+  expect(rubricTask.text).toContain("Местодляработы");
+
+  for (const revealOnlyText of [
+    "Проведиграницыпопустымстрокаминачалампунктов.",
+    "Впорядкечтенияидутзаголовокпервогоуровня",
+    "Позаголовкамиспискуможновосстановитьцель",
+  ]) {
+    expect(mainFlow).not.toContain(revealOnlyText);
+    expect(appendix).toContain(revealOnlyText);
+  }
+  expect(appendix).toContain(
+    `Практическоезадание${solutionTask.number}:Разметькартуисходника`,
+  );
+  expect(appendix).toContain("Подсказки");
+  expect(appendix).toContain("Разборрешения");
+  expect(appendix).toContain("Ходрассуждения");
+  expect(appendix).toContain("Другойподход");
+  expect(appendix).toContain("Вероятныеошибки");
+  expect(appendix).toContain(
+    `Практическоезадание${rubricTask.number}:Соберипамяткупередвыпуском`,
+  );
+  expect(appendix).toContain("Самопроверка");
+  expect(appendix).toContain("Структураведёткрезультату");
+
+  for (const number of [solutionTask.number, rubricTask.number]) {
+    expect(pdf.internalDestinations).toContain(`practice-task-${number}`);
+    expect(pdf.internalDestinations).toContain(
+      `practice-task-support-${number}`,
+    );
+  }
+});
+
+test("Reflections provide guided paper space without browser-local state or controls", async ({
+  page,
+}, testInfo) => {
+  const localReflection = "ЛОКАЛЬНАЯ РЕФЛЕКСИЯ НЕ ДОЛЖНА ПОПАСТЬ В PDF";
+  await page.goto("./courses/markdown/lessons/source-render/");
+  await page.locator("[data-reflection-note]").fill(localReflection);
+  await expect(page.locator("[data-reflection-status]")).toContainText(
+    "Черновик сохранён",
+  );
+
+  const response = await page.request.get(
+    new URL(coursePdfName, testInfo.project.use.baseURL!).href,
+  );
+  expect(response.ok()).toBe(true);
+  const { text } = await inspectPdf(new Uint8Array(await response.body()));
+
+  for (const expected of [
+    "Осмыслиопыт",
+    "КакдвухпроходнаяпроверкаизмениттвойспособчитатьMarkdown-исходник?",
+    "Еслиполезно,опирайсянавопросы:",
+    "Назови,чтобудешьискатьпервым",
+    "Опишиошибку,которуютакойпорядокпоможетзаметить",
+    "Местодлязаписи",
+  ]) {
+    expect(text).toContain(expected);
+  }
+
+  for (const browserOnlyText of [
+    normalizePdfText(localReflection),
+    "Твоязаметка",
+    "Текстостаётсятольковэтомбраузереиникуданеотправляется.",
+    "Экспортировать",
+    "Удалитьнавсегда",
+    "Отметитькакзавершённый",
+    "Переключитьтему",
+    "Установитьприложение",
+  ]) {
+    expect(text).not.toContain(browserOnlyText);
+  }
+
+  await page.evaluate(() => localStorage.clear());
 });
 
 test("production build emits one Course PDF for every Catalog Course", async ({

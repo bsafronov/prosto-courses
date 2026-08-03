@@ -93,55 +93,139 @@ async function preparePrintDocument(page, courseSlug) {
     const checks = [
       ...document.querySelectorAll("[data-course-pdf-knowledge-check]"),
     ];
-    if (!(appendix instanceof HTMLElement) || !answerList || checks.length === 0) {
+    const prepareKnowledgeChecks = () => {
+      if (
+        !(appendix instanceof HTMLElement) ||
+        !answerList ||
+        checks.length === 0
+      ) {
+        return;
+      }
+
+      const setKnowledgeCheckNumber = (root, number) => {
+        root
+          .querySelectorAll("[data-course-pdf-knowledge-check-number]")
+          .forEach((label) => {
+            label.textContent = String(number);
+          });
+      };
+
+      for (const [index, check] of checks.entries()) {
+        const number = index + 1;
+        const activityId = `knowledge-check-${number}`;
+        const answerId = `knowledge-check-answer-${number}`;
+        check.id = activityId;
+        setKnowledgeCheckNumber(check, number);
+
+        const answerLink = check.querySelector(
+          "[data-course-pdf-knowledge-check-link]",
+        );
+        if (answerLink instanceof HTMLAnchorElement) {
+          answerLink.href = `#${answerId}`;
+        }
+
+        const template = check.querySelector(
+          "template[data-course-pdf-knowledge-check-answer]",
+        );
+        if (!(template instanceof HTMLTemplateElement)) continue;
+        const answer = template.content.cloneNode(true);
+        if (!(answer instanceof DocumentFragment)) continue;
+        const entry = answer.querySelector(
+          "[data-course-pdf-knowledge-check-answer-entry]",
+        );
+        if (!(entry instanceof HTMLElement)) continue;
+        entry.id = answerId;
+        setKnowledgeCheckNumber(entry, number);
+        const returnLink = entry.querySelector(
+          "[data-course-pdf-knowledge-check-return-link]",
+        );
+        if (returnLink instanceof HTMLAnchorElement) {
+          returnLink.href = `#${activityId}`;
+        }
+        answerList.append(answer);
+        template.remove();
+      }
+
+      appendix.hidden = false;
+    };
+    prepareKnowledgeChecks();
+
+    const practiceAppendix = document.querySelector(
+      "[data-course-pdf-practice-task-appendix]",
+    );
+    const supportList = practiceAppendix?.querySelector(
+      "[data-course-pdf-practice-task-support-list]",
+    );
+    const tasks = [
+      ...document.querySelectorAll("[data-course-pdf-practice-task]"),
+    ];
+    if (
+      !(practiceAppendix instanceof HTMLElement) ||
+      !supportList ||
+      tasks.length === 0
+    ) {
       return;
     }
 
-    const setKnowledgeCheckNumber = (root, number) => {
+    const setPracticeTaskNumber = (root, number) => {
       root
-        .querySelectorAll("[data-course-pdf-knowledge-check-number]")
+        .querySelectorAll("[data-course-pdf-practice-task-number]")
         .forEach((label) => {
           label.textContent = String(number);
         });
     };
 
-    for (const [index, check] of checks.entries()) {
+    for (const [index, task] of tasks.entries()) {
       const number = index + 1;
-      const activityId = `knowledge-check-${number}`;
-      const answerId = `knowledge-check-answer-${number}`;
-      check.id = activityId;
-      setKnowledgeCheckNumber(check, number);
+      const activityId = `practice-task-${number}`;
+      const supportId = `practice-task-support-${number}`;
+      task.id = activityId;
+      setPracticeTaskNumber(task, number);
 
-      const answerLink = check.querySelector(
-        "[data-course-pdf-knowledge-check-link]",
+      const supportLink = task.querySelector(
+        "[data-course-pdf-practice-task-link]",
       );
-      if (answerLink instanceof HTMLAnchorElement) {
-        answerLink.href = `#${answerId}`;
+      if (supportLink instanceof HTMLAnchorElement) {
+        supportLink.href = `#${supportId}`;
       }
 
-      const template = check.querySelector(
-        "template[data-course-pdf-knowledge-check-answer]",
+      const template = task.querySelector(
+        "template[data-course-pdf-practice-task-support]",
       );
       if (!(template instanceof HTMLTemplateElement)) continue;
-      const answer = template.content.cloneNode(true);
-      if (!(answer instanceof DocumentFragment)) continue;
-      const entry = answer.querySelector(
-        "[data-course-pdf-knowledge-check-answer-entry]",
+      const support = template.content.cloneNode(true);
+      if (!(support instanceof DocumentFragment)) continue;
+      const entry = support.querySelector(
+        "[data-course-pdf-practice-task-support-entry]",
       );
       if (!(entry instanceof HTMLElement)) continue;
-      entry.id = answerId;
-      setKnowledgeCheckNumber(entry, number);
+      entry.id = supportId;
+      setPracticeTaskNumber(entry, number);
+
+      const authoredSupport = entry.querySelector(
+        "[data-course-pdf-practice-task-authored-support]",
+      );
+      if (authoredSupport) {
+        task
+          .querySelectorAll("template[data-course-pdf-task-support]")
+          .forEach((authoredTemplate) => {
+            if (!(authoredTemplate instanceof HTMLTemplateElement)) return;
+            authoredSupport.append(authoredTemplate.content.cloneNode(true));
+            authoredTemplate.remove();
+          });
+      }
+
       const returnLink = entry.querySelector(
-        "[data-course-pdf-knowledge-check-return-link]",
+        "[data-course-pdf-practice-task-return-link]",
       );
       if (returnLink instanceof HTMLAnchorElement) {
         returnLink.href = `#${activityId}`;
       }
-      answerList.append(answer);
+      supportList.append(support);
       template.remove();
     }
 
-    appendix.hidden = false;
+    practiceAppendix.hidden = false;
   });
   await page.locator("details").evaluateAll((details) => {
     details.forEach((detail) => {

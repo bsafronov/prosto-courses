@@ -1,0 +1,32 @@
+---
+interface Criterion {
+  criterion: string;
+  evidence: string;
+}
+
+interface Props {
+  criteria: Criterion[];
+}
+
+const { criteria } = Astro.props;
+---
+
+<template data-course-pdf-task-support>
+  <section data-course-pdf-task-rubric>
+    <h4 class="type-body">Самопроверка</h4>
+    <p>
+      Сопоставь свою работу с наблюдаемыми признаками и реши, что стоит
+      улучшить.
+    </p>
+    <dl>
+      {
+        criteria.map(({ criterion, evidence }) => (
+          <>
+            <dt>{criterion}</dt>
+            <dd>{evidence}</dd>
+          </>
+        ))
+      }
+    </dl>
+  </section>
+</template>

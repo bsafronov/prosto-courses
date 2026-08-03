@@ -1,0 +1,21 @@
+---
+interface Props {
+  reasoning: string;
+  alternatives: string[];
+  likelyErrors: string[];
+}
+
+const { reasoning, alternatives, likelyErrors } = Astro.props;
+---
+
+<template data-course-pdf-task-support>
+  <section data-course-pdf-task-solution>
+    <h4 class="type-body">Разбор решения</h4>
+    <h5 class="type-body">Ход рассуждения</h5>
+    <p>{reasoning}</p>
+    <h5 class="type-body">Другой подход</h5>
+    <ul>{alternatives.map((alternative) => <li>{alternative}</li>)}</ul>
+    <h5 class="type-body">Вероятные ошибки</h5>
+    <ul>{likelyErrors.map((error) => <li>{error}</li>)}</ul>
+  </section>
+</template>

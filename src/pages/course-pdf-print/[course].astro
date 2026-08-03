@@ -1,6 +1,10 @@
 ---
 import { getCollection, render, type CollectionEntry } from "astro:content";
 import CoursePdfKnowledgeCheck from "../../components/CoursePdfKnowledgeCheck.astro";
+import CoursePdfPracticeTask from "../../components/CoursePdfPracticeTask.astro";
+import CoursePdfReflection from "../../components/CoursePdfReflection.astro";
+import CoursePdfTaskRubric from "../../components/CoursePdfTaskRubric.astro";
+import CoursePdfTaskSolution from "../../components/CoursePdfTaskSolution.astro";
 import { semanticComponents } from "../../components/semantic-components";
 import CoursePdfLayout from "../../layouts/CoursePdfLayout.astro";
 import { coursePdfFilename } from "../../lib/course-pdf";
@@ -25,6 +29,10 @@ const { course, tree } = Astro.props as Props;
 const coursePdfSemanticComponents = {
   ...semanticComponents,
   KnowledgeCheck: CoursePdfKnowledgeCheck,
+  PracticeTask: CoursePdfPracticeTask,
+  Reflection: CoursePdfReflection,
+  TaskRubric: CoursePdfTaskRubric,
+  TaskSolution: CoursePdfTaskSolution,
 };
 const { Content: CourseContent } = await render(course);
 const modules = await Promise.all(
@@ -116,6 +124,15 @@ const { Content: CapstoneContent } = await render(tree.capstone);
     >
       <h2 class="type-page-title">Ответы к проверкам знаний</h2>
       <div data-course-pdf-knowledge-check-answers />
+    </section>
+
+    <section
+      class="course-pdf__practice-task-appendix"
+      data-course-pdf-practice-task-appendix
+      hidden
+    >
+      <h2 class="type-page-title">Поддержка и самопроверка</h2>
+      <div data-course-pdf-practice-task-support-list />
     </section>
   </main>
 </CoursePdfLayout>

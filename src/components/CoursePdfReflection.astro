@@ -1,0 +1,73 @@
+---
+interface Props {
+  prompt: string;
+  outcomes: string[];
+  guidance?: string[];
+}
+
+const { prompt, guidance = [] } = Astro.props;
+---
+
+<section class="course-pdf-reflection">
+  <p class="course-pdf-reflection__label type-meta">Осмысли опыт</p>
+  <h2 class="type-component-title">{prompt}</h2>
+  {
+    guidance.length > 0 && (
+      <div class="course-pdf-reflection__guidance type-supporting">
+        <p>Если полезно, опирайся на вопросы:</p>
+        <ul>{guidance.map((item) => <li>{item}</li>)}</ul>
+      </div>
+    )
+  }
+  <section
+    class="course-pdf-reflection__work-space"
+    aria-label="Место для записи"
+  >
+    <h3 class="type-body">Место для записи</h3>
+    <div aria-hidden="true">
+      {Array.from({ length: 7 }, () => <span />)}
+    </div>
+  </section>
+</section>
+
+<style>
+  .course-pdf-reflection {
+    margin-block: var(--space-10);
+    border: var(--border-subtle);
+    padding: var(--space-card);
+  }
+
+  .course-pdf-reflection__label,
+  .course-pdf-reflection h2,
+  .course-pdf-reflection h3 {
+    margin-block: var(--space-0);
+  }
+
+  .course-pdf-reflection__guidance,
+  .course-pdf-reflection__work-space {
+    margin-top: var(--space-5);
+    border-top: var(--border-subtle);
+    padding-top: var(--space-4);
+  }
+
+  .course-pdf-reflection__guidance p {
+    margin-block: var(--space-0) var(--space-2);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .course-pdf-reflection__guidance ul {
+    margin-bottom: var(--space-0);
+  }
+
+  .course-pdf-reflection__work-space div {
+    display: grid;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+  }
+
+  .course-pdf-reflection__work-space span {
+    display: block;
+    min-height: var(--space-6);
+    border-bottom: var(--border-subtle);
+  }
+</style>

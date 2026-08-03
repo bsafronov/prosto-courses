@@ -1,0 +1,156 @@
+---
+interface Props {
+  title: string;
+  level: "core" | "challenge" | "stretch";
+  estimatedMinutes: number;
+  goal: string;
+  outcomes: string[];
+  constraints?: string[];
+  criteria: string[];
+  hints?: string[];
+}
+
+const levelLabels = {
+  core: "Основная практика",
+  challenge: "Практика с вызовом",
+  stretch: "Дополнительная практика",
+} satisfies Record<Props["level"], string>;
+
+const {
+  title,
+  level,
+  estimatedMinutes,
+  goal,
+  constraints = [],
+  criteria,
+  hints = [],
+} = Astro.props;
+---
+
+<article class="course-pdf-practice-task" data-course-pdf-practice-task>
+  <p class="course-pdf-practice-task__label type-meta">
+    {levelLabels[level]} · {estimatedMinutes} мин
+  </p>
+  <h2 class="type-component-title">{title}</h2>
+  <p><strong>Цель:</strong> {goal}</p>
+
+  {
+    constraints.length > 0 && (
+      <section>
+        <h3 class="type-body">Ограничения</h3>
+        <ul>{constraints.map((constraint) => <li>{constraint}</li>)}</ul>
+      </section>
+    )
+  }
+
+  <section>
+    <h3 class="type-body">Критерии готовности</h3>
+    <ul>{criteria.map((criterion) => <li>{criterion}</li>)}</ul>
+  </section>
+
+  <section class="course-pdf-practice-task__prompt">
+    <h3 class="type-body">Задание</h3>
+    <slot />
+  </section>
+
+  <section
+    class="course-pdf-practice-task__work-space"
+    aria-label="Место для работы"
+  >
+    <h3 class="type-body">Место для работы</h3>
+    <div aria-hidden="true">
+      {Array.from({ length: 6 }, () => <span />)}
+    </div>
+  </section>
+
+  <p class="course-pdf-practice-task__appendix-link">
+    <a data-course-pdf-practice-task-link>
+      Поддержка и самопроверка: практика{" "}
+      <span data-course-pdf-practice-task-number />
+    </a>
+  </p>
+
+  <template data-course-pdf-practice-task-support>
+    <section
+      class="course-pdf-practice-task-support"
+      data-course-pdf-practice-task-support-entry
+    >
+      <h3 class="type-section-title">
+        Практическое задание{" "}
+        <span data-course-pdf-practice-task-number />: {title}
+      </h3>
+      {
+        hints.length > 0 && (
+          <section>
+            <h4 class="type-body">Подсказки</h4>
+            <ol>{hints.map((hint) => <li>{hint}</li>)}</ol>
+          </section>
+        )
+      }
+      <div data-course-pdf-practice-task-authored-support />
+      <p>
+        <a data-course-pdf-practice-task-return-link>
+          Вернуться к практике{" "}
+          <span data-course-pdf-practice-task-number />
+        </a>
+      </p>
+    </section>
+  </template>
+</article>
+
+<style>
+  .course-pdf-practice-task {
+    margin-block: var(--space-10);
+    border: var(--border-subtle);
+    padding: var(--space-card);
+  }
+
+  .course-pdf-practice-task__label,
+  .course-pdf-practice-task h2,
+  .course-pdf-practice-task h3 {
+    margin-block: var(--space-0);
+  }
+
+  .course-pdf-practice-task > section,
+  .course-pdf-practice-task__appendix-link {
+    margin-top: var(--space-5);
+    border-top: var(--border-subtle);
+    padding-top: var(--space-4);
+  }
+
+  .course-pdf-practice-task ul {
+    margin-bottom: var(--space-0);
+  }
+
+  .course-pdf-practice-task__prompt :global(p:first-of-type) {
+    margin-top: var(--space-2);
+  }
+
+  .course-pdf-practice-task__work-space div {
+    display: grid;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+  }
+
+  .course-pdf-practice-task__work-space span {
+    display: block;
+    min-height: var(--space-6);
+    border-bottom: var(--border-subtle);
+  }
+
+  .course-pdf-practice-task__appendix-link {
+    margin-bottom: var(--space-0);
+  }
+
+  :global(.course-pdf-practice-task-support) {
+    break-inside: avoid;
+  }
+
+  :global(
+    .course-pdf-practice-task-support + .course-pdf-practice-task-support
+  ) {
+    margin-top: var(--space-10);
+    border-top: var(--border-subtle);
+    padding-top: var(--space-8);
+  }
+</style>
