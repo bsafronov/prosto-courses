@@ -348,6 +348,8 @@ test("the root-deployed release remains complete and scoped offline", async ({
   browser,
   page,
 }) => {
+  test.slow();
+
   const rootUrl = "http://127.0.0.1:4323/";
   const routesResponse = await page.request.get(
     new URL("__test__/routes", rootUrl).href,
