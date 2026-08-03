@@ -8,10 +8,19 @@ const coursePdfName = "prosto-courses-markdown.pdf";
 const normalizePdfText = (value: string) =>
   value.normalize("NFKC").replaceAll(/[\s\u00ad]+/g, "");
 
+const exactUrlOccurrences = (text: string, url: string) =>
+  text.match(
+    new RegExp(`${url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![?#])`, "g"),
+  ) ?? [];
+
 async function inspectPdf(pdf: Uint8Array) {
   const loadingTask = getDocument({ data: pdf });
   const document = await loadingTask.promise;
+  const metadata = await document.getMetadata();
+  const outline = await document.getOutline();
+  const destinationPages: Record<string, number> = {};
   const pages = [];
+  const externalUrls: string[] = [];
   const internalLinkTargets: string[] = [];
 
   for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
@@ -24,18 +33,45 @@ async function inspectPdf(pdf: Uint8Array) {
         .join(" "),
     );
     for (const annotation of annotations) {
-      if (annotation.subtype !== "Link" || !("dest" in annotation)) continue;
-      if (typeof annotation.dest === "string") {
+      if (annotation.subtype !== "Link") continue;
+      if ("url" in annotation && typeof annotation.url === "string") {
+        externalUrls.push(annotation.url);
+      }
+      if ("dest" in annotation && typeof annotation.dest === "string") {
         internalLinkTargets.push(annotation.dest);
       }
     }
   }
 
+  for (const name of new Set(internalLinkTargets)) {
+    const destination = await document.getDestination(name);
+    if (!destination) continue;
+    const pageReference = destination[0];
+    destinationPages[name] =
+      typeof pageReference === "number"
+        ? pageReference
+        : await document.getPageIndex(pageReference);
+  }
+
   await loadingTask.destroy();
   return {
+    destinationPages,
+    externalUrls,
     internalLinkTargets,
+    metadata: metadata.info,
+    outline,
     text: normalizePdfText(pages.join("\n")),
   };
+}
+
+function flattenOutlineTitles(
+  items: Awaited<ReturnType<Awaited<ReturnType<typeof getDocument>["promise"]>["getOutline"]>>,
+): string[] {
+  if (!items) return [];
+  return items.flatMap((item) => [
+    item.title,
+    ...flattenOutlineTitles(item.items),
+  ]);
 }
 
 function collectAlternativeText(value: unknown, result: string[]) {
@@ -189,6 +225,133 @@ test("learner downloads the complete searchable Course PDF from its Overview", a
   }
 });
 
+test("Course PDF identifies its release and provides complete document navigation", async ({
+  page,
+}, testInfo) => {
+  const response = await page.request.get(
+    new URL(coursePdfName, testInfo.project.use.baseURL!).href,
+  );
+  expect(response.ok()).toBe(true);
+  const pdf = await inspectPdf(new Uint8Array(await response.body()));
+
+  expect(pdf.metadata).toMatchObject({
+    Title: "Основы Markdown | Prosto.Courses",
+  });
+  expect(pdf.metadata).toHaveProperty("CreationDate");
+  const lowercaseText = pdf.text.toLocaleLowerCase("ru");
+  for (const coverText of [
+    "Проверено25июля2026г.",
+    "Дата сборки PDF",
+    "https://bsafronov.github.io/prosto-courses/courses/markdown/",
+  ]) {
+    expect(lowercaseText).toContain(
+      normalizePdfText(coverText).toLocaleLowerCase("ru"),
+    );
+  }
+
+  for (const section of [
+    "Содержание",
+    "Модули и Уроки",
+    "Проверки Модулей",
+    "Итоговая работа",
+    "Ответы и самопроверка",
+    "Источники",
+  ]) {
+    expect(pdf.text).toContain(normalizePdfText(section));
+  }
+
+  for (const destination of [
+    "module-osnovy",
+    "lesson-vvedenie",
+    "checkpoint-osnovy",
+    "capstone",
+    "knowledge-check-appendix",
+    "practice-task-appendix",
+    "sources",
+    "course-pdf-source-1",
+  ]) {
+    expect(pdf.internalLinkTargets).toContain(destination);
+  }
+
+  const orderedDestinations = [
+    "course-overview",
+    "module-osnovy",
+    "lesson-vvedenie",
+    "lesson-source-render",
+    "checkpoint-osnovy",
+    "module-struktura",
+    "lesson-formatting",
+    "lesson-links-code",
+    "checkpoint-struktura",
+    "capstone",
+    "knowledge-check-appendix",
+    "practice-task-appendix",
+    "sources",
+  ];
+  let previousDestinationPage = -1;
+  for (const destination of orderedDestinations) {
+    const pageNumber = pdf.destinationPages[destination];
+    expect(pageNumber, `PDF exposes destination “${destination}”`).toBeDefined();
+    expect(
+      pageNumber,
+      `destination “${destination}” follows Course order`,
+    ).toBeGreaterThan(previousDestinationPage);
+    previousDestinationPage = pageNumber;
+  }
+
+  const outlineTitles = flattenOutlineTitles(pdf.outline);
+  const orderedOutline = [
+    "От исходника к структуре",
+    "Знакомство с Markdown",
+    "Как читать Markdown-исходник",
+    "Структура рабочей инструкции",
+    "Заголовки, выделение и списки",
+    "Ссылки и код",
+    "Проверка и переносимость",
+    "Где Markdown перестаёт быть одинаковым",
+    "Проверка инструкции перед публикацией",
+  ];
+  let previousOutlineIndex = -1;
+  for (const title of orderedOutline) {
+    const index = outlineTitles.indexOf(title);
+    expect(index, `outline contains “${title}” in Course order`).toBeGreaterThan(
+      previousOutlineIndex,
+    );
+    previousOutlineIndex = index;
+  }
+
+  const commonMarkUrl = "https://spec.commonmark.org/0.31.2/";
+  const chartSourceUrl =
+    "https://github.com/bsafronov/prosto-courses/blob/main/src/content/courses/markdown/modules/proverka/lessons/review.mdx";
+  expect(pdf.externalUrls).toContain(
+    "https://bsafronov.github.io/prosto-courses/courses/markdown/",
+  );
+  expect(pdf.externalUrls).toContain(commonMarkUrl);
+  expect(pdf.externalUrls).toContain(chartSourceUrl);
+  expect(pdf.text).toContain(normalizePdfText("CommonMark 0.31.2[1]"));
+  expect(exactUrlOccurrences(pdf.text, commonMarkUrl)).toHaveLength(1);
+  expect(exactUrlOccurrences(pdf.text, chartSourceUrl)).toHaveLength(1);
+
+  const fixtureResponse = await page.request.get(
+    new URL(
+      "prosto-courses-accessible-images.pdf",
+      testInfo.project.use.baseURL!,
+    ).href,
+  );
+  expect(fixtureResponse.ok()).toBe(true);
+  const fixturePdf = await inspectPdf(
+    new Uint8Array(await fixtureResponse.body()),
+  );
+  expect(fixturePdf.text).toContain(
+    normalizePdfText("Требуется повторная проверка"),
+  );
+  expect(fixturePdf.text).toContain(
+    normalizePdfText(
+      "https://github.com/bsafronov/prosto-courses/blob/main/tests/fixtures/valid-course/accessible-images/modules/alt-text/lessons/describe-purpose.mdx",
+    ),
+  );
+});
+
 test("Course PDF preserves meaningful print presentation for every Learning Visual", async ({
   page,
 }, testInfo) => {
@@ -293,7 +456,7 @@ test("Knowledge Checks remain answerable on paper and link to a spoiler appendix
   const markdown = await inspectPdf(
     new Uint8Array(await markdownResponse.body()),
   );
-  const appendixStart = markdown.text.indexOf("Ответыкпроверкамзнаний");
+  const appendixStart = markdown.text.lastIndexOf("Ответыкпроверкамзнаний");
   expect(appendixStart).toBeGreaterThan(0);
 
   const mainFlow = markdown.text.slice(0, appendixStart);
@@ -416,7 +579,7 @@ test("Knowledge Checks remain answerable on paper and link to a spoiler appendix
   const numericPrompt = numeric.text.indexOf(
     "Каковавыручкапервогорегионапослеrevenue.sum(axis=1)?",
   );
-  const numericAppendix = numeric.text.indexOf("Ответыкпроверкамзнаний");
+  const numericAppendix = numeric.text.lastIndexOf("Ответыкпроверкамзнаний");
   expect(numericPrompt).toBeGreaterThan(0);
   expect(numericPrompt).toBeLessThan(numericAppendix);
   const numericMain = numeric.text.slice(numericPrompt, numericAppendix);

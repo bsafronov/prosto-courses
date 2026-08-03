@@ -65,6 +65,49 @@ async function inspectPdf(file) {
   return pages;
 }
 
+async function inspectPdfLinks(file) {
+  const loadingTask = getDocument({ data: new Uint8Array(await readFile(file)) });
+  const document = await loadingTask.promise;
+  const externalUrls = [];
+  const internalLinkTargets = [];
+  for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+    const page = await document.getPage(pageNumber);
+    for (const annotation of await page.getAnnotations()) {
+      if (annotation.subtype !== "Link") continue;
+      if (typeof annotation.url === "string") externalUrls.push(annotation.url);
+      if (typeof annotation.dest === "string") {
+        internalLinkTargets.push(annotation.dest);
+      }
+    }
+  }
+  await loadingTask.destroy();
+  return { externalUrls, internalLinkTargets };
+}
+
+test("production build preserves exact same-Course PDF destinations", async () => {
+  const canonicalCourseUrl =
+    "https://bsafronov.github.io/prosto-courses/courses/visual-course/";
+  const lessonUrl = `${canonicalCourseUrl}lessons/lesson/`;
+  await withPrintDocument(
+    `<div class="course-pdf__release-identity">
+      <a href="${canonicalCourseUrl}">${canonicalCourseUrl}</a>
+    </div>
+    <section id="course-overview" data-course-pdf-route="/prosto-courses/courses/visual-course/">
+      <a href="${lessonUrl}#lesson-details">Read lesson details</a>
+    </section>
+    <section id="lesson" data-course-pdf-route="/prosto-courses/courses/visual-course/lessons/lesson/">
+      <h2 id="lesson-details">Lesson details</h2>
+    </section>`,
+    async (root) => {
+      await runProductionBuild(root);
+      const links = await inspectPdfLinks(path.join(root, "visual-course.pdf"));
+      assert.ok(links.internalLinkTargets.includes("lesson-details"));
+      assert.ok(links.externalUrls.includes(canonicalCourseUrl));
+      assert.ok(!links.externalUrls.includes(`${lessonUrl}#lesson-details`));
+    },
+  );
+});
+
 test("production build rejects a Course PDF with a missing authored image", async () => {
   await withPrintDocument(
     '<img src="/missing-authored-image.png" alt="Missing visual">',

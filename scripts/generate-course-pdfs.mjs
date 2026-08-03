@@ -84,6 +84,25 @@ const closeServer = (server) =>
 
 async function preparePrintDocument(page, courseSlug) {
   await page.evaluate(() => {
+    const prepareReleaseIdentity = () => {
+      const buildDate = new Date();
+      document
+        .querySelectorAll("[data-course-pdf-build-date]")
+        .forEach((buildDateElement) => {
+          if (!(buildDateElement instanceof HTMLTimeElement)) return;
+          buildDateElement.dateTime = buildDate.toISOString().slice(0, 10);
+          buildDateElement.textContent = new Intl.DateTimeFormat("ru-RU", {
+            dateStyle: "long",
+          }).format(buildDate);
+        });
+    };
+
+    const prepareAuthoredImages = () => {
+      document.querySelectorAll("img[loading='lazy']").forEach((image) => {
+        if (image instanceof HTMLImageElement) image.loading = "eager";
+      });
+    };
+
     const prepareLinkedAppendix = ({
       activityIdPrefix,
       appendixSelector,
@@ -185,6 +204,119 @@ async function preparePrintDocument(page, courseSlug) {
       sourceSelector: "[data-course-pdf-practice-task]",
       templateSelector: "template[data-course-pdf-practice-task-support]",
     });
+
+    const rewriteSameCourseReferences = () => {
+      const canonicalCourseLink = document.querySelector(
+        ".course-pdf__release-identity a[href]",
+      );
+      if (!(canonicalCourseLink instanceof HTMLAnchorElement)) return;
+      const canonicalCourseUrl = new URL(canonicalCourseLink.href);
+      const normalizePath = (pathname) =>
+        pathname === "/" ? pathname : pathname.replace(/\/+$/, "");
+      const routeDestinations = new Map(
+        [...document.querySelectorAll("[data-course-pdf-route][id]")].flatMap(
+          (target) => {
+            if (!(target instanceof HTMLElement)) return [];
+            const route = target.dataset.coursePdfRoute;
+            return route
+              ? [[normalizePath(new URL(route, canonicalCourseUrl).pathname), target]]
+              : [];
+          },
+        ),
+      );
+
+      document.querySelectorAll("a[href]").forEach((link) => {
+        if (!(link instanceof HTMLAnchorElement)) return;
+        if (link === canonicalCourseLink) return;
+        const authoredHref = link.getAttribute("href");
+        if (!authoredHref || authoredHref.startsWith("#")) return;
+        const routeContainer = link.closest("[data-course-pdf-route]");
+        const routeBase =
+          routeContainer instanceof HTMLElement &&
+          routeContainer.dataset.coursePdfRoute
+            ? new URL(routeContainer.dataset.coursePdfRoute, canonicalCourseUrl)
+            : canonicalCourseUrl;
+        const authoredUrl = new URL(authoredHref, routeBase);
+        const routeDestination = routeDestinations.get(
+          normalizePath(authoredUrl.pathname),
+        );
+        let destination = routeDestination?.id;
+        if (routeDestination && authoredUrl.hash) {
+          let fragmentId;
+          try {
+            fragmentId = decodeURIComponent(authoredUrl.hash.slice(1));
+          } catch {
+            fragmentId = null;
+          }
+          const fragmentDestination = fragmentId
+            ? document.getElementById(fragmentId)
+            : null;
+          destination =
+            fragmentDestination &&
+            (fragmentDestination === routeDestination ||
+              routeDestination.contains(fragmentDestination))
+              ? fragmentDestination.id
+              : undefined;
+        }
+        if (
+          authoredUrl.origin === canonicalCourseUrl.origin &&
+          destination
+        ) {
+          link.href = `#${destination}`;
+          link.removeAttribute("target");
+          link.removeAttribute("rel");
+          link.removeAttribute("data-external-reference");
+          link.querySelector(".external-reference-marker")?.remove();
+        }
+      });
+    };
+
+    const prepareSourceIndex = () => {
+      const sourceList = document.querySelector("[data-course-pdf-source-list]");
+      const sourceSection = document.querySelector("[data-course-pdf-sources]");
+      if (!sourceList || !(sourceSection instanceof HTMLElement)) return;
+      const sourceNumbers = new Map();
+      document.querySelectorAll("a[data-external-reference][href]").forEach(
+        (link) => {
+          if (!(link instanceof HTMLAnchorElement)) return;
+          const url = link.href;
+          let source = sourceNumbers.get(url);
+          if (!source) {
+            source = {
+              label: link.textContent?.replace(/↗$/, "").trim() || url,
+              number: sourceNumbers.size + 1,
+            };
+            sourceNumbers.set(url, source);
+
+            const entry = document.createElement("li");
+            entry.id = `course-pdf-source-${source.number}`;
+            entry.className = "course-pdf__source-entry";
+            const label = document.createElement("span");
+            label.className = "course-pdf__source-label";
+            label.textContent = source.label;
+            const address = document.createElement("a");
+            address.href = url;
+            address.textContent = url;
+            entry.append(label, address);
+            sourceList.append(entry);
+          }
+
+          link.querySelector(".external-reference-marker")?.remove();
+          const marker = document.createElement("a");
+          marker.className = "external-reference-marker";
+          marker.href = `#course-pdf-source-${source.number}`;
+          marker.textContent = `[${source.number}]`;
+          marker.setAttribute("aria-label", `Источник ${source.number}`);
+          link.after(marker);
+        },
+      );
+      sourceSection.hidden = sourceNumbers.size === 0;
+    };
+
+    prepareReleaseIdentity();
+    prepareAuthoredImages();
+    rewriteSameCourseReferences();
+    prepareSourceIndex();
   });
   await page.locator("details").evaluateAll((details) => {
     details.forEach((detail) => {

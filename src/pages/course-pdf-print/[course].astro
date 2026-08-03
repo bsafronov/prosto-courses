@@ -5,10 +5,22 @@ import CoursePdfPracticeTask from "../../components/CoursePdfPracticeTask.astro"
 import CoursePdfReflection from "../../components/CoursePdfReflection.astro";
 import CoursePdfTaskRubric from "../../components/CoursePdfTaskRubric.astro";
 import CoursePdfTaskSolution from "../../components/CoursePdfTaskSolution.astro";
+import ContentFreshness from "../../components/ContentFreshness.astro";
 import { semanticComponents } from "../../components/semantic-components";
 import CoursePdfLayout from "../../layouts/CoursePdfLayout.astro";
 import { coursePdfFilename } from "../../lib/course-pdf";
-import { getCourseTree, type CourseTree } from "../../lib/courses";
+import {
+  capstonePath,
+  checkpointPath,
+  courseFreshnessState,
+  coursePath,
+  getCourseTree,
+  lessonPath,
+  lessonSlug,
+  modulePath,
+  moduleSlug,
+  type CourseTree,
+} from "../../lib/courses";
 
 export async function getStaticPaths() {
   const courses = await getCollection("courses");
@@ -50,6 +62,8 @@ const modules = await Promise.all(
   })),
 );
 const { Content: CapstoneContent } = await render(tree.capstone);
+const canonicalUrl = new URL(coursePath(course.id), Astro.site).href;
+const freshness = courseFreshnessState(course, tree);
 ---
 
 <CoursePdfLayout
@@ -61,9 +75,78 @@ const { Content: CapstoneContent } = await render(tree.capstone);
       <p class="course-pdf__section-label type-meta">Курс</p>
       <h1 class="type-page-title">{course.data.title}</h1>
       <p class="course-pdf__summary">{course.data.summary}</p>
+      <div class="course-pdf__release-identity">
+        <ContentFreshness state={freshness} />
+        <dl>
+          <div>
+            <dt>Дата сборки PDF</dt>
+            <dd><time data-course-pdf-build-date></time></dd>
+          </div>
+          <div>
+            <dt>Канонический адрес Курса</dt>
+            <dd><a href={canonicalUrl}>{canonicalUrl}</a></dd>
+          </div>
+        </dl>
+      </div>
     </header>
 
-    <section class="course-pdf__overview">
+    <nav class="course-pdf__toc" aria-labelledby="course-pdf-toc-title">
+      <h2 id="course-pdf-toc-title" class="type-page-title">Содержание</h2>
+      <ol>
+        <li><a href="#course-overview">О Курсе</a></li>
+        <li>
+          <span>Модули и Уроки</span>
+          <ol>
+            {modules.map(({ module, lessons }, moduleIndex) => {
+              const currentModuleSlug = moduleSlug(module);
+              return (
+                <li>
+                  <a href={`#module-${currentModuleSlug}`}>
+                    Модуль {moduleIndex + 1}. {module.data.title}
+                  </a>
+                  <ol>
+                    {lessons.map(({ lesson }, lessonIndex) => (
+                      <li>
+                        <a href={`#lesson-${lessonSlug(lesson)}`}>
+                          Урок {lessonIndex + 1}. {lesson.data.title}
+                        </a>
+                      </li>
+                    ))}
+                  </ol>
+                </li>
+              );
+            })}
+          </ol>
+        </li>
+        <li>
+          <span>Проверки Модулей</span>
+          <ol>
+            {modules.map(({ module, checkpoint }, moduleIndex) => (
+              <li>
+                <a href={`#checkpoint-${moduleSlug(module)}`}>
+                  Модуль {moduleIndex + 1}. {checkpoint.data.title}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </li>
+        <li><a href="#capstone">Итоговая работа</a></li>
+        <li>
+          <span>Ответы и самопроверка</span>
+          <ol>
+            <li><a href="#knowledge-check-appendix">Ответы к проверкам знаний</a></li>
+            <li><a href="#practice-task-appendix">Поддержка практики</a></li>
+          </ol>
+        </li>
+        <li><a href="#sources">Источники</a></li>
+      </ol>
+    </nav>
+
+    <section
+      id="course-overview"
+      class="course-pdf__overview"
+      data-course-pdf-route={coursePath(course.id)}
+    >
       <h2 class="type-section-title">О курсе</h2>
       <CourseContent components={coursePdfSemanticComponents} />
       <h2 class="type-section-title">Чему ты научишься</h2>
@@ -84,8 +167,14 @@ const { Content: CapstoneContent } = await render(tree.capstone);
       lessons,
       checkpoint,
       CheckpointContent,
-    }, moduleIndex) => (
-      <section class="course-pdf__module">
+    }, moduleIndex) => {
+      const currentModuleSlug = moduleSlug(module);
+      return (
+      <section
+        id={`module-${currentModuleSlug}`}
+        class="course-pdf__module"
+        data-course-pdf-route={modulePath(course.id, currentModuleSlug)}
+      >
         <p class="course-pdf__section-label type-meta">
           Модуль {moduleIndex + 1}
         </p>
@@ -94,7 +183,11 @@ const { Content: CapstoneContent } = await render(tree.capstone);
         <ModuleContent components={coursePdfSemanticComponents} />
 
         {lessons.map(({ lesson, LessonContent }, lessonIndex) => (
-          <article class="course-pdf__lesson">
+          <article
+            id={`lesson-${lessonSlug(lesson)}`}
+            class="course-pdf__lesson"
+            data-course-pdf-route={lessonPath(course.id, lessonSlug(lesson))}
+          >
             <p class="course-pdf__section-label type-meta">
               Урок {lessonIndex + 1}
             </p>
@@ -103,21 +196,30 @@ const { Content: CapstoneContent } = await render(tree.capstone);
           </article>
         ))}
 
-        <article class="course-pdf__checkpoint">
+        <article
+          id={`checkpoint-${currentModuleSlug}`}
+          class="course-pdf__checkpoint"
+          data-course-pdf-route={checkpointPath(course.id, currentModuleSlug)}
+        >
           <p class="course-pdf__section-label type-meta">Проверка Модуля</p>
           <h3 class="type-section-title">{checkpoint.data.title}</h3>
           <CheckpointContent components={coursePdfSemanticComponents} />
         </article>
       </section>
-    ))}
+    );})}
 
-    <section class="course-pdf__capstone">
+    <section
+      id="capstone"
+      class="course-pdf__capstone"
+      data-course-pdf-route={capstonePath(course.id)}
+    >
       <p class="course-pdf__section-label type-meta">Итоговая работа</p>
       <h2 class="type-page-title">{tree.capstone.data.title}</h2>
       <CapstoneContent components={coursePdfSemanticComponents} />
     </section>
 
     <section
+      id="knowledge-check-appendix"
       class="course-pdf__knowledge-check-appendix"
       data-course-pdf-knowledge-check-appendix
       hidden
@@ -127,12 +229,18 @@ const { Content: CapstoneContent } = await render(tree.capstone);
     </section>
 
     <section
+      id="practice-task-appendix"
       class="course-pdf__practice-task-appendix"
       data-course-pdf-practice-task-appendix
       hidden
     >
       <h2 class="type-page-title">Поддержка и самопроверка</h2>
       <div data-course-pdf-practice-task-support-list />
+    </section>
+
+    <section id="sources" class="course-pdf__sources" hidden data-course-pdf-sources>
+      <h2 class="type-page-title">Источники</h2>
+      <ol data-course-pdf-source-list></ol>
     </section>
   </main>
 </CoursePdfLayout>
