@@ -2,60 +2,7 @@
 import { createHash } from "node:crypto";
 import Button from "./Button.astro";
 import Card from "./Card.astro";
-
-interface ChoiceOption {
-  id: string;
-  text: string;
-  feedback: string;
-}
-
-interface MatchingPair {
-  id: string;
-  left: string;
-  right: string;
-  feedback: string;
-}
-
-interface OrderingItem {
-  id: string;
-  text: string;
-}
-
-interface ExactNormalization {
-  trim: boolean;
-  case: "sensitive" | "insensitive";
-}
-
-interface SharedProps {
-  prompt: string;
-  outcomes: string[];
-  explanation: string;
-}
-
-type Props =
-  | (SharedProps & {
-      type: "single";
-      options: ChoiceOption[];
-      answer: string;
-    })
-  | (SharedProps & {
-      type: "multiple";
-      options: ChoiceOption[];
-      answer: string[];
-    })
-  | (SharedProps & { type: "matching"; pairs: MatchingPair[] })
-  | (SharedProps & { type: "ordering"; items: OrderingItem[] })
-  | (SharedProps & {
-      type: "exact";
-      acceptedAnswers: string[];
-      normalization: ExactNormalization;
-    })
-  | (SharedProps & {
-      type: "numeric";
-      answer: number;
-      tolerance: number;
-      unit?: string;
-    });
+import type { KnowledgeCheckProps as Props } from "./knowledge-check";
 
 function shuffleAwayFromAuthoredOrder<T>(values: T[]) {
   const shuffled = [...values];

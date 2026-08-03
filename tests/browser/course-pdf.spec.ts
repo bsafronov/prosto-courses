@@ -4,6 +4,9 @@ import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 
 const coursePdfName = "prosto-courses-markdown.pdf";
 
+const normalizePdfText = (value: string) =>
+  value.normalize("NFKC").replaceAll(/[\s\u00ad]+/g, "");
+
 async function inspectPdf(pdf: Uint8Array) {
   const loadingTask = getDocument({ data: pdf });
   const document = await loadingTask.promise;
@@ -30,11 +33,24 @@ async function inspectPdf(pdf: Uint8Array) {
   await loadingTask.destroy();
   return {
     internalDestinations,
-    text: pages
-      .join("\n")
-      .normalize("NFKC")
-      .replaceAll(/[\s\u00ad]+/g, ""),
+    text: normalizePdfText(pages.join("\n")),
   };
+}
+
+function knowledgeCheckMain(
+  mainFlow: string,
+  prompt: string,
+  number: number,
+) {
+  const normalizedPrompt = normalizePdfText(prompt);
+  const start = mainFlow.indexOf(normalizedPrompt);
+  const link = `Ответиобъяснение:проверказнаний${number}`;
+  const end = mainFlow.indexOf(link, start);
+  expect(start, `main flow contains “${prompt}”`).toBeGreaterThanOrEqual(0);
+  expect(end, `Knowledge Check ${number} links to its appendix entry`).toBeGreaterThan(
+    start,
+  );
+  return mainFlow.slice(start, end + link.length);
 }
 
 test("learner downloads the complete searchable Course PDF from its Overview", async ({
@@ -95,13 +111,14 @@ test("learner downloads the complete searchable Course PDF from its Overview", a
 test("Knowledge Checks remain answerable on paper and link to a spoiler appendix", async ({
   page,
 }, testInfo) => {
-  await page.goto("./courses/markdown/");
-  await page.evaluate(() => {
-    localStorage.setItem(
-      "knowledge-check-attempt",
-      "ЛОКАЛЬНЫЙ ОТВЕТ НЕ ДОЛЖЕН ПОПАСТЬ В PDF",
-    );
-  });
+  const localAnswer = "ЛОКАЛЬНЫЙ ОТВЕТ НЕ ДОЛЖЕН ПОПАСТЬ В PDF";
+  await page.goto("./courses/markdown/lessons/portability/");
+  const exactCheck = page.locator(
+    '[data-knowledge-check][data-type="exact"]',
+  );
+  await exactCheck.locator("[data-exact-answer]").fill(localAnswer);
+  await exactCheck.getByRole("button", { name: "Проверить ответ" }).click();
+  await expect(exactCheck.locator("[data-feedback]")).not.toBeEmpty();
 
   const markdownResponse = await page.request.get(
     new URL(coursePdfName, testInfo.project.use.baseURL!).href,
@@ -115,19 +132,83 @@ test("Knowledge Checks remain answerable on paper and link to a spoiler appendix
 
   const mainFlow = markdown.text.slice(0, appendixStart);
   const appendix = markdown.text.slice(appendixStart);
-  expect(mainFlow).toContain("Отметьодинответ.");
-  expect(mainFlow).toContain("Отметьвсеподходящиеответы.");
-  expect(mainFlow).toContain(
-    "Соединикаждуюстрокусоднимвариантомответа.",
+  const single = knowledgeCheckMain(
+    mainFlow,
+    "Какое действие понадобится для практики в этом Курсе?",
+    1,
   );
-  expect(mainFlow).toContain("Запишиточныйответ.");
-  expect(mainFlow).toContain(
+  expect(single).toContain("Отметьодинответ.");
+  expect(single).toContain("Создатьисохранитьобычныйтекстовыйфайл");
+  expect(single).toContain("Настроитьбазуданных");
+
+  const matching = knowledgeCheckMain(
+    mainFlow,
+    "Сопоставь фрагмент исходника с его ролью.",
+    3,
+  );
+  expect(matching).toContain("Соединикаждуюстрокусоднимвариантомответа.");
+  expect(matching.match(/Ответ:/g)).toHaveLength(3);
+  const matchingOptions = [
+    "Пунктмаркированногосписка",
+    "Кодвнутристроки",
+    "Блок-заголовок",
+  ];
+  let previousMatchingOption = -1;
+  for (const option of matchingOptions) {
+    const index = matching.indexOf(option);
+    expect(index).toBeGreaterThan(previousMatchingOption);
+    previousMatchingOption = index;
+  }
+
+  const ordering = knowledgeCheckMain(
+    mainFlow,
+    "Расположи действия так, чтобы сначала спроектировать структуру, а затем проверить её.",
+    5,
+  );
+  expect(ordering).toContain(
     "Укажипорядокшагов:впишиномерпозициирядомскаждымшагом.",
   );
+  expect(ordering.match(/Позиция:__/g)).toHaveLength(4);
+  expect(ordering.indexOf("Сгруппироватьсвязанныедействия")).toBeLessThan(
+    ordering.indexOf("Сформулироватьрезультатчитателя"),
+  );
+
+  const multiple = knowledgeCheckMain(
+    mainFlow,
+    "Какие части нужны для обычной Markdown-ссылки?",
+    6,
+  );
+  expect(multiple).toContain("Отметьвсеподходящиеответы.");
+  expect(multiple).toContain("Текствквадратныхскобках");
+  expect(multiple).toContain("Адресвкруглыхскобках");
+  expect(multiple).toContain("Символ#передссылкой");
+
+  const exact = knowledgeCheckMain(
+    mainFlow,
+    "Как называется базовая спецификация, поверх которой GFM определяет расширения? Введи одно слово.",
+    7,
+  );
+  expect(exact).toContain("Запишиточныйответ.");
+  expect(exact).toContain("Ответ:");
   expect(mainFlow).not.toContain("Перетащишагизаполосусправа.");
   expect(mainFlow).not.toContain("Проверитьответ");
-  expect(mainFlow).not.toContain("ЛОКАЛЬНЫЙОТВЕТНЕДОЛЖЕНПОПАСТЬВPDF");
+  expect(markdown.text).not.toContain(normalizePdfText(localAnswer));
 
+  expect(appendix).toContain(
+    "Проверказнаний1Задание:КакоедействиепонадобитсядляпрактикивэтомКурсе?",
+  );
+  expect(appendix).toContain(
+    "Проверказнаний3Задание:Сопоставьфрагментисходникасегоролью.",
+  );
+  expect(appendix).toContain(
+    "Проверказнаний5Задание:Расположидействиятак,чтобысначаласпроектироватьструктуру,азатемпроверитьеё.",
+  );
+  expect(appendix).toContain(
+    "Проверказнаний6Задание:КакиечастинужныдляобычнойMarkdown-ссылки?",
+  );
+  expect(appendix).toContain(
+    "Проверказнаний7Задание:Какназываетсябазоваяспецификация,поверхкоторойGFMопределяетрасширения?Введиоднослово.",
+  );
   expect(appendix).toContain("Правильныйответ:CommonMark");
   expect(appendix).toContain(
     "GFMописываетрасширенияповерхспецификацииCommonMark.",
@@ -135,21 +216,27 @@ test("Knowledge Checks remain answerable on paper and link to a spoiler appendix
   expect(appendix).toContain(
     "Да:этоттекстобъясняетчитателюназначениессылки.",
   );
+  expect(appendix).toContain(
+    "Символ#передссылкой:Символ#создаётзаголовокинеявляетсяобязательнойчастьюссылки.",
+  );
   expect(appendix).toContain("Правильныйпорядок:");
   expect(appendix).toContain(
     "1.Назватьцелевуюсредупубликации2.Выделитьконструкции,откоторыхзависитсмысл",
   );
-  expect(appendix).not.toContain("knowledge-check-attempt");
 
   expect(
-    new Set(markdown.internalDestinations.filter((destination) =>
-      /^knowledge-check-answer-\d+$/.test(destination),
-    )).size,
+    new Set(
+      markdown.internalDestinations.filter((destination) =>
+        /^knowledge-check-answer-\d+$/.test(destination),
+      ),
+    ).size,
   ).toBe(9);
   expect(
-    new Set(markdown.internalDestinations.filter((destination) =>
-      /^knowledge-check-\d+$/.test(destination),
-    )).size,
+    new Set(
+      markdown.internalDestinations.filter((destination) =>
+        /^knowledge-check-\d+$/.test(destination),
+      ),
+    ).size,
   ).toBe(9);
 
   const numericResponse = await page.request.get(
@@ -166,12 +253,39 @@ test("Knowledge Checks remain answerable on paper and link to a spoiler appendix
   const numericAppendix = numeric.text.indexOf("Ответыкпроверкамзнаний");
   expect(numericPrompt).toBeGreaterThan(0);
   expect(numericPrompt).toBeLessThan(numericAppendix);
-  expect(numeric.text.slice(numericPrompt, numericAppendix)).toContain(
+  const numericMain = numeric.text.slice(numericPrompt, numericAppendix);
+  expect(numericMain).toContain(
     "Запишичисловойответ.Единицаизмерения:₽.",
   );
-  expect(numeric.text.slice(numericAppendix)).toContain(
-    "Правильныйответ:31200₽",
+  expect(numericMain).toContain("Ответ:");
+  const numericLink = numericMain.match(
+    /Ответиобъяснение:проверказнаний(\d+)/,
   );
+  expect(numericLink).not.toBeNull();
+  const numericCheckNumber = numericLink![1];
+  expect(numeric.text.slice(numericAppendix)).toContain(
+    `Проверказнаний${numericCheckNumber}Задание:Каковавыручкапервогорегионапослеrevenue.sum(axis=1)?Правильныйответ:31200₽`,
+  );
+  expect(numeric.internalDestinations).toContain(
+    `knowledge-check-answer-${numericCheckNumber}`,
+  );
+  expect(numeric.internalDestinations).toContain(
+    `knowledge-check-${numericCheckNumber}`,
+  );
+  expect(
+    new Set(
+      numeric.internalDestinations.filter((destination) =>
+        /^knowledge-check-answer-\d+$/.test(destination),
+      ),
+    ).size,
+  ).toBe(17);
+  expect(
+    new Set(
+      numeric.internalDestinations.filter((destination) =>
+        /^knowledge-check-\d+$/.test(destination),
+      ),
+    ).size,
+  ).toBe(17);
 });
 
 test("production build emits one Course PDF for every Catalog Course", async ({

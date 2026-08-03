@@ -95,16 +95,20 @@ async function preparePrintDocument(page) {
       return;
     }
 
+    const setKnowledgeCheckNumber = (root, number) => {
+      root
+        .querySelectorAll("[data-course-pdf-knowledge-check-number]")
+        .forEach((label) => {
+          label.textContent = String(number);
+        });
+    };
+
     for (const [index, check] of checks.entries()) {
       const number = index + 1;
       const activityId = `knowledge-check-${number}`;
       const answerId = `knowledge-check-answer-${number}`;
       check.id = activityId;
-      check
-        .querySelectorAll("[data-course-pdf-knowledge-check-number]")
-        .forEach((label) => {
-          label.textContent = String(number);
-        });
+      setKnowledgeCheckNumber(check, number);
 
       const answerLink = check.querySelector(
         "[data-course-pdf-knowledge-check-link]",
@@ -124,11 +128,7 @@ async function preparePrintDocument(page) {
       );
       if (!(entry instanceof HTMLElement)) continue;
       entry.id = answerId;
-      entry
-        .querySelectorAll("[data-course-pdf-knowledge-check-number]")
-        .forEach((label) => {
-          label.textContent = String(number);
-        });
+      setKnowledgeCheckNumber(entry, number);
       const returnLink = entry.querySelector(
         "[data-course-pdf-knowledge-check-return-link]",
       );

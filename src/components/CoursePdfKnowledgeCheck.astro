@@ -1,59 +1,7 @@
 ---
-interface ChoiceOption {
-  id: string;
-  text: string;
-  feedback: string;
-}
+import type { KnowledgeCheckProps as Props } from "./knowledge-check";
 
-interface MatchingPair {
-  id: string;
-  left: string;
-  right: string;
-  feedback: string;
-}
-
-interface OrderingItem {
-  id: string;
-  text: string;
-}
-
-interface ExactNormalization {
-  trim: boolean;
-  case: "sensitive" | "insensitive";
-}
-
-interface SharedProps {
-  prompt: string;
-  outcomes: string[];
-  explanation: string;
-}
-
-type Props =
-  | (SharedProps & {
-      type: "single";
-      options: ChoiceOption[];
-      answer: string;
-    })
-  | (SharedProps & {
-      type: "multiple";
-      options: ChoiceOption[];
-      answer: string[];
-    })
-  | (SharedProps & { type: "matching"; pairs: MatchingPair[] })
-  | (SharedProps & { type: "ordering"; items: OrderingItem[] })
-  | (SharedProps & {
-      type: "exact";
-      acceptedAnswers: string[];
-      normalization: ExactNormalization;
-    })
-  | (SharedProps & {
-      type: "numeric";
-      answer: number;
-      tolerance: number;
-      unit?: string;
-    });
-
-function rotate<T>(values: T[]) {
+function rotateAwayFromAuthoredOrder<T>(values: T[]) {
   return values.length > 1 ? [...values.slice(1), values[0]] : [...values];
 }
 
@@ -70,9 +18,11 @@ const correctChoiceOptions = choiceOptions.filter((option) =>
   correctChoiceIds.includes(option.id),
 );
 const printableMatchingOptions =
-  type === "matching" ? rotate(props.pairs.map((pair) => pair.right)) : [];
+  type === "matching"
+    ? rotateAwayFromAuthoredOrder(props.pairs.map((pair) => pair.right))
+    : [];
 const printableOrderingItems =
-  type === "ordering" ? rotate(props.items) : [];
+  type === "ordering" ? rotateAwayFromAuthoredOrder(props.items) : [];
 ---
 
 <article
@@ -114,7 +64,9 @@ const printableOrderingItems =
           {props.pairs.map((pair) => (
             <li>
               {pair.left}
-              <span class="course-pdf-knowledge-check__response-line" />
+              <span class="course-pdf-knowledge-check__response-line">
+                Ответ:
+              </span>
             </li>
           ))}
         </ol>
@@ -136,9 +88,8 @@ const printableOrderingItems =
             <li>
               <span
                 class="course-pdf-knowledge-check__position"
-                aria-label="Позиция"
               >
-                __
+                Позиция: __
               </span>
               {item.text}
             </li>
@@ -229,17 +180,26 @@ const printableOrderingItems =
           <p>
             <strong>Правильный ответ:</strong> {props.answer}
             {props.unit && <> {props.unit}</>}
+            {props.tolerance > 0 && (
+              <>
+                {" "}
+                (допустимое отклонение: ±{props.tolerance}
+                {props.unit && <> {props.unit}</>})
+              </>
+            )}
           </p>
         )
       }
 
       {
-        correctChoiceOptions.length > 0 && (
+        choiceOptions.length > 0 && (
           <>
             <p><strong>Обратная связь:</strong></p>
             <ul>
-              {correctChoiceOptions.map((option) => (
-                <li>{option.feedback}</li>
+              {choiceOptions.map((option) => (
+                <li>
+                  <strong>{option.text}:</strong> {option.feedback}
+                </li>
               ))}
             </ul>
           </>
@@ -309,7 +269,7 @@ const printableOrderingItems =
   }
 
   .course-pdf-knowledge-check__position {
-    flex: 0 0 var(--space-8);
+    flex: 0 0 auto;
     border-bottom: var(--border-subtle);
     text-align: center;
   }
