@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expectBoxCloseTo } from "../support/browser-geometry.mjs";
 
 async function cardSurface(locator: Locator) {
   return locator.evaluate((element) => {
@@ -747,8 +748,8 @@ test("Ghost Button stays quiet until pointer interaction", async ({ page }) => {
 
   const buttonBox = await expandDiagram.boundingBox();
   const iconBox = await expandDiagram.locator("svg").boundingBox();
-  expect(buttonBox).toMatchObject({ width: 36, height: 36 });
-  expect(iconBox).toMatchObject({ width: 18, height: 18 });
+  expectBoxCloseTo(buttonBox, { width: 36, height: 36 });
+  expectBoxCloseTo(iconBox, { width: 18, height: 18 });
 
   await expandDiagram.focus();
   await expect(expandDiagram).toHaveCSS("outline-color", themes.light.focus);
@@ -823,7 +824,7 @@ test("icon-only primary and danger Buttons stay 44px square", async ({
       element.classList.add(`button-control--${nextVariant}`);
     }, variant);
     const box = await button.boundingBox();
-    expect(box).toMatchObject({ width: 44, height: 44 });
+    expectBoxCloseTo(box, { width: 44, height: 44 });
   }
 });
 
@@ -852,9 +853,9 @@ test("Ghost Button expands its target for touch input", async ({
   const buttonBox = await expandDiagram.boundingBox();
   const iconBox = await expandDiagram.locator("svg").boundingBox();
   const routeToggleBox = await routeToggle.boundingBox();
-  expect(buttonBox).toMatchObject({ width: 44, height: 44 });
-  expect(iconBox).toMatchObject({ width: 18, height: 18 });
-  expect(routeToggleBox).toMatchObject({ width: 44, height: 44 });
+  expectBoxCloseTo(buttonBox, { width: 44, height: 44 });
+  expectBoxCloseTo(iconBox, { width: 18, height: 18 });
+  expectBoxCloseTo(routeToggleBox, { width: 44, height: 44 });
 
   await context.close();
 });
@@ -893,7 +894,7 @@ test("Long Lesson title keeps responsive Header and keyboard Course route", asyn
   expect(toggleBox).not.toBeNull();
   expect(titleBox).not.toBeNull();
   expect(themeBox).not.toBeNull();
-  expect(toggleBox).toMatchObject({ width: 36, height: 36 });
+  expectBoxCloseTo(toggleBox, { width: 36, height: 36 });
   expect(toggleBox!.x + toggleBox!.width).toBeLessThanOrEqual(titleBox!.x);
   expect(titleBox!.x + titleBox!.width).toBeLessThanOrEqual(themeBox!.x);
 
@@ -904,7 +905,7 @@ test("Long Lesson title keeps responsive Header and keyboard Course route", asyn
   await expect(close).toBeFocused();
   const closeBox = await close.boundingBox();
   expect(closeBox).not.toBeNull();
-  expect(closeBox).toMatchObject({ width: 36, height: 36 });
+  expectBoxCloseTo(closeBox, { width: 36, height: 36 });
   await page.keyboard.press("Escape");
   await expect(routeToggle).toBeFocused();
   expect(

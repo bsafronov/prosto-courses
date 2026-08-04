@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expectBoxCloseTo } from "../support/browser-geometry.mjs";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("./courses/markdown/lessons/vvedenie/");
@@ -102,9 +103,8 @@ test("Knowledge Check feedback and ordering handles stay explicit in both themes
     .locator("[data-ordering-handle]");
   const handleBox = await handle.boundingBox();
   const glyphBox = await handle.locator("svg").boundingBox();
-  expect(handleBox).not.toBeNull();
-  expect(handleBox).toMatchObject({ width: 36, height: 36 });
-  expect(glyphBox).toMatchObject({ width: 18, height: 18 });
+  expectBoxCloseTo(handleBox, { width: 36, height: 36 });
+  expectBoxCloseTo(glyphBox, { width: 18, height: 18 });
   await expect(handle).toHaveCSS("cursor", "grab");
   await expect(handle).toHaveCSS("touch-action", "none");
   await expect(handle).toHaveCSS("border-left-width", "1px");

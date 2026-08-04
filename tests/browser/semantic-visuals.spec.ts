@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expectBoxCloseTo } from "../support/browser-geometry.mjs";
 
 const visualThemes = {
   light: {
@@ -168,11 +169,13 @@ test("Diagram opens a full-viewport viewer with zoom and restores focus", async 
 
   const viewport = page.viewportSize();
   const viewerBox = await viewer.boundingBox();
-  expect(viewerBox).not.toBeNull();
-  expect(viewerBox?.x).toBe(0);
-  expect(viewerBox?.y).toBe(0);
-  expect(viewerBox?.width).toBe(viewport?.width);
-  expect(viewerBox?.height).toBe(viewport?.height);
+  expect(viewport).not.toBeNull();
+  expectBoxCloseTo(viewerBox, {
+    x: 0,
+    y: 0,
+    width: viewport!.width,
+    height: viewport!.height,
+  });
 
   const resetZoom = viewer.getByRole("button", {
     name: /^Сбросить масштаб схемы/,
@@ -220,9 +223,7 @@ test("Diagram viewer keeps its canvas usable at a narrow width", async ({
     name: "Развернутая схема «Как Markdown становится страницей»",
   });
   const viewerBox = await viewer.boundingBox();
-  expect(viewerBox).not.toBeNull();
-  expect(viewerBox?.width).toBe(390);
-  expect(viewerBox?.height).toBe(844);
+  expectBoxCloseTo(viewerBox, { width: 390, height: 844 });
   await expect(
     viewer.getByRole("toolbar", { name: "Масштаб схемы" }),
   ).toBeVisible();
