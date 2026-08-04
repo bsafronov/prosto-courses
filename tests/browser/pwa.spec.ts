@@ -1117,7 +1117,7 @@ test("External References are marked, blocked offline, and restored online", asy
     for (let index = 0; index < count; index += 1) {
       const reference = references.nth(index);
       const href = await reference.getAttribute("href");
-      const url = new URL(href!, siteOrigin);
+      const url = new URL(href!, new URL(route, siteOrigin));
       const isInternalPlatformLink =
         url.origin === siteOrigin &&
         (url.pathname === siteBasePath ||
