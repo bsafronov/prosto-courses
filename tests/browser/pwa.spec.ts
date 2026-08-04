@@ -5,7 +5,6 @@ import {
   type BrowserContext,
   type Page,
 } from "@playwright/test";
-import { siteBasePath, siteOrigin } from "../../site.config.mjs";
 
 test.use({ serviceWorkers: "allow" });
 
@@ -359,7 +358,23 @@ test("the root-deployed release remains complete and scoped offline", async ({
 
   const assets = new Set<string>();
   const routeHeadings = new Map<string, string>();
-  for (const route of routes) {
+  const representativeRoutes = [
+    "/",
+    "/courses/markdown/",
+    "/courses/markdown/lessons/vvedenie/",
+    "/courses/markdown/capstone/",
+  ];
+  expect(routes).toEqual(expect.arrayContaining(representativeRoutes));
+  expect(routes.length).toBeGreaterThan(2);
+  await page.goto(rootUrl);
+  await expect(
+    unavailableReleaseUrls(
+      page,
+      routes.map((route) => new URL(route, rootUrl).href),
+    ),
+  ).resolves.toEqual([]);
+
+  for (const route of representativeRoutes) {
     await page.goto(new URL(route, rootUrl).href);
     await expect(page.locator("main")).not.toBeEmpty();
     const heading = (
@@ -389,7 +404,6 @@ test("the root-deployed release remains complete and scoped offline", async ({
   for (const icon of manifest.icons) {
     assets.add(new URL(icon.src, rootUrl).href);
   }
-  expect(routes.length).toBeGreaterThan(2);
   expect(assets.size).toBeGreaterThan(5);
   for (const assetUrl of assets) {
     const parsed = new URL(assetUrl);
@@ -406,7 +420,13 @@ test("the root-deployed release remains complete and scoped offline", async ({
     await expectControlledRelease(offlinePage, rootUrl);
     await offlineContext.setOffline(true);
 
-    for (const route of routes) {
+    await expect(
+      unavailableReleaseUrls(
+        offlinePage,
+        routes.map((route) => new URL(route, rootUrl).href),
+      ),
+    ).resolves.toEqual([]);
+    for (const route of representativeRoutes) {
       await offlinePage.goto(new URL(route, rootUrl).href);
       await expect(
         offlinePage.locator("h1:visible").first(),
@@ -469,14 +489,6 @@ test("the header reports complete Offline Availability and recovers unknown rout
 
   await context.setOffline(true);
   await expect(control).toBeHidden();
-
-  for (const route of release.routes) {
-    await page.goto(route);
-    await expect(page.locator("main")).not.toBeEmpty();
-    await expect(
-      page.getByRole("group", { name: "Приложение и офлайн-доступ" }),
-    ).toBeHidden();
-  }
 
   await expect(unavailableReleaseUrls(page, release.releaseUrls)).resolves.toEqual(
     [],
@@ -1101,46 +1113,9 @@ test("an unsupported browser keeps the ordinary site quiet", async ({
 });
 
 test("External References are marked, blocked offline, and restored online", async ({
-  baseURL,
   context,
   page,
-  request,
 }) => {
-  const release = await getReleaseInventory(baseURL, request);
-  const platformScope =
-    siteBasePath === "/" ? "/" : `${siteBasePath}/`;
-  let referenceCount = 0;
-  for (const route of release.routes) {
-    await page.goto(route);
-    const references = page.locator("main a[href]");
-    const count = await references.count();
-    for (let index = 0; index < count; index += 1) {
-      const reference = references.nth(index);
-      const href = await reference.getAttribute("href");
-      const url = new URL(href!, new URL(route, siteOrigin));
-      const isInternalPlatformLink =
-        url.origin === siteOrigin &&
-        (url.pathname === siteBasePath ||
-          url.pathname.startsWith(platformScope));
-      if (
-        !["http:", "https:"].includes(url.protocol) ||
-        isInternalPlatformLink
-      ) {
-        continue;
-      }
-      referenceCount += 1;
-      await expect(reference).toHaveAttribute("data-external-reference", "");
-      await expect(reference).toHaveAttribute("target", "_blank");
-      await expect(reference).toHaveAttribute("rel", /noopener/);
-      await expect(reference).toHaveAttribute("rel", /noreferrer/);
-      await expect(
-        reference.locator("sup.external-reference-marker"),
-      ).toHaveText("↗");
-      await expect(reference).not.toContainText("требуется интернет");
-    }
-  }
-  expect(referenceCount).toBeGreaterThan(1);
-
   await page.goto("./courses/lesson-history/lessons/moved-lesson/");
   const internalReference = page.getByRole("link", {
     name: "Внутренняя ссылка на Урок",

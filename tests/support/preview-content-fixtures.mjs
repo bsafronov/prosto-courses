@@ -83,7 +83,7 @@ await writeFile(changedLessonPath, secondLessonSource);
 
 const runBuild = ({ basePath, cacheRoot, contentRoot, outputRoot }) =>
   new Promise((resolve, reject) => {
-    const child = spawn("pnpm", ["build"], {
+    const child = spawn("pnpm", ["exec", "astro", "build"], {
       cwd: projectRoot,
       env: {
         ...process.env,
