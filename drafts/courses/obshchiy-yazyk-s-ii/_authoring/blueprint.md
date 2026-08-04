@@ -2,9 +2,11 @@
 
 Подзаголовок: «Как проектировать задачи, получать предсказуемые результаты и управлять качеством»
 
-Версия: 2
+Версия: 3
 
-Статус: проект курса проверен; Reference Lesson создан и откалиброван с записанным ограничением learner probe; делегированное создание курса активно
+Статус: проект курса проверен; делегированное создание курса активно
+
+Этап: полный draft интегрирован и передан в Independent Course Audit; release не выполнен
 
 Дата проектирования: 2026-08-04
 
@@ -694,6 +696,68 @@ Workload определяет пять Modules вместе с capability depend
 уменьшение смешало бы distinct intermediate capabilities и превысило бы
 разумную нагрузку одного Module.
 
+## Pre-audit Outcome Alignment review
+
+Полный draft проверен перед передачей в fresh-context Independent Course Audit.
+Это authoring review, а не независимый аудит и не release approval.
+
+### Проверенный inventory
+
+- один Course Overview описывает Learner Profile, observable prerequisites,
+  восемь Learning Outcomes, scope, exclusions, Course promise и optional
+  non-blocking Readiness Check;
+- пять Module overviews имеют contiguous orders `1–5` и сохраняют capabilities
+  из verified Sequence;
+- 30 Lessons имеют уникальные Course-level slugs, contiguous orders внутри
+  Modules и один primary capability;
+- пять Module Checkpoints покрывают Outcomes своих Modules и возвращают
+  capabilities более ранних Modules в changed cases;
+- один Capstone Demonstration использует новую относительно authored cases
+  реальную задачу и требует specification, prompt или workflow, rubric,
+  development и held-out cases, baseline, iteration log, evidence register,
+  limitations, safety check и reproducibility record;
+- Capstone Self-Assessment содержит восемь отдельных observable criteria без
+  score, certification или progression gate;
+- Capability Packs отсутствуют; External References остаются supplemental.
+
+### Trace каждого Learning Outcome
+
+| Learning Outcome | Taught | Practiced | Retrieved | Demonstrated |
+| --- | --- | --- | --- | --- |
+| `distinguish-system-boundaries` | Module 1: модель, ассистент, инструмент, вариативность, контекстное окно и instruction hierarchy | classification, repeated runs и system-boundary map | Modules 2, 3, 4 и 5 при выборе format, baseline, tool и условий запуска | «Границы системы учтены» |
+| `specify-work` | Module 1: task map, minimal sufficiency и mode choice | raw intent → specification и сокращение полей | Modules 2 и 5 в requirements/metaprompt interview | «Спецификация минимально достаточна» |
+| `design-inputs` | Module 2: relevance, lost conditions, examples и format boundaries | context ablation, example selection и input package | Modules 4 и 5 в injection boundary и language comparison | «Входной пакет спроектирован по функции» |
+| `orchestrate-work` | Modules 1–2: request/dialog/workflow, consolidation и decomposition | artefact, verification и stop/go condition для каждого шага | Module 4 при controlled external action | «Режим работы обоснован» |
+| `evaluate-quality` | Module 3: rubric, case roles, baseline, variability и measured iteration | development set, multiple runs и version comparison | Modules 4–5 при source checks и candidate selection | «Качество измеряется» |
+| `verify-evidence` | Modules 3–4: external feedback, source, search, calculation и Deterministic Check | evidence register, citation fragment и uncertainty label | Module 5 при evaluation-driven candidate choice | «Тезисы связаны с подтверждениями» |
+| `manage-risk` | Modules 1, 3 и 4: instruction priority, stakes, injection, privacy, bias, IP и actions | trust-boundary review, data minimization и confirmation card | Module 5 и Capstone при full-input/reproducibility record | «Риск управляется пропорционально ставке» |
+| `improve-and-transfer` | Modules 3 и 5: measured failure, metaprompt pipeline, held-out check и portable core | iteration log, candidate selection и adapter separation | Module 5 Checkpoint после retrieval всех earlier capabilities | «Улучшение и перенос доказаны» |
+
+Каждый Outcome имеет минимум один Lesson с instruction, meaningful core
+Practice Task, retrieval в более позднем контексте, Module Checkpoint evidence
+и отдельный observable Capstone criterion. Ни один Outcome не опирается только
+на recall или Self-Assessment claim.
+
+### Cross-course integration findings
+
+- Сквозной кейс запуска образовательного продукта развивается от raw request и
+  system boundary map через specification, input package, workflow, rubric,
+  baseline, evidence и safety к metaprompt selection. Capstone снимает authored
+  case и требует собственный новый контекст.
+- Короткие examples из редактуры, аналитики, закупок, поддержки, HR,
+  исследований и operations меняют surface context, сохраняя проверяемый
+  capability; transfer не сводится к замене имён.
+- Cumulative Retrieval возвращает specification, rubric, test cases, trust
+  boundary и iteration record в later Lessons и Checkpoints. Последний
+  Checkpoint требует полный pipeline до независимой Capstone работы.
+- Core path остаётся self-contained: ссылки подтверждают и расширяют claims,
+  но authored explanations, case data, expected evidence, feedback and rubrics
+  достаточны без сети.
+- Проверка schema, deterministic answers, factual claims, plain Russian,
+  accessibility и render behavior передана Independent Course Audit ticket
+  #77. До завершения этого fresh-context audit Course остаётся draft вне
+  `src/content/courses`.
+
 ## Verification record
 
 - Brief version 1 завершён до проектирования Sequence и фиксирует отсутствие
@@ -710,7 +774,12 @@ Workload определяет пять Modules вместе с capability depend
   Learner Profile; limitation и точный будущий probe записаны без заявления о
   learner validation.
 - Blueprint не публикует Course и не вводит platform contract. Draft остаётся
-  вне `src/content/courses` до полного integration ticket.
+  вне `src/content/courses` до Independent Course Audit и release QA в ticket
+  #77.
+- Pre-audit Outcome Alignment review выполнен по полному Course Overview,
+  Modules, Lessons, Checkpoints и Capstone. Восемь Outcomes traced through
+  instruction, Practice, Cumulative Retrieval and separate Capstone criteria;
+  gaps не найдены. Independent verification остаётся ticket #77.
 
 Материальное изменение Module capabilities, Outcome evidence, Capstone,
 Reference Lesson или workload требует новой версии Blueprint и повторной
