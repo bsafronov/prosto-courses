@@ -137,10 +137,13 @@
 
 ### 1.3. Вариативность и воспроизводимость
 
-Один и тот же запрос может дать разные ответы. OpenAI прямо описывает генерацию
-как недетерминированную по умолчанию и называет фиксированный `seed` лишь
-best-effort механизмом, который не гарантирует ни идентичность, ни качество
-([OpenAI Cookbook, Reproducible outputs](https://cookbook.openai.com/examples/reproducible_outputs_with_the_seed_parameter)).
+Один и тот же запрос может дать разные ответы. Параметры воспроизводимости
+зависят от API и модели. Если текущая документация выбранной системы поддерживает
+`seed` или аналогичный параметр, его нужно фиксировать вместе с точным `model ID`
+и существенными условиями, но не считать гарантией идентичности, качества или
+истинности
+([OpenAI, Chat Completions reference](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create),
+[OpenAI, Evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices)).
 
 Температура меняет выбор токенов, но универсальное правило «поставь температуру
 0 и получишь гарантированно правильный и одинаковый ответ» неверно. Параметры и
@@ -405,7 +408,7 @@ NIST относит prompt injection и indirect prompt injection к актуа�
 отдельно предупреждает, что полных защит нет. OWASP 2025 ставит Prompt Injection
 и Sensitive Information Disclosure первыми двумя рисками для LLM-приложений
 ([NIST AI 100-2e2025](https://doi.org/10.6028/NIST.AI.100-2e2025),
-[OWASP Top 10 for LLM Applications 2025](https://genai.owasp.org/llm-top-10/)).
+[архивная версия OWASP Top 10 for LLM Applications 2025](https://genai.owasp.org/llm-top-10/)).
 
 Для базового курса необходимы пользовательские правила:
 
@@ -421,7 +424,7 @@ NIST относит prompt injection и indirect prompt injection к актуа�
 официальные таблицы OpenAI и Anthropic перечисляют разные режимы хранения и
 Zero Data Retention; такие цифры нельзя переносить между бесплатным чатом и API
 и нужно перепроверять перед публикацией
-([OpenAI, Data controls](https://platform.openai.com/docs/models/default-usage-policies-by-endpoint),
+([OpenAI, Data controls](https://developers.openai.com/api/docs/guides/your-data#default-usage-policies-by-endpoint),
 [Anthropic, API and data retention](https://platform.claude.com/docs/en/manage-claude/api-and-data-retention)).
 
 NIST AI 600-1 дополнительно выделяет конфабуляцию, вредную предвзятость,
@@ -441,11 +444,11 @@ Automatic Prompt Engineer формировал набор инструкций �
 [Yang et al., 2023](https://arxiv.org/abs/2309.03409)).
 
 Официальный Anthropic metaprompt прямо называется стартовой точкой и предупреждает,
-что результат не гарантированно оптимален. Текущий OpenAI prompt optimizer требует
-датасет и graders и предписывает вручную проверить результат, потому что
-оптимизированный промпт может стать хуже на отдельных входах
+что результат не гарантированно оптимален. Поэтому автоматический поиск кандидатов
+нужно строить как провайдер-независимый цикл с единым набором для разработки,
+наблюдаемыми критериями, ручным разбором ошибок и отложенной проверкой
 ([Anthropic Cookbook, Metaprompt](https://platform.claude.com/cookbook/misc-metaprompt),
-[OpenAI, Prompt optimizer](https://developers.openai.com/api/docs/guides/prompt-optimizer)).
+[OpenAI, Evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices)).
 
 Центральный практический конвейер курса обоснован так:
 
@@ -533,7 +536,7 @@ benchmarks, поэтому они опровергают абсолютный м
 Поведение меняется и между snapshots одного провайдера. OpenAI рекомендует
 фиксировать версию модели и использовать evals, потому что одинаковые system и
 user messages могут работать по-разному после смены snapshot
-([OpenAI API, Backward compatibility](https://platform.openai.com/docs/api-reference/backward-compatibility)).
+([OpenAI API, Backwards compatibility](https://developers.openai.com/api/reference/overview#backwards-compatibility)).
 
 Рекомендованное разделение:
 
@@ -555,10 +558,10 @@ user messages могут работать по-разному после сме�
 | «Напиши: “ты эксперт”, и ответ станет экспертным» | Persona prompting даёт смешанные и task-specific результаты; общий прирост factual QA не подтверждён ([Kong et al.](https://arxiv.org/abs/2308.07702), [Zheng et al.](https://aclanthology.org/2024.findings-emnlp.888/)) | Роль задаёт перспективу и стиль; экспертность обеспечивают процедура, источники и проверка. |
 | «Чем длиннее промпт, тем лучше» | Нерелевантность и позиция в длинном контексте могут ухудшать ответ ([Shi et al.](https://arxiv.org/abs/2302.00093), [Liu et al.](https://arxiv.org/abs/2307.03172)) | Нужна минимально достаточная спецификация. |
 | «На английском всегда лучше» | Многоязычное качество зависит от языка, задачи, модели и prompting strategy ([Shi et al.](https://arxiv.org/abs/2210.03057), [Qin et al.](https://arxiv.org/abs/2310.14799)) | Начни на языке задачи; сравни языки на одном тестовом наборе, если качество недостаточно. |
-| «Температура 0 гарантирует правильный ответ» | Низкая вариативность не равна правильности; даже seed — best effort ([OpenAI Cookbook](https://cookbook.openai.com/examples/reproducible_outputs_with_the_seed_parameter)) | Управляй вариативностью, но доказывай качество тестами. |
+| «Температура 0 гарантирует правильный ответ» | Низкая вариативность не равна правильности; параметры воспроизводимости зависят от API и модели ([OpenAI, Chat Completions reference](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create)) | Управляй вариативностью, но доказывай качество тестами. |
 | «Попроси проверить себя — и ошибка исчезнет» | Intrinsic self-correction имеет конфликтующие результаты; внешний feedback надёжнее ([Huang et al.](https://arxiv.org/abs/2310.01798), [CRITIC](https://arxiv.org/abs/2305.11738)) | Дай модели источник, тест, расчёт или рубрику с наблюдаемыми свидетельствами. |
 | «Ссылка в ответе доказывает факт» | Retrieval и citations делают ответ проверяемым, но не гарантируют поддержку каждого вывода ([RAG](https://arxiv.org/abs/2005.11401), [WebGPT](https://arxiv.org/abs/2112.09332)) | Открой первоисточник и проверь соседний фрагмент, дату и область применимости. |
-| «XML/JSON — магический формат» | Формат влияет на модель и может быть хрупким; schema mode гарантирует структуру, не смысл ([Sclar et al.](https://arxiv.org/abs/2310.11324), [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs)) | Выбирай формат по границам данных и следующему потребителю. |
+| «XML/JSON — магический формат» | Формат влияет на модель и может быть хрупким; для успешного, не-refusal ответа с поддерживаемой схемой API может обеспечить соответствие схеме, но refusal, incomplete и ошибки требуют отдельной обработки, а значения — проверки ([Sclar et al.](https://arxiv.org/abs/2310.11324), [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs)) | Выбирай формат по границам данных и следующему потребителю. |
 | «Один идеальный промпт гарантирует результат» | Ответы вариативны, prompts чувствительны к модели и формату, snapshots меняются ([OpenAI evals](https://developers.openai.com/api/docs/guides/evaluation-best-practices), [Sclar et al.](https://arxiv.org/abs/2310.11324)) | Строй управляемый процесс: спецификация, тесты, повторные запуски, исправление. |
 
 ## 13. Исследовательские следствия для будущего Course Blueprint
@@ -635,7 +638,7 @@ user messages могут работать по-разному после сме�
 | OpenAI Model Spec | 2025-12-18 | Термины ролей, chain of command, untrusted data, tool и token | При каждом обновлении курса или новой версии spec |
 | NIST AI 600-1 | Июль 2024; страница NIST обновлена в 2026 | Классы GenAI-рисков и risk-management framing | Ежегодно и при новой редакции |
 | NIST AI 100-2e2025 | Март 2025 | Таксономия prompt injection и indirect prompt injection | Ежегодно; NIST планирует обновления |
-| OWASP Top 10 for LLM Applications | Версия 2025 | Практическая security-классификация | Каждые 6 месяцев и при новом major release |
+| OWASP Top 10 for LLM Applications | Архивная версия 2025 | Практическая security-классификация | Перед следующим релизом заменить на актуальную major-версию и перепроверить категории |
 | OpenAI, Anthropic, Google prompting/eval docs | Living docs, просмотрены 2026-08-04 | Только текущие product-specific labs и примеры интерфейса | Не реже чем каждые 90 дней и перед публикацией лабораторной |
 | Каталоги моделей, context windows, параметры, data retention | Текущее состояние на 2026-08-04 | Никаких стабильных чисел в ядре; только обновляемые лабораторные | Перед каждым релизом курса, затем каждые 30 дней |
 | Structured Outputs и tool APIs | Living docs, просмотрены 2026-08-04 | Текущий синтаксис, поддерживаемая schema и исключения | Перед каждой лабораторной и при смене model/API version |
