@@ -433,8 +433,9 @@ Unresolved non-blocking risks:
 - benchmark evidence не покрывает всё распределение русскоязычных рабочих
   задач; Course учит локальной проверке вместо универсального языкового
   рейтинга;
-- target-learner comprehension probe ещё не проведён; Reference Lesson ticket
-  должен записать метод, sample limitations и изменения после probe;
+- target-learner comprehension probe не проведён; Course Owner принял это как
+  явно раскрытое ограничение релиза, а будущий probe должен записать метод,
+  sample limitations и изменения после проверки;
 - независимый subject-matter expert Course не проверял; Factual Risk остаётся
   standard, а финальный quality report не должен выдавать Independent Course
   Audit за expert review;
@@ -451,6 +452,10 @@ authoring tickets и Independent Course Audit.
 
 ## Decision record
 
+- 2026-08-04 — Course Owner разрешил завершить issue #68 без live
+  target-learner comprehension probe при условии, что отсутствие learner
+  validation останется явно записанным ограничением, а AI-аудит не будет
+  представлен как его замена.
 - 2026-08-04 — parent spec #68 фиксирует Learner Profile, название «Общий язык
   с ИИ», подзаголовок «Как проектировать задачи, получать предсказуемые
   результаты и управлять качеством», central cycle, application context,

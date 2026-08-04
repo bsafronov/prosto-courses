@@ -77,11 +77,17 @@ offline: learner может использовать данные из усло�
   объясняются при первом значимом употреблении.
 - Термины `prompt`, `baseline`, `development set`, `held-out case`, `rubric`,
   `model ID` и `prompt injection` используются последовательно.
+- Authoring-термины `Course`, `Module`, `Lesson`, `Checkpoint`, `Capstone` и
+  `Self-Assessment` удалены из learner-facing текста; диагностические возвраты
+  показывают русские названия уроков и ведут на их публичные страницы.
+- Course Overview даёт необязательную рекомендацию по будущим специализациям,
+  не создавая сущность программы и не публикуя ссылки на отсутствующие Courses.
 - Headings и инструкции прошли read-aloud pass; критической двусмысленности не
   найдено.
 - Четыре ASCII-многоточия заменены типографским знаком `…`.
 - Target-learner comprehension probe с живым участником не проводился; это
-  ограничение, а не подтверждение понимания.
+  ограничение, а не подтверждение понимания. Course Owner разрешил релиз с
+  этим явно раскрытым ограничением 2026-08-04; AI-аудит его не заменяет.
 
 ## Source, version, jurisdiction and freshness checks
 
@@ -185,7 +191,8 @@ certification или доказательство отсутствия ошиб�
 
 - Независимая экспертная проверка не проводилась. No independent expert review
   was performed.
-- Target-learner probe и field validation не проводились.
+- Target-learner probe и field validation не проводились; Course Owner принял
+  это как явно раскрытое ограничение релиза 2026-08-04.
 - Digital render-QA не заменяет ручное тестирование screen reader и проверку с
   людьми с инвалидностью.
 - Provider behavior, model parameters, product controls и data-retention rules

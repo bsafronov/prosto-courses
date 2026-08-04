@@ -577,8 +577,9 @@ findings, не evidence понимания target learner:
 
 В этой сессии не было доступно представителя Learner Profile. Поэтому
 target-learner comprehension probe не проведён, наблюдаемых learner errors нет
-и target-learner validation не заявляется. Authoring audit, automated
-validation и AI review не считаются заменой.
+и target-learner validation не заявляется. Course Owner разрешил релиз с этим
+явно раскрытым ограничением 2026-08-04. Authoring audit, automated validation
+и AI review не считаются заменой.
 
 Запланированный probe перед final Course audit: дать participant без
 предварительного объяснения найти central loop, пересказать его своими
@@ -771,8 +772,8 @@ Practice Task, retrieval в более позднем контексте, Module
 - Reference Lesson создан в середине Course; authoring calibration, findings,
   corrections и contract для остальных Lessons зафиксированы в ticket #70.
   Target-learner probe не проведён из-за отсутствия доступного представителя
-  Learner Profile; limitation и точный будущий probe записаны без заявления о
-  learner validation.
+  Learner Profile; Course Owner принял это как ограничение релиза, а точный
+  будущий probe записан без заявления о learner validation.
 - Blueprint не публикует Course и не вводит platform contract. Draft остаётся
   вне `src/content/courses` до Independent Course Audit и release QA в ticket
   #77.
