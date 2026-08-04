@@ -199,7 +199,7 @@ Intermediate capability: зафиксировать исходный резул�
 | Order | Lesson slug | Lesson | Primary capability | Outcomes | Study | Practice | Advanced |
 | ---: | --- | --- | --- | --- | ---: | ---: | ---: |
 | 1 | `rubrika-i-cena-oshibki` | Качество состоит из нескольких измерений | Строить рубрику из наблюдаемых свойств, приоритетов и цены критической ошибки | `evaluate-quality`, `manage-risk` | 14 | 21 | 0 |
-| 2 | `normal-edge-adversarial-i-held-out` | Один удачный пример ничего не доказывает | Собирать набор для разработки и отложенный набор из обычных, граничных и adversarial проверочных случаев | `evaluate-quality` | 14 | 21 | 10 |
+| 2 | `normal-edge-adversarial-i-held-out` | Один удачный пример ничего не доказывает | Собирать набор для разработки и отложенный набор из обычных, граничных и провокационных (`adversarial`) проверочных случаев | `evaluate-quality` | 14 | 21 | 10 |
 | 3 | `tochnaya-proverka-ili-samoocenka` | Где нужен тест, а где рубрика | Выбирать Deterministic Check, калиброванное суждение человека или Self-Assessment без ложной оценки | `evaluate-quality`, `verify-evidence` | 14 | 21 | 10 |
 | 4 | `baseline-i-variativnye-zapuski` | Сначала измерь исходный результат | Фиксировать исходный результат и достаточное число случаев и запусков до изменения prompt | `evaluate-quality`, `distinguish-system-boundaries` | 14 | 21 | 5 |
 | 5 | `izmerennaya-oshibka-i-odna-gipoteza` | Меняй только то, что проверяешь | Связывать одно содержательное изменение с измеренным отклонением и вести журнал итераций | `evaluate-quality`, `improve-and-transfer` | 14 | 21 | 10 |
@@ -248,7 +248,7 @@ Intermediate capability: использовать модель для интер
 
 | Order | Lesson slug | Lesson | Primary capability | Outcomes | Study | Practice | Advanced |
 | ---: | --- | --- | --- | --- | ---: | ---: | ---: |
-| 1 | `metaprompt-kak-intervyuer` | Модель помогает найти пробел, но не назначает цель | Проводить pipeline «интервью → черновик спецификации → поиск пробелов», сохраняя цель, риск и критерии у человека | `improve-and-transfer`, `specify-work` | 14 | 21 | 10 |
+| 1 | `metaprompt-kak-intervyuer` | Модель помогает найти пробел, но не назначает цель | Проводить процесс «интервью → черновик спецификации → поиск пробелов», сохраняя цель, риск и критерии у человека | `improve-and-transfer`, `specify-work` | 14 | 21 | 10 |
 | 2 | `kandidaty-i-otlozhennaya-proverka` | Генерируй несколько, выбирай по тестам | Выбирать варианты prompt на наборе для разработки и один раз проверять выбранную версию на отложенных случаях | `improve-and-transfer`, `evaluate-quality` | 14 | 21 | 20 |
 | 3 | `russkiy-angliyskiy-odin-test` | Язык сравнивают, а не объявляют победителем | Сравнивать русскую и английскую версии на одном наборе проверочных случаев и диагностировать изменение смысла при переводе | `improve-and-transfer`, `design-inputs` | 14 | 21 | 25 |
 | 4 | `perenosimoe-yadro-i-usloviya-zapuska` | Переноси задачу, а не магическую строку | Отделять спецификацию от ролей, параметров и синтаксиса инструментов и фиксировать воспроизводимые зависящие от модели условия запуска | `improve-and-transfer`, `distinguish-system-boundaries` | 14 | 21 | 35 |
