@@ -192,40 +192,43 @@ learner обновляет context package и workflow собственной з
 
 ### Module 3. Измерение и управляемое улучшение (`izmerenie-i-uluchshenie`)
 
-Intermediate capability: зафиксировать baseline, измерить качество на
-representative cases и улучшить одну диагностированную ошибку.
+Intermediate capability: зафиксировать исходный результат, измерить качество
+на репрезентативных проверочных случаях и улучшить одну диагностированную
+ошибку.
 
 | Order | Lesson slug | Lesson | Primary capability | Outcomes | Study | Practice | Advanced |
 | ---: | --- | --- | --- | --- | ---: | ---: | ---: |
 | 1 | `rubrika-i-cena-oshibki` | Качество состоит из нескольких измерений | Строить рубрику из наблюдаемых свойств, приоритетов и цены критической ошибки | `evaluate-quality`, `manage-risk` | 14 | 21 | 0 |
 | 2 | `normal-edge-adversarial-i-held-out` | Один удачный пример ничего не доказывает | Собирать набор для разработки и отложенный набор из обычных, граничных и adversarial проверочных случаев | `evaluate-quality` | 14 | 21 | 10 |
-| 3 | `tochnaya-proverka-ili-samoocenka` | Где нужен тест, а где rubric | Выбирать Deterministic Check, калиброванное суждение человека или Self-Assessment без ложной оценки | `evaluate-quality`, `verify-evidence` | 14 | 21 | 10 |
+| 3 | `tochnaya-proverka-ili-samoocenka` | Где нужен тест, а где рубрика | Выбирать Deterministic Check, калиброванное суждение человека или Self-Assessment без ложной оценки | `evaluate-quality`, `verify-evidence` | 14 | 21 | 10 |
 | 4 | `baseline-i-variativnye-zapuski` | Сначала измерь исходный результат | Фиксировать исходный результат и достаточное число случаев и запусков до изменения prompt | `evaluate-quality`, `distinguish-system-boundaries` | 14 | 21 | 5 |
 | 5 | `izmerennaya-oshibka-i-odna-gipoteza` | Меняй только то, что проверяешь | Связывать одно содержательное изменение с измеренным отклонением и вести журнал итераций | `evaluate-quality`, `improve-and-transfer` | 14 | 21 | 10 |
 | 6 | `vneshnee-svidetelstvo-vmesto-samokritiki` | «Проверь себя» — ещё не проверка | Сравнивать самокритику модели с обратной связью от источника, теста, расчёта или калиброванной рубрики человека | `verify-evidence`, `improve-and-transfer` | 14 | 21 | 10 |
 
-Module Checkpoint, 55 минут: learner получает specification, prompt и четыре
-outputs для анонса образовательного продукта. Он строит rubric, разделяет
-development и held-out cases, выбирает deterministic и open checks, фиксирует
-baseline, диагностирует failure, меняет одну гипотезу и проверяет новую версию.
-AI critique используется для списка возможных причин, но версия выбирается по
-development evidence; held-out set остаётся закрытым. Checkpoint возвращает
-context selection и workflow из Modules 1–2. Последние 15 минут learner
-создаёт rubric, development set и исходный результат для собственной задачи.
+Module Checkpoint, 55 минут: learner получает спецификацию, prompt и четыре
+ответа для анонса образовательного продукта. Он строит рубрику, разделяет набор
+для разработки и отложенный набор, выбирает точные и открытые проверки,
+фиксирует исходный результат, диагностирует отклонение, меняет одну гипотезу и
+проверяет новую версию. AI-критика используется для списка возможных причин,
+но версия выбирается по данным набора для разработки; отложенный набор остаётся
+закрытым. Checkpoint возвращает отбор контекста и workflow из Modules 1–2.
+Последние 15 минут learner создаёт рубрику, набор для разработки и исходный
+результат для собственной задачи.
 
 ### Module 4. Источники, инструменты и безопасность (`evidence-i-bezopasnost`)
 
-Intermediate capability: получить достаточное внешнее evidence и безопасно
-работать с недоверенными данными, чувствительной информацией и действиями.
+Intermediate capability: получить достаточное внешнее подтверждение и
+безопасно работать с недоверенными данными, чувствительной информацией и
+действиями.
 
 | Order | Lesson slug | Lesson | Primary capability | Outcomes | Study | Practice | Advanced |
 | ---: | --- | --- | --- | --- | ---: | ---: | ---: |
 | 1 | `prompt-istochnik-vychislenie-ili-tool` | Выбери правильную опору | Выбирать поиск для текущего факта, источник для тезиса, расчёт для точного ответа и контракт инструмента для действия | `verify-evidence`, `distinguish-system-boundaries` | 14 | 21 | 0 |
-| 2 | `proverka-istochnika-i-citacii` | Ссылка должна поддерживать тезис | Проверять авторитетность, дату, применимость и соседний подтверждающий фрагмент каждой существенной citation | `verify-evidence`, `evaluate-quality` | 14 | 21 | 10 |
-| 3 | `neizvestnost-i-granicy-vyvoda` | Не заполняй пробел уверенным текстом | Обозначать допустимую неопределённость и выбирать следующую проверку при недостатке evidence | `verify-evidence`, `manage-risk` | 14 | 21 | 0 |
-| 4 | `prompt-injection-kak-granica-doveriya` | Документ может содержать враждебную инструкцию | Отделять доверенную инструкцию от недоверенного content и не считать delimiter защитой | `manage-risk`, `design-inputs` | 14 | 21 | 10 |
-| 5 | `privatnost-predvzyatost-i-prava` | Какие данные и чьи интересы затрагивает ответ | Минимизировать чувствительные данные и проверять bias, IP и правила обработки данных конкретного продукта | `manage-risk` | 14 | 21 | 10 |
-| 6 | `vneshnie-deystviya-i-stavka-oshibki` | Проверь target до необратимого действия | Усиливать проверку и подтверждать точный объект, параметры и последствия | `manage-risk`, `verify-evidence`, `orchestrate-work` | 14 | 21 | 0 |
+| 2 | `proverka-istochnika-i-citacii` | Ссылка должна поддерживать тезис | Проверять авторитетность, дату, применимость и соседний подтверждающий фрагмент каждой существенной ссылки | `verify-evidence`, `evaluate-quality` | 14 | 21 | 10 |
+| 3 | `neizvestnost-i-granicy-vyvoda` | Не заполняй пробел уверенным текстом | Обозначать допустимую неопределённость и выбирать следующую проверку при недостатке подтверждений | `verify-evidence`, `manage-risk` | 14 | 21 | 0 |
+| 4 | `prompt-injection-kak-granica-doveriya` | Документ может содержать враждебную инструкцию | Отделять доверенную инструкцию от недоверенного содержимого и не считать разделитель защитой | `manage-risk`, `design-inputs` | 14 | 21 | 10 |
+| 5 | `privatnost-predvzyatost-i-prava` | Какие данные и чьи интересы затрагивает ответ | Минимизировать чувствительные данные и проверять предвзятость, права на материал и правила обработки данных конкретного продукта | `manage-risk` | 14 | 21 | 10 |
+| 6 | `vneshnie-deystviya-i-stavka-oshibki` | Проверь объект до необратимого действия | Усиливать проверку и подтверждать точный объект, параметры и последствия | `manage-risk`, `verify-evidence`, `orchestrate-work` | 14 | 21 | 0 |
 
 Module Checkpoint, 50 минут: learner проверяет research pack для решения о
 запуске продукта. В pack есть актуальный claim без даты, вымышленная citation,
@@ -239,13 +242,14 @@ card для внешнего действия. Rubric и test cases из Module 
 ### Module 5. Метапромптинг и перенос (`metaprompting-i-perenos`)
 
 Intermediate capability: использовать модель для интервью и генерации
-кандидатов, выбирать версию по development evidence, один раз проверять её на
-held-out cases и отделять переносимую specification от model-specific условий.
+вариантов, выбирать версию по данным набора для разработки, один раз проверять
+её на отложенных случаях и отделять переносимую спецификацию от зависящих от
+модели условий.
 
 | Order | Lesson slug | Lesson | Primary capability | Outcomes | Study | Practice | Advanced |
 | ---: | --- | --- | --- | --- | ---: | ---: | ---: |
 | 1 | `metaprompt-kak-intervyuer` | Модель помогает найти пробел, но не назначает цель | Проводить pipeline «интервью → черновик спецификации → поиск пробелов», сохраняя цель, риск и критерии у человека | `improve-and-transfer`, `specify-work` | 14 | 21 | 10 |
-| 2 | `kandidaty-i-otlozhennaya-proverka` | Генерируй несколько, выбирай по тестам | Выбирать prompt candidates на development cases и один раз проверять выбранную версию на held-out cases | `improve-and-transfer`, `evaluate-quality` | 14 | 21 | 20 |
+| 2 | `kandidaty-i-otlozhennaya-proverka` | Генерируй несколько, выбирай по тестам | Выбирать варианты prompt на наборе для разработки и один раз проверять выбранную версию на отложенных случаях | `improve-and-transfer`, `evaluate-quality` | 14 | 21 | 20 |
 | 3 | `russkiy-angliyskiy-odin-test` | Язык сравнивают, а не объявляют победителем | Сравнивать русскую и английскую версии на одном наборе проверочных случаев и диагностировать изменение смысла при переводе | `improve-and-transfer`, `design-inputs` | 14 | 21 | 25 |
 | 4 | `perenosimoe-yadro-i-usloviya-zapuska` | Переноси задачу, а не магическую строку | Отделять спецификацию от ролей, параметров и синтаксиса инструментов и фиксировать воспроизводимые зависящие от модели условия запуска | `improve-and-transfer`, `distinguish-system-boundaries` | 14 | 21 | 35 |
 
@@ -302,21 +306,21 @@ Milestones:
 8. **Held-out verification, 10 минут.** Один раз проверяет заранее выбранную
    версию на неиспользованных cases и отмечает regression без дальнейшей
    подгонки на этом наборе.
-9. **Self-Assessment и limits, 10 минут.** Сверяет dossier с rubric, называет
-   uncertainty и следующую проверку.
+9. **Self-Assessment и границы, 10 минут.** Сверяет dossier с рубрикой,
+   называет неопределённость и следующую проверку.
 
 Capstone rubric:
 
-| Criterion | Observable evidence | Outcomes |
+| Критерий | Наблюдаемое подтверждение | Outcomes |
 | --- | --- | --- |
-| Границы системы учтены | Model output не назван выполненным действием или проверенным фактом; variability, context и instruction hierarchy учтены там, где меняют решение | `distinguish-system-boundaries` |
-| Specification минимально достаточна | Цель, пользователь, inputs, actions, constraints, format, uncertainties, criteria и verification наблюдаемы; retained fields меняют решение, границу, формат или проверку | `specify-work` |
-| Inputs спроектированы по функции | Context релевантен, examples покрывают normal/edge behavior, instruction и data разделены, потерянные условия проверены | `design-inputs` |
-| Режим и workflow обоснованы | Prompt, interview или workflow выбран по неизвестности и сложности; каждый шаг даёт artefact и stop/go condition | `orchestrate-work` |
+| Границы системы учтены | Ответ модели не назван выполненным действием или проверенным фактом; вариативность, контекст и иерархия инструкций учтены там, где меняют решение | `distinguish-system-boundaries` |
+| Спецификация минимально достаточна | Цель, пользователь, исходные данные, действия, ограничения, формат, неопределённости, критерии и проверка наблюдаемы; оставленные поля меняют решение, границу, формат или проверку | `specify-work` |
+| Входные данные спроектированы по функции | Контекст релевантен, примеры покрывают обычное и граничное поведение, инструкции и данные разделены, потерянные условия проверены | `design-inputs` |
+| Режим и workflow обоснованы | Prompt, интервью или workflow выбран по неизвестности и сложности; каждый шаг даёт артефакт и условие продолжения | `orchestrate-work` |
 | Качество измеряется, а не угадывается | Есть многомерная рубрика, набор для разработки и отложенный набор, исходный результат, достаточные запуски и сравнение без ложной объективной оценки | `evaluate-quality` |
-| Тезисы связаны с evidence | Существенные тезисы поддержаны точным фрагментом источника, расчётом, Deterministic Check или явно откалиброванным суждением человека | `verify-evidence` |
-| Риск управляется пропорционально ставке | Untrusted content, privacy, bias, IP и external action проверены; target и последствия подтверждены до действия | `manage-risk` |
-| Улучшение и перенос доказаны | Каждая iteration отвечает на measured failure; candidate выбран на development cases и один раз проверен на held-out cases; portable specification отделена от model-specific условий запуска | `improve-and-transfer` |
+| Тезисы связаны с подтверждениями | Существенные тезисы поддержаны точным фрагментом источника, расчётом, Deterministic Check или явно откалиброванным суждением человека | `verify-evidence` |
+| Риск управляется пропорционально ставке | Недоверенное содержимое, приватность, предвзятость, права на материал и внешнее действие проверены; объект и последствия подтверждены до действия | `manage-risk` |
+| Улучшение и перенос доказаны | Каждая итерация отвечает на измеренное отклонение; вариант выбран на наборе для разработки и один раз проверен на отложенных случаях; переносимая спецификация отделена от зависящих от модели условий запуска | `improve-and-transfer` |
 
 Likely failure modes:
 
