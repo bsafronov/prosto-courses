@@ -2,9 +2,9 @@
 
 Подзаголовок: «Как проектировать задачи, получать предсказуемые результаты и управлять качеством»
 
-Версия: 1
+Версия: 2
 
-Статус: проект курса проверен; делегированное создание курса активно
+Статус: проект курса проверен; Reference Lesson создан и откалиброван с записанным ограничением learner probe; делегированное создание курса активно
 
 Дата проектирования: 2026-08-04
 
@@ -486,60 +486,130 @@ boundary, then elicit a changed-case action before consolidation. Diagrams are
 used only for layered system, central cycle, trust boundary or iteration loop
 when they reduce effort; exact mappings use Markdown tables.
 
-## Reference Lesson calibration plan
+## Reference Lesson calibration record
 
-Selected Reference Lesson:
+Reference Lesson создан в
 `modules/izmerenie-i-uluchshenie/lessons/izmerennaya-oshibka-i-odna-gipoteza.mdx`.
+Калибровка зафиксирована 2026-08-04 в ticket #70.
 
-Почему Lesson репрезентативен:
+Lesson остаётся репрезентативным: он расположен в середине dependency chain,
+возвращает specification, rubric, test cases, variability и baseline, а затем
+выражает центральный переход Course `оценка → уточнение`. Одна primary
+capability наблюдаема: learner связывает измеренное отклонение с одной
+проверяемой гипотезой, проводит сопоставимый повтор и заполняет журнал
+итераций.
 
-- находится в середине dependency chain и возвращает specification, context,
-  examples, rubric, test cases, variability и baseline;
-- выражает центральный переход Course `оценка → уточнение`;
-- требует причинного понимания, а не копирования prompt template;
-- использует сквозной кейс запуска образовательного продукта и changed
-  professional case для transfer;
-- позволяет откалибровать Knowledge Check, open Practice Task, progressive
-  hints, TaskRubric и Reflection без AI grading;
-- показывает diagnostic feedback: measured symptom → likely cause → one change
-  → rerun → regression check;
-- проверяет natural Russian вокруг терминов baseline, failure, hypothesis и
-  iteration log;
-- visual decision содержательна: компактный iteration table обязателен;
-  Diagram добавляется только если learner-probe покажет, что causal loop
-  трудно восстановить из текста.
+### Что откалибровано
 
-Planned calibration:
+- **Depth.** Причинная модель отделяет симптом от причины, задаёт
+  подтверждающее и опровергающее evidence, требует regression check и явно
+  ограничивает вывод конкретными cases и условиями. Boundary cases различают
+  одну содержательную гипотезу, несколько связанных текстовых правок, новый
+  baseline после смены условий и срочную работу без causal attribution.
+- **Pacing.** Metadata сохраняет 14 минут study, 21 минуту core practice и до
+  10 минут advanced. Core содержит один worked example, один ordering
+  Knowledge Check и одну open Practice Task; optional stretch Practice Task
+  отдельно разбирает невозможность controlled isolation. Это authoring
+  estimate, а не измерение на target learner.
+- **Worked example.** Смоделированный baseline анонса образовательного продукта
+  одновременно нарушает specificity и source-grounding. Example выбирает
+  неподтверждённые claims по частоте и риску, меняет только evidence rule,
+  повторяет по три сопоставимых запуска тех же cases и сохраняет размытую
+  аудиторию как отдельную следующую ошибку. Поэтому частичное улучшение не
+  выдано за полный успех, а observed difference — за universal causality.
+- **Scaffolding.** Rubric, baseline и measured failure даны. Hypothesis,
+  falsifying evidence, one change, regression checks и log entry остаются за
+  learner. Changed professional case требует переноса без готовой
+  формулировки; микрошаг возвращает собственную задачу learner.
+- **Feedback and interactions.** Ordering check диагностирует преждевременное
+  редактирование. Progressive hints идут от симптома к механизму и протоколу.
+  Core and stretch TaskRubrics отдельно показывают ошибки attribution,
+  falsifiability, comparability, regression и transfer. Reflection сохраняет
+  ровно тот выбор, который нужен для следующей итерации, и не оценивает
+  открытый ответ.
+- **Course Voice.** Основной текст использует естественные русские действия:
+  `измеренное отклонение`, `проверяемая гипотеза`, `сопоставимый повтор`,
+  `журнал итераций`. `prompt` и `baseline` сохранены как зафиксированные Course
+  terms и объяснены в контексте, без чередования случайных English synonyms.
+- **Learning Visual.** Exact mapping представлен двумя Markdown tables и
+  соседней текстовой инструкцией: сначала cases и симптомы, затем causal log.
+  Смысл не зависит от цвета или положения. Diagram не добавлен: без learner
+  evidence нет основания считать, что короткая цепочка и таблица недостаточны.
+- **Sources and freshness.** Claims о variability, task-specific evals,
+  logging и prompt sensitivity имеют соседние primary/official citations.
+  Living provider guidance отделено от Course design method; Lesson получает
+  time-sensitive freshness `verifiedAt: 2026-08-04`, `reviewAfter:
+  2026-11-02`, applicability `global`.
 
-- depth: learner объясняет, почему simultaneous edits не позволяют приписать
-  improvement одной cause, и распознаёт случай, где controlled isolation
-  невозможно;
-- pacing: 14 минут study + 21 минута core practice + до 10 минут advanced;
-- worked example: baseline launch brief fails on audience specificity and
-  unsupported claims; author changes only evidence rule, then compares same
-  cases;
-- partial completion: learner получает rubric, baseline outputs и one failure,
-  но сам формулирует hypothesis and log entry;
-- independent transfer: для changed case learner выбирает measured failure and
-  one change без готового prompt;
-- interaction density: один diagnostic Knowledge Check, одна core Practice
-  Task с progressive hints и TaskRubric, одна Reflection only if stored note
-  helps plan next iteration;
-- feedback: names observable symptom, why tempting multi-edit strategy breaks
-  diagnosis, correction and next rerun;
-- accessibility: iteration comparison remains understandable as text/table and
-  never encodes winner only with color or position;
-- source use: causal claim about controlled iteration is framed as Course
-  design method; variability and eval claims cite Evidence Base sources near
-  learner-facing text;
-- comprehension probe: representative learner retells the loop without source
-  wording, chooses one change in a changed case and explains what evidence
-  would falsify it. «Всё понятно?» is not accepted evidence.
+### Findings and corrections
 
-Reference Lesson ticket #70 records probe method, observed errors, corrections
-and final calibration in a new version of this Blueprint. Until
-that work exists, only selection and planned contract are complete; no claim of
-target-learner validation is made.
+Authoring audit и двухосевой review нашли восемь рисков; это редакционные
+findings, не evidence понимания target learner:
+
+1. Формулировку «одно изменение» можно было понять как одну строку или одно
+   слово. Lesson теперь определяет одну содержательную гипотезу и показывает
+   boundary со связанными правками.
+2. Успех новой версии мог скрыть оставшуюся ошибку. Worked example и журнал
+   сохраняют размытую аудиторию отдельным residual failure и проверяют
+   regressions.
+3. Core task мог зависеть от online-доступа к модели. Добавлен offline-complete
+   путь: learner записывает точный протокол будущего запуска; модель даёт
+   дополнительные observations, но не является условием понимания задания.
+4. Diagram мог дублировать короткую причинную цепочку. Сохранена более точная
+   table form; Diagram отложен до evidence, что связи нельзя восстановить из
+   текста и таблицы.
+5. Один output на case не отделял effect изменения от обычной variability.
+   Worked example и core task теперь используют по три сопоставимых запуска
+   каждого case, а результат назван preliminary evidence, которое следующая
+   серия способна опровергнуть.
+6. Changed case повторял ошибки worked example и позволял скопировать выбор по
+   частоте. Transfer теперь использует инструкцию службы поддержки, другие
+   error types и trade-off между частотой и ценой пропущенной эскалации.
+7. Timed advanced action был оформлен как Callout без goal, criteria и
+   feedback. Он преобразован в optional stretch Practice Task с TaskRubric.
+8. Stretch task предполагал, что у learner уже есть подходящая прошлая правка.
+   Добавлен complete fallback case, поэтому task solvable from available
+   material без личного artefact.
+
+### Learner-probe limitation
+
+В этой сессии не было доступно представителя Learner Profile. Поэтому
+target-learner comprehension probe не проведён, наблюдаемых learner errors нет
+и target-learner validation не заявляется. Authoring audit, automated
+validation и AI review не считаются заменой.
+
+Запланированный probe перед final Course audit: дать participant без
+предварительного объяснения найти central loop, пересказать его своими
+словами, затем выбрать одну гипотезу для нового status case и назвать
+falsifying evidence. Записываются hesitation, смешение symptom/cause,
+simultaneous edits и пропущенные regressions; consequential finding требует
+revision и повторного changed case. Вопрос «Всё понятно?» не используется.
+
+### Calibration contract for remaining Lessons
+
+1. Начинать difficult explanation с рабочего решения learner, а термин вводить
+   после конкретного симптома или case.
+2. Показывать causal or decision chain, intermediate check и boundary; красивый
+   final output без причин и ограничений недостаточен.
+3. Давать помощь по текущей ступени scaffolding: к Module 3 можно предоставить
+   rubric, baseline и один symptom, но hypothesis, change и evidence выбирает
+   learner. В следующих Lessons готовый verification method снимается.
+4. Строить diagnostic feedback как `симптом → возможная причина → исправление
+   → повторная проверка → regression check`, не как verdict о learner.
+5. Использовать minimum interaction density, достаточную для action and
+   transfer. Knowledge Check нужен только для consequential deterministic
+   misconception; open work получает TaskRubric без score.
+6. Использовать Markdown table для exact mappings. Diagram добавлять только
+   для relationship/process, когда text and table требуют больше effort;
+   visual всегда получает самостоятельную textual interpretation.
+7. Сохранять русский Course Voice и зафиксированные terms. English нужен для
+   official names, identifiers или термина, который learner должен узнать, а
+   не как authoring shorthand.
+8. Ставить citation рядом с consequential technical claim, отделять source
+   claim от Course synthesis и назначать living guidance собственный
+   freshness lifecycle.
+9. Не выдавать pacing estimate за измеренное время до learner probe; если probe
+   остаётся невозможен к final audit, перенести limitation в quality report.
 
 ## Coverage audit
 
@@ -634,8 +704,11 @@ Workload определяет пять Modules вместе с capability depend
   Practice and instruction; gaps в Outcome Alignment не найдены.
 - Dependency, overload, duplication, scope, platform, safety, accessibility и
   workload audits записаны выше.
-- Reference Lesson выбран из середины Course; calibration evidence ещё должно
-  быть получено в ticket #70 и не заявлено как завершённое.
+- Reference Lesson создан в середине Course; authoring calibration, findings,
+  corrections и contract для остальных Lessons зафиксированы в ticket #70.
+  Target-learner probe не проведён из-за отсутствия доступного представителя
+  Learner Profile; limitation и точный будущий probe записаны без заявления о
+  learner validation.
 - Blueprint не публикует Course и не вводит platform contract. Draft остаётся
   вне `src/content/courses` до полного integration ticket.
 
