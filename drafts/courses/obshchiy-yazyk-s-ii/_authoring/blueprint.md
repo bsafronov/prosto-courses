@@ -30,11 +30,11 @@ Capstone требует спроектировать и доказательно
    последствия возможного внешнего действия;
 8. изменить минимум две измеренные ошибки по одной содержательной гипотезе за
    итерацию и показать, что held-out evidence не использовалось для подгонки;
-9. сохранить переносимое ядро спецификации отдельно от model-specific условий
+9. сохранить переносимое ядро спецификации отдельно от зависящих от модели условий
    запуска и воспроизводимо зафиксировать эксперимент; отдельный model adapter
    и вторая модель остаются optional;
-10. сравнить итог с Self-Assessment rubric, назвать границы и выбрать следующую
-    проверку без ложного objective score.
+10. сравнить итог с рубрикой Self-Assessment, назвать границы и выбрать
+    следующую проверку без ложной объективной оценки.
 
 Capstone context выбирает learner, но brief требует realistic stakes, нового
 контекста относительно учебного кейса и результата, который можно проверить за
@@ -158,9 +158,11 @@ Module Checkpoint, 50 минут: learner получает сырой запро
 ошибки, превращает запрос в минимально достаточную specification, удаляет
 декоративную роль, отбирает релевантный фрагмент context, отклоняет инструкцию
 из недоверенных данных, выбирает prompt, requirements interview или workflow и
-задаёт два проверочных случая и способ проверки. Changed case просит
-подготовить решение для руководителя при неполных данных. Evidence: mode
-объяснён наблюдаемыми признаками, а уверенный текст не считается фактом.
+задаёт два проверочных случая и способ проверки. Для одного вариативного случая
+он выполняет два запуска и сравнивает результат по одному наблюдаемому
+критерию. Changed case просит подготовить решение для руководителя при неполных
+данных. Evidence: mode объяснён наблюдаемыми признаками, а уверенный текст не
+считается фактом.
 Последние 10 минут learner применяет те же действия к собственной задаче и
 сохраняет первую версию Capstone dossier.
 
@@ -176,7 +178,7 @@ workflow, в котором каждый шаг даёт проверяемый 
 | 3 | `primery-i-granichnye-sluchai` | Пример показывает поведение, а не закон | Подбирать репрезентативные обычные и граничные примеры и добавлять контрпример только к измеренной ошибке | `design-inputs`, `evaluate-quality` | 14 | 21 | 10 |
 | 4 | `format-dlya-sleduyushchego-potrebitelya` | Markdown, теги или JSON | Выбирать форму по границам частей и следующему потребителю без обещания правильности содержания | `design-inputs`, `distinguish-system-boundaries` | 14 | 21 | 10 |
 | 5 | `dialog-kak-intervyu-o-trebovaniyah` | Сначала выяснить, потом собрать заново | Проводить интервью о требованиях и подтверждать консолидированную спецификацию до выполнения | `orchestrate-work`, `specify-work` | 14 | 21 | 5 |
-| 6 | `dekompoziciya-s-usloviem-prodolzheniya` | Каждый шаг должен оставить evidence | Делить задачу на более простые подзадачи с проверяемым результатом и условием продолжения | `orchestrate-work`, `verify-evidence` | 14 | 21 | 10 |
+| 6 | `dekompoziciya-s-usloviem-prodolzheniya` | Каждый шаг должен оставить проверяемый след | Делить задачу на более простые подзадачи с проверяемым результатом и условием продолжения | `orchestrate-work`, `verify-evidence` | 14 | 21 | 10 |
 
 Module Checkpoint, 50 минут: по specification запуска образовательного продукта
 learner получает набор заметок, таблицу требований, три examples и недоверенный
@@ -196,7 +198,7 @@ representative cases и улучшить одну диагностированн
 | Order | Lesson slug | Lesson | Primary capability | Outcomes | Study | Practice | Advanced |
 | ---: | --- | --- | --- | --- | ---: | ---: | ---: |
 | 1 | `rubrika-i-cena-oshibki` | Качество состоит из нескольких измерений | Строить рубрику из наблюдаемых свойств, приоритетов и цены критической ошибки | `evaluate-quality`, `manage-risk` | 14 | 21 | 0 |
-| 2 | `normal-edge-adversarial-i-held-out` | Один удачный пример ничего не доказывает | Собирать development и held-out sets из обычных, граничных и adversarial проверочных случаев | `evaluate-quality` | 14 | 21 | 10 |
+| 2 | `normal-edge-adversarial-i-held-out` | Один удачный пример ничего не доказывает | Собирать набор для разработки и отложенный набор из обычных, граничных и adversarial проверочных случаев | `evaluate-quality` | 14 | 21 | 10 |
 | 3 | `tochnaya-proverka-ili-samoocenka` | Где нужен тест, а где rubric | Выбирать Deterministic Check, калиброванное суждение человека или Self-Assessment без ложной оценки | `evaluate-quality`, `verify-evidence` | 14 | 21 | 10 |
 | 4 | `baseline-i-variativnye-zapuski` | Сначала измерь исходный результат | Фиксировать исходный результат и достаточное число случаев и запусков до изменения prompt | `evaluate-quality`, `distinguish-system-boundaries` | 14 | 21 | 5 |
 | 5 | `izmerennaya-oshibka-i-odna-gipoteza` | Меняй только то, что проверяешь | Связывать одно содержательное изменение с измеренным отклонением и вести журнал итераций | `evaluate-quality`, `improve-and-transfer` | 14 | 21 | 10 |
@@ -218,7 +220,7 @@ Intermediate capability: получить достаточное внешнее 
 
 | Order | Lesson slug | Lesson | Primary capability | Outcomes | Study | Practice | Advanced |
 | ---: | --- | --- | --- | --- | ---: | ---: | ---: |
-| 1 | `prompt-istochnik-vychislenie-ili-tool` | Выбери правильную опору | Выбирать поиск для текущего факта, источник для тезиса, расчёт для точного ответа и tool contract для действия | `verify-evidence`, `distinguish-system-boundaries` | 14 | 21 | 0 |
+| 1 | `prompt-istochnik-vychislenie-ili-tool` | Выбери правильную опору | Выбирать поиск для текущего факта, источник для тезиса, расчёт для точного ответа и контракт инструмента для действия | `verify-evidence`, `distinguish-system-boundaries` | 14 | 21 | 0 |
 | 2 | `proverka-istochnika-i-citacii` | Ссылка должна поддерживать тезис | Проверять авторитетность, дату, применимость и соседний подтверждающий фрагмент каждой существенной citation | `verify-evidence`, `evaluate-quality` | 14 | 21 | 10 |
 | 3 | `neizvestnost-i-granicy-vyvoda` | Не заполняй пробел уверенным текстом | Обозначать допустимую неопределённость и выбирать следующую проверку при недостатке evidence | `verify-evidence`, `manage-risk` | 14 | 21 | 0 |
 | 4 | `prompt-injection-kak-granica-doveriya` | Документ может содержать враждебную инструкцию | Отделять доверенную инструкцию от недоверенного content и не считать delimiter защитой | `manage-risk`, `design-inputs` | 14 | 21 | 10 |
@@ -245,7 +247,7 @@ held-out cases и отделять переносимую specification от mod
 | 1 | `metaprompt-kak-intervyuer` | Модель помогает найти пробел, но не назначает цель | Проводить pipeline «интервью → черновик спецификации → поиск пробелов», сохраняя цель, риск и критерии у человека | `improve-and-transfer`, `specify-work` | 14 | 21 | 10 |
 | 2 | `kandidaty-i-otlozhennaya-proverka` | Генерируй несколько, выбирай по тестам | Выбирать prompt candidates на development cases и один раз проверять выбранную версию на held-out cases | `improve-and-transfer`, `evaluate-quality` | 14 | 21 | 20 |
 | 3 | `russkiy-angliyskiy-odin-test` | Язык сравнивают, а не объявляют победителем | Сравнивать русскую и английскую версии на одном наборе проверочных случаев и диагностировать изменение смысла при переводе | `improve-and-transfer`, `design-inputs` | 14 | 21 | 25 |
-| 4 | `perenosimoe-yadro-i-usloviya-zapuska` | Переноси задачу, а не магическую строку | Отделять спецификацию от ролей, параметров и синтаксиса инструментов и фиксировать воспроизводимые model-specific условия запуска | `improve-and-transfer`, `distinguish-system-boundaries` | 14 | 21 | 35 |
+| 4 | `perenosimoe-yadro-i-usloviya-zapuska` | Переноси задачу, а не магическую строку | Отделять спецификацию от ролей, параметров и синтаксиса инструментов и фиксировать воспроизводимые зависящие от модели условия запуска | `improve-and-transfer`, `distinguish-system-boundaries` | 14 | 21 | 35 |
 
 Module Checkpoint, 50 минут: learner проходит полный metaprompt pipeline для
 новой рабочей задачи, получает минимум три candidates, выбирает версию по
@@ -281,8 +283,10 @@ Learner сохраняет эти микрошаги в растущем Capston
 
 Milestones:
 
-1. **Безопасный brief, 20 минут.** Learner выбирает новую реальную задачу,
-   называет пользователя результата, stakes, exclusions и обезличивает inputs.
+1. **Безопасный brief, 20 минут.** Learner продолжает собственную задачу и
+   растущее dossier из предыдущих Modules. Она нова только относительно
+   authored учебного кейса. Learner повторно проверяет пользователя результата,
+   stakes, exclusions и обезличивает inputs.
 2. **Specification, 35 минут.** Собирает обязательные поля и обосновывает
    удалённые детали.
 3. **Mode и input package, 30 минут.** Выбирает prompt/dialog/workflow,
@@ -309,8 +313,8 @@ Capstone rubric:
 | Specification минимально достаточна | Цель, пользователь, inputs, actions, constraints, format, uncertainties, criteria и verification наблюдаемы; retained fields меняют решение, границу, формат или проверку | `specify-work` |
 | Inputs спроектированы по функции | Context релевантен, examples покрывают normal/edge behavior, instruction и data разделены, потерянные условия проверены | `design-inputs` |
 | Режим и workflow обоснованы | Prompt, interview или workflow выбран по неизвестности и сложности; каждый шаг даёт artefact и stop/go condition | `orchestrate-work` |
-| Качество измеряется, а не угадывается | Есть multidimensional rubric, development и held-out cases, baseline, достаточные runs и сравнение без ложного objective score | `evaluate-quality` |
-| Claims связаны с evidence | Существенные тезисы поддержаны точным source fragment, calculation, Deterministic Check или явно calibrated human judgment | `verify-evidence` |
+| Качество измеряется, а не угадывается | Есть многомерная рубрика, набор для разработки и отложенный набор, исходный результат, достаточные запуски и сравнение без ложной объективной оценки | `evaluate-quality` |
+| Тезисы связаны с evidence | Существенные тезисы поддержаны точным фрагментом источника, расчётом, Deterministic Check или явно откалиброванным суждением человека | `verify-evidence` |
 | Риск управляется пропорционально ставке | Untrusted content, privacy, bias, IP и external action проверены; target и последствия подтверждены до действия | `manage-risk` |
 | Улучшение и перенос доказаны | Каждая iteration отвечает на measured failure; candidate выбран на development cases и один раз проверен на held-out cases; portable specification отделена от model-specific условий запуска | `improve-and-transfer` |
 
@@ -401,11 +405,12 @@ Lesson Completion.
 7. Каждый Module Checkpoint использует changed case, возвращает прежние
    capabilities и даёт diagnostic review guidance, но не блокирует следующий
    Module.
-8. Capstone меняет рабочую задачу, убирает готовые prompts/examples и оставляет
-   brief, milestones, constraints и Self-Assessment rubric.
+8. Capstone убирает authored кейс и готовые prompts/examples, но продолжает
+   собственную задачу и dossier learner. Остаются brief, milestones,
+   constraints и Self-Assessment rubric.
 
 Support fades так: annotated worked example → marked parts → partial
-completion → changed-case choice → independent workflow → new-task Capstone.
+completion → changed-case choice → independent workflow → own-task Capstone.
 Hints становятся progressively specific и раскрываются после первой попытки.
 Worked solutions показывают причины шагов, промежуточные checks и границы, а
 не только красивый final output.
@@ -528,7 +533,7 @@ Planned calibration:
   would falsify it. «Всё понятно?» is not accepted evidence.
 
 Reference Lesson ticket #70 records probe method, observed errors, corrections
-and final calibration in a new Blueprint version or calibration addendum. Until
+and final calibration in a new version of this Blueprint. Until
 that work exists, only selection and planned contract are complete; no claim of
 target-learner validation is made.
 
@@ -564,10 +569,10 @@ target-learner validation is made.
   names, exact identifiers or terms needed for interface/search. Translation
   experiments hold cases and criteria constant.
 - Practice audit: every Lesson elicits action before solution; every Module
-  Checkpoint is cumulative, changed-case and non-blocking; Capstone is a new
-  authentic task.
+  Checkpoint is cumulative, changed-case and non-blocking; Capstone continues
+  learner's authentic task and is new relative to authored cases.
 - Scaffolding audit: complete worked path appears only early; support falls
-  through partial completion and independent selection to new-task Capstone.
+  through partial completion and independent selection to own-task Capstone.
 - Safety audit: verification, prompt injection, privacy, bias, IP and external
   action appear both in dedicated instruction and across later practice.
 - Accessibility audit: planned visuals have text equivalents; tables carry
