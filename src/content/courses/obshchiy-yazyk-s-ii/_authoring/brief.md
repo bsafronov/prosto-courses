@@ -263,13 +263,13 @@ Factual Risk — `standard`. Applicability — `global`: Course учит общ�
 stable core.
 
 Основная Evidence Base —
-[`docs/research/common-language-with-ai-evidence-base.md`](../../../../docs/research/common-language-with-ai-evidence-base.md),
+[`docs/research/common-language-with-ai-evidence-base.md`](../../../../../docs/research/common-language-with-ai-evidence-base.md),
 версия обзора от 2026-08-04. Она содержит оригинальные исследования,
 официальные спецификации и provider documentation по prompting, evals,
 safety, multilingual behavior и freshness. Решения учебного письма опираются
 также на
-[`docs/research/plain-language-course-authoring.md`](../../../../docs/research/plain-language-course-authoring.md)
-и действующий [`docs/authoring.md`](../../../../docs/authoring.md).
+[`plain-language-evidence.md`](../../../../../.agents/skills/author-course/references/plain-language-evidence.md)
+и [действующую карту authoring contract](../../../../../docs/authoring.md).
 
 Иерархия источников:
 

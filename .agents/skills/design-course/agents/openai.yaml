@@ -1,0 +1,7 @@
+interface:
+  display_name: "Проектирование курса"
+  short_description: "Создаёт бриф и проект нового курса"
+  default_prompt: "Используй $design-course, чтобы спроектировать новый курс по моему запросу."
+
+policy:
+  allow_implicit_invocation: false
