@@ -40,7 +40,7 @@ async function completeCoreRoute(page: Page) {
   for (const moduleSlug of moduleSlugs) {
     await page.goto(`./courses/markdown/modules/${moduleSlug}/checkpoint/`);
     await page.getByRole("button", {
-      name: "Завершить проверку Модуля",
+      name: "Завершить проверку модуля",
     }).click();
   }
   await page.goto("./courses/markdown/capstone/");
@@ -477,30 +477,30 @@ test("Course Completion requires explicit completion of every core destination",
   for (const moduleSlug of moduleSlugs.slice(0, -1)) {
     await page.goto(`./courses/markdown/modules/${moduleSlug}/checkpoint/`);
     await page.getByRole("button", {
-      name: "Завершить проверку Модуля",
+      name: "Завершить проверку модуля",
     }).click();
   }
   await page.goto("./courses/markdown/lessons/review/");
   const checkpointSequenceLink = page.getByRole("link", {
-    name: /Перейти к проверке Модуля/,
+    name: /Перейти к проверке модуля/,
   });
   await expect(
     checkpointSequenceLink.getByLabel(
-      "Статус проверки Модуля: Не начат",
+      "Статус проверки модуля: Не начат",
     ),
   ).toBeVisible();
   await checkpointSequenceLink.click();
 
   const checkpointCompletion = page.locator("[data-completion-toggle]");
   await expect(checkpointCompletion).toHaveAccessibleName(
-    "Завершить проверку Модуля",
+    "Завершить проверку модуля",
   );
   await expect(
-    page.locator("header").getByLabel("Статус проверки Модуля: В процессе"),
+    page.locator("header").getByLabel("Статус проверки модуля: В процессе"),
   ).toBeVisible();
   await checkpointCompletion.click();
   await expect(
-    page.locator("header").getByLabel("Статус проверки Модуля: Завершён"),
+    page.locator("header").getByLabel("Статус проверки модуля: Завершён"),
   ).toBeVisible();
   await expect(checkpointCompletion).toHaveAttribute("aria-pressed", "true");
 
@@ -522,8 +522,8 @@ test("Course Completion requires explicit completion of every core destination",
   ).toBeVisible();
   await expect(
     page
-      .getByRole("link", { name: /← Проверка Модуля/ })
-      .getByLabel("Статус проверки Модуля: Завершён"),
+      .getByRole("link", { name: /← Проверка модуля/ })
+      .getByLabel("Статус проверки модуля: Завершён"),
   ).toBeVisible();
 
   await page.reload();
@@ -552,7 +552,7 @@ test("Course resumes the most recently visited incomplete core destination", asy
   page,
 }) => {
   await page.getByRole("link", {
-    name: /Проверка Модуля: Собери Markdown-памятку/,
+    name: /Проверка модуля: Собери Markdown-памятку/,
   }).click();
   await page.getByRole("link", { name: "О курсе", exact: true }).click();
   await expect(page.getByRole("link", { name: "Продолжить" })).toHaveAttribute(
@@ -611,10 +611,10 @@ test("core destination progress stays consistent across browser tabs", async ({
   context,
 }) => {
   const checkpointLink = page.getByRole("link", {
-    name: /Проверка Модуля: Собери Markdown-памятку/,
+    name: /Проверка модуля: Собери Markdown-памятку/,
   });
   await expect(
-    checkpointLink.getByLabel("Статус проверки Модуля: Не начат"),
+    checkpointLink.getByLabel("Статус проверки модуля: Не начат"),
   ).toBeVisible();
 
   const checkpointPage = await context.newPage();
@@ -622,14 +622,14 @@ test("core destination progress stays consistent across browser tabs", async ({
     "./courses/markdown/modules/struktura/checkpoint/",
   );
   await expect(
-    checkpointLink.getByLabel("Статус проверки Модуля: В процессе"),
+    checkpointLink.getByLabel("Статус проверки модуля: В процессе"),
   ).toBeVisible();
 
   await checkpointPage.getByRole("button", {
-    name: "Завершить проверку Модуля",
+    name: "Завершить проверку модуля",
   }).click();
   await expect(
-    checkpointLink.getByLabel("Статус проверки Модуля: Завершён"),
+    checkpointLink.getByLabel("Статус проверки модуля: Завершён"),
   ).toBeVisible();
 });
 

@@ -89,7 +89,7 @@ const lessons = tree.modules.flatMap((courseModule) => courseModule.lessons);
             <dd><time data-course-pdf-build-date></time></dd>
           </div>
           <div>
-            <dt>Канонический адрес Курса</dt>
+            <dt>Канонический адрес курса</dt>
             <dd><a href={canonicalUrl}>{canonicalUrl}</a></dd>
           </div>
         </dl>
@@ -103,9 +103,9 @@ const lessons = tree.modules.flatMap((courseModule) => courseModule.lessons);
     >
       <h2 id="course-pdf-toc-title" class="type-page-title">Содержание</h2>
       <ol>
-        <li><a href="#course-overview">О Курсе</a></li>
+        <li><a href="#course-overview">О курсе</a></li>
         <li>
-          <span>Модули и Уроки</span>
+          <span>Модули и уроки</span>
           <ol>
             {modules.map(({ module, lessons }, moduleIndex) => {
               const currentModuleSlug = moduleSlug(module);
@@ -129,7 +129,7 @@ const lessons = tree.modules.flatMap((courseModule) => courseModule.lessons);
           </ol>
         </li>
         <li>
-          <span>Проверки Модулей</span>
+          <span>Проверки модулей</span>
           <ol>
             {modules.map(({ module, checkpoint }, moduleIndex) => (
               <li>
@@ -224,7 +224,7 @@ const lessons = tree.modules.flatMap((courseModule) => courseModule.lessons);
           data-course-pdf-route={checkpointPath(course.id, currentModuleSlug)}
           data-course-pdf-required-section
         >
-          <p class="course-pdf__section-label type-meta">Проверка Модуля</p>
+          <p class="course-pdf__section-label type-meta">Проверка модуля</p>
           <h3 class="type-section-title">{checkpoint.data.title}</h3>
           <CheckpointContent components={coursePdfSemanticComponents} />
         </article>

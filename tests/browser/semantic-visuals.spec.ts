@@ -278,7 +278,7 @@ test("canonical Chart exposes review evidence, table fallback, and provenance", 
   );
   await expect(
     chart.getByRole("link", {
-      name: "Смоделированный журнал проверки в исходнике этого Урока",
+      name: "Смоделированный журнал проверки в исходнике этого урока",
     }),
   ).toHaveAttribute(
     "href",

@@ -83,7 +83,7 @@ const { Content } = await render(module);
       <Fragment slot="header-details">
         <p class="learning-page__summary type-reading">{module.data.summary}</p>
         <WorkloadSummary
-          label="Объём Модуля"
+          label="Объём модуля"
           items={[
             { label: "Уроки", value: formatLessonCount(current.lessons.length) },
             { label: "Вместе с проверкой", value: formatMinutes(moduleMinutes(current)) },
@@ -94,12 +94,12 @@ const { Content } = await render(module);
           class="learning-page__primary-action"
           variant="primary"
           href={lessonPath(course.id, lessonSlug(current.lessons[0]))}
-        >Начать Модуль</Button>
+        >Начать модуль</Button>
       </Fragment>
       <Content components={semanticComponents} />
-      <h2>Что ты сможешь после Модуля</h2>
+      <h2>Что ты сможешь после модуля</h2>
       <p>{module.data.capability}</p>
-      <h2>Какие результаты поддерживает Модуль</h2>
+      <h2>Какие результаты поддерживает модуль</h2>
       <ul>
         {supportedOutcomes.map((outcome) => (
           <li>{outcome.statement}</li>
@@ -107,11 +107,11 @@ const { Content } = await render(module);
       </ul>
       <Fragment slot="after-reading">
         <section class="learning-section" aria-labelledby="module-lessons-heading">
-          <h2 id="module-lessons-heading" class="learning-section__title type-section-title">Уроки Модуля</h2>
+          <h2 id="module-lessons-heading" class="learning-section__title type-section-title">Уроки модуля</h2>
           <CourseLessonList
             courseSlug={course.id}
             lessons={current.lessons}
-            label="Уроки Модуля"
+            label="Уроки модуля"
           />
           <a class="learning-section__action type-supporting" href={checkpointPath(course.id, slug)}>
             {current.checkpoint.data.title} →
@@ -126,7 +126,7 @@ const { Content } = await render(module);
                   moduleSlug(previousModule.module),
                 )}
               >
-                ← Предыдущая проверка Модуля: {previousModule.checkpoint.data.title}
+                ← Предыдущая проверка модуля: {previousModule.checkpoint.data.title}
               </SequenceDestinationLink>
             : <a class="sequence-destination-link type-supporting" href={coursePath(course.id)}>← Обзор курса</a>}
           <SequenceDestinationLink

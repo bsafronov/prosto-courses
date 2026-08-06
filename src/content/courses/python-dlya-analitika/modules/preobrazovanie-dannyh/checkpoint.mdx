@@ -7,7 +7,7 @@ outcomes:
 time: 35
 ---
 
-Checkpoint интегрирует dates, вычисляемый показатель, many-to-one merge,
+Проверка модуля интегрирует dates, вычисляемый показатель, many-to-one merge,
 GroupBy и pivot. Вопрос:
 
 > Какой регион лидировал по выручке в январе и феврале, и изменился ли лидер?
@@ -106,7 +106,7 @@ categories = pd.DataFrame(
 - После merge меняются rows/totals → `combine-and-check-tables`.
 
 <Reflection
-  prompt="Какой control первым обнаружит неверный ответ в твоём Checkpoint?"
+  prompt="Какой control первым обнаружит неверный ответ в твоей проверке модуля?"
   outcomes={["answer-with-transformations", "prepare-tabular-data"]}
   guidance={[
     "Выбери row count, total, uniqueness или unmatched keys",

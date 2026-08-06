@@ -80,7 +80,7 @@ for (const [theme, colors] of Object.entries(themes)) {
 
       const hero = page.getByRole("heading", {
         level: 1,
-        name: "Выбери Курс и начни с первого Урока.",
+        name: "Выбери курс и начни с первого урока.",
       });
       await expect(hero).toHaveCSS("font-size", viewport.display);
       await expect(page.getByText(/^Читай, пробуй/)).toHaveCSS(
@@ -175,7 +175,7 @@ const learningJourney = [
     kind: "Module Checkpoint",
     path: "./courses/markdown/modules/osnovy/checkpoint/",
     title: "Объясни путь от исходника к документу",
-    current: /Проверка Модуля: Объясни путь от исходника к документу/,
+    current: /Проверка модуля: Объясни путь от исходника к документу/,
   },
   {
     kind: "Capstone Demonstration",

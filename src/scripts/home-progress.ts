@@ -202,7 +202,7 @@ function refreshHome(root: HTMLElement) {
   if (action) {
     const label =
       resume.destination.kind === "lesson"
-        ? "Продолжить Урок"
+        ? "Продолжить урок"
         : resume.destination.kind === "checkpoint"
           ? "Продолжить проверку"
           : "Продолжить итоговую работу";

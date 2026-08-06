@@ -92,18 +92,18 @@ const routePosition =
         <div
           class="lesson-utility"
           role="group"
-          aria-label="Сведения об Уроке"
+          aria-label="Сведения об уроке"
         >
           <p class="capability learning-page__summary type-reading">{lesson.data.capability}</p>
           <p class="route-position type-meta type-technical">
             Маршрут: {routePosition} из {progress.destinations.length}
           </p>
           <WorkloadSummary
-            label="Время на Урок"
+            label="Время на урок"
             items={lessonTimeItems}
           />
           <div class="lesson-progress">
-            <span class="type-meta">Прогресс Урока</span>
+            <span class="type-meta">Прогресс урока</span>
             <ProgressStatus destination={progress.current} />
           </div>
         </div>
@@ -129,7 +129,7 @@ const routePosition =
                   moduleSlug(previousModule.module),
                 )}
               >
-                ← Предыдущая проверка Модуля: {previousModule.checkpoint.data.title}
+                ← Предыдущая проверка модуля: {previousModule.checkpoint.data.title}
               </SequenceDestinationLink>
           : <span></span>}
         {next
@@ -149,7 +149,7 @@ const routePosition =
               )}
               align="end"
             >
-              Перейти к проверке Модуля: {currentModule.checkpoint.data.title} →
+              Перейти к проверке модуля: {currentModule.checkpoint.data.title} →
             </SequenceDestinationLink>}
       </Fragment>
     </LearningPage>

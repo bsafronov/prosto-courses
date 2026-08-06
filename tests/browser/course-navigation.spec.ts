@@ -34,7 +34,7 @@ async function expectLearnerTraversesCompleteCourseSequence(page: Page) {
   ).toBeVisible();
 
   await page
-    .getByRole("list", { name: "Уроки Модуля" })
+    .getByRole("list", { name: "Уроки модуля" })
     .getByRole("link", { name: /Знакомство с Markdown/ })
     .click();
   await expect(page).toHaveURL(/\/courses\/markdown\/lessons\/vvedenie\/$/);
@@ -42,7 +42,7 @@ async function expectLearnerTraversesCompleteCourseSequence(page: Page) {
 
   await page.getByRole("link", { name: /Следующий урок: Как читать/ }).click();
   await page.getByRole("button", { name: "Завершить урок" }).click();
-  await page.getByRole("link", { name: /Перейти к проверке Модуля/ }).click();
+  await page.getByRole("link", { name: /Перейти к проверке модуля/ }).click();
   await expect(page).toHaveURL(
     /\/courses\/markdown\/modules\/osnovy\/checkpoint\/$/,
   );
@@ -53,28 +53,28 @@ async function expectLearnerTraversesCompleteCourseSequence(page: Page) {
     }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: "Завершить проверку Модуля" })
+    .getByRole("button", { name: "Завершить проверку модуля" })
     .click();
 
-  await page.getByRole("link", { name: /Перейти к следующему Модулю/ }).click();
-  await page.getByRole("link", { name: "Начать Модуль" }).click();
+  await page.getByRole("link", { name: /Перейти к следующему модулю/ }).click();
+  await page.getByRole("link", { name: "Начать модуль" }).click();
   await page.getByRole("button", { name: "Завершить урок" }).click();
   await page.getByRole("link", { name: /Следующий урок: Ссылки и код/ }).click();
   await page.getByRole("button", { name: "Завершить урок" }).click();
-  await page.getByRole("link", { name: /Перейти к проверке Модуля/ }).click();
+  await page.getByRole("link", { name: /Перейти к проверке модуля/ }).click();
   await page
-    .getByRole("button", { name: "Завершить проверку Модуля" })
+    .getByRole("button", { name: "Завершить проверку модуля" })
     .click();
-  await page.getByRole("link", { name: /Перейти к следующему Модулю/ }).click();
-  await page.getByRole("link", { name: "Начать Модуль" }).click();
+  await page.getByRole("link", { name: /Перейти к следующему модулю/ }).click();
+  await page.getByRole("link", { name: "Начать модуль" }).click();
   await page.getByRole("button", { name: "Завершить урок" }).click();
   await page
     .getByRole("link", { name: /Следующий урок: Проверка инструкции/ })
     .click();
   await page.getByRole("button", { name: "Завершить урок" }).click();
-  await page.getByRole("link", { name: /Перейти к проверке Модуля/ }).click();
+  await page.getByRole("link", { name: /Перейти к проверке модуля/ }).click();
   await page
-    .getByRole("button", { name: "Завершить проверку Модуля" })
+    .getByRole("button", { name: "Завершить проверку модуля" })
     .click();
   await page.getByRole("link", { name: /Перейти к итоговой работе/ }).click();
   await expect(page).toHaveURL(/\/courses\/markdown\/capstone\/$/);
@@ -156,7 +156,7 @@ test("Module Overview bridges the previous Module Checkpoint to its first Lesson
   });
   await expect(
     sequence.getByRole("link", {
-      name: /Предыдущая проверка Модуля: Объясни путь от исходника к документу/,
+      name: /Предыдущая проверка модуля: Объясни путь от исходника к документу/,
     }),
   ).toHaveAttribute(
     "href",
@@ -181,7 +181,7 @@ test("learner reads the first Lesson from the Course Catalog", async (
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "Выбери Курс и начни с первого Урока.",
+      name: "Выбери курс и начни с первого урока.",
     }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Каталог" })).toHaveAttribute(
@@ -309,6 +309,6 @@ test("learner follows the complete first-Module Lesson sequence", async ({
 
   await expect(page.getByRole("link", { name: /Следующий урок/ })).toHaveCount(0);
   await expect(
-    page.getByRole("link", { name: /Перейти к проверке Модуля/ }),
+    page.getByRole("link", { name: /Перейти к проверке модуля/ }),
   ).toHaveAttribute("href", /\/courses\/markdown\/modules\/osnovy\/checkpoint\/$/);
 });

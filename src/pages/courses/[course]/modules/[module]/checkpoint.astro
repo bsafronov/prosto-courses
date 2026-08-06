@@ -72,7 +72,7 @@ const { Content } = await render(checkpoint);
     destination={progress.current}
   >
     <LearningPage
-      eyebrow="Проверка Модуля"
+      eyebrow="Проверка модуля"
       sequenceLabel="Последовательность курса"
       title={checkpoint.data.title}
     >
@@ -94,7 +94,7 @@ const { Content } = await render(checkpoint);
           ← Последний урок: {previousLesson.data.title}
         </SequenceDestinationLink>
         {nextModule
-          ? <a class="sequence-destination-link type-supporting" data-align="end" href={modulePath(course.id, moduleSlug(nextModule.module))}>Перейти к следующему Модулю: {nextModule.module.data.title} →</a>
+          ? <a class="sequence-destination-link type-supporting" data-align="end" href={modulePath(course.id, moduleSlug(nextModule.module))}>Перейти к следующему модулю: {nextModule.module.data.title} →</a>
           : <SequenceDestinationLink
               destination={capstoneDestinationLink(course.id)}
               align="end"

@@ -14,6 +14,7 @@ _Avoid_: Length, comprehensiveness, expert appendix
 
 **Course Voice**:
 The clear, respectful, conversational Russian voice that addresses the learner as `ты`, explains precise ideas in plain language, and treats mistakes as information rather than personal failure. Humor and emoji are used only when they materially aid understanding, memory, or emotional ease.
+In learner-facing Russian, domain concepts use ordinary Russian common nouns — `курс`, `модуль`, `урок`, `проверка модуля`, `итоговая работа`, and `самооценка` — with capitalization only where Russian orthography requires it.
 _Avoid_: Bureaucratic prose, infantilization, empty praise, decorative humor
 
 **Module**:

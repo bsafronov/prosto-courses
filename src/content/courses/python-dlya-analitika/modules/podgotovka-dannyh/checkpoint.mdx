@@ -6,7 +6,7 @@ outcomes:
 time: 30
 ---
 
-Module Checkpoint объединяет три действия: загрузить файл с явным контрактом,
+Проверка модуля объединяет три действия: загрузить файл с явным контрактом,
 диагностировать symptoms и очистить только то, что можно обосновать. Результат
 должен оставлять audit trail.
 
@@ -44,7 +44,7 @@ orders_source.to_csv(data_dir / "module-2-orders.csv", index=False)
 
 <KnowledgeCheck
   type="multiple"
-  prompt="Какие изменения можно обосновать из условия Checkpoint?"
+  prompt="Какие изменения можно обосновать из условия проверки модуля?"
   outcomes={["prepare-tabular-data"]}
   options={[
     {
@@ -135,7 +135,7 @@ orders_source.to_csv(data_dir / "module-2-orders.csv", index=False)
 - Не объясняется изменение числа строк → `clean-and-validate-data`.
 
 <Reflection
-  prompt="Какое изменение в Checkpoint было cleaning rule, а какое — scope аналитического вопроса?"
+  prompt="Какое изменение в проверке модуля было cleaning rule, а какое — scope аналитического вопроса?"
   outcomes={["prepare-tabular-data"]}
   guidance={[
     "Назови точный symptom",

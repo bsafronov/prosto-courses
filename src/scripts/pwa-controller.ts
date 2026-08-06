@@ -84,7 +84,7 @@ function installedDisplayMode() {
 
 function formatReleaseSize(bytes?: number) {
   if (bytes === undefined) return "Размер релиза недоступен.";
-  return `Полный Каталог: ${new Intl.NumberFormat("ru-RU", {
+  return `Полный каталог: ${new Intl.NumberFormat("ru-RU", {
     maximumFractionDigits: 1,
   }).format(bytes / 1024 / 1024)} МБ.`;
 }
@@ -141,7 +141,7 @@ function createController(config: {
           ? "Доступно обновление"
           : "Обновление готово офлайн",
         detail:
-          "Текущие несохранённые действия могут быть потеряны. После обновления откроется Каталог курсов.",
+          "Текущие несохранённые действия могут быть потеряны. После обновления откроется каталог курсов.",
         action: "update",
         actionText: "Обновить",
       };
@@ -150,7 +150,7 @@ function createController(config: {
       return {
         ...result,
         statusText: "Офлайн не подготовлен",
-        detail: "Не удалось сохранить полный Каталог.",
+        detail: "Не удалось сохранить полный каталог.",
         action: "retry",
         actionText: "Повторить",
         actionDisabled: !state.online,

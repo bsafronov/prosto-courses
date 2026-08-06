@@ -12,24 +12,24 @@ test("Home gives a new learner a direct, editorial path into the Course Catalog"
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "Выбери Курс и начни с первого Урока.",
+      name: "Выбери курс и начни с первого урока.",
     }),
   ).toBeVisible();
   await expect(page.getByText(/Прогресс останется в этом браузере/)).toBeVisible();
   await expect(
-    page.getByText(/Каталог можно подготовить для работы офлайн/),
+    page.getByText(/каталог можно подготовить для работы офлайн/),
   ).toBeVisible();
 
   const catalog = page.getByRole("list", { name: "Каталог курсов" });
   const markdown = catalog
     .getByRole("listitem")
     .filter({ hasText: "Основы Markdown" });
-  await expect(markdown).toContainText("3 Модуля");
-  await expect(markdown).toContainText("6 Уроков");
+  await expect(markdown).toContainText("3 модуля");
+  await expect(markdown).toContainText("6 уроков");
   await expect(markdown).toContainText("3 ч 55 мин");
   await expect(markdown).toContainText("Не начат");
   await expect(
-    markdown.getByRole("link", { name: "Открыть Курс" }),
+    markdown.getByRole("link", { name: "Открыть курс" }),
   ).toHaveAttribute("href", /\/courses\/markdown\/$/);
 });
 
@@ -403,7 +403,7 @@ test("Lesson keeps the Course route persistent on desktop and accessible in a mo
   });
   await expect(current).toHaveAttribute("aria-current", "page");
   await expect(
-    courseRoute.getByRole("link", { name: /Проверка Модуля/ }).first(),
+    courseRoute.getByRole("link", { name: /Проверка модуля/ }).first(),
   ).toBeEnabled();
   await expect(
     courseRoute.getByRole("link", { name: /Итоговая работа/ }),
@@ -562,14 +562,14 @@ test("Lesson groups capability, route position, workload, and progress as utilit
   await page.goto("./courses/markdown/lessons/source-render/");
 
   const utility = page.getByRole("group", {
-    name: "Сведения об Уроке",
+    name: "Сведения об уроке",
   });
   await expect(utility).toContainText(
     "Различать блочные конструкции и элементы внутри строки по Markdown-исходнику",
   );
   await expect(utility).toContainText("Маршрут: 2 из 10");
   await expect(
-    utility.getByRole("group", { name: "Время на Урок" }),
+    utility.getByRole("group", { name: "Время на урок" }),
   ).toContainText("Изучение10 мин");
   await expect(
     utility.getByLabel("Статус урока: В процессе"),
@@ -586,7 +586,7 @@ test("every learning destination shares the same Course route semantics", async 
     },
     {
       path: "./courses/markdown/modules/osnovy/checkpoint/",
-      current: /Проверка Модуля: Объясни путь от исходника к документу/,
+      current: /Проверка модуля: Объясни путь от исходника к документу/,
     },
     {
       path: "./courses/markdown/capstone/",
@@ -677,7 +677,7 @@ test("Lesson sequence crosses Module boundaries through the prior Checkpoint", a
   await expect(
     page.getByRole("navigation", { name: "Последовательность уроков" })
       .getByRole("link", {
-        name: /Предыдущая проверка Модуля: Объясни путь от исходника к документу/,
+        name: /Предыдущая проверка модуля: Объясни путь от исходника к документу/,
       }),
   ).toHaveAttribute(
     "href",
@@ -856,7 +856,7 @@ test("Home keeps the static Course Catalog usable when local progress is unusabl
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: "Выбери Курс и начни с первого Урока.",
+        name: "Выбери курс и начни с первого урока.",
       }),
     ).toBeVisible();
     await expect(
@@ -915,7 +915,7 @@ test("Home shows completed-only progress without inventing a Resume Destination"
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "Выбери Курс и начни с первого Урока.",
+      name: "Выбери курс и начни с первого урока.",
     }),
   ).toBeVisible();
   await expect(
@@ -939,7 +939,7 @@ test("Home names and navigates directly to every Resume Destination kind", async
       position: 4,
       total: 10,
       minutes: 20,
-      action: "Продолжить Урок",
+      action: "Продолжить урок",
       href: /\/courses\/markdown\/lessons\/formatting\/$/,
     },
     {

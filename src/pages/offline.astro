@@ -6,7 +6,7 @@ import { sitePath } from "../lib/courses";
 ---
 <BaseLayout
   title="Страница недоступна офлайн | Prosto.Courses"
-  description="Эта страница не сохранена в текущем Каталоге курсов."
+  description="Эта страница не сохранена в текущем каталоге курсов."
 >
   <div class="container offline-page">
     <Card
@@ -17,11 +17,11 @@ import { sitePath } from "../lib/courses";
       <Fragment slot="eyebrow">Сейчас офлайн</Fragment>
       <Fragment slot="title">Эта страница не сохранена</Fragment>
       <Fragment slot="description">
-        Адрес мог устареть после обновления Каталога. Сохранённые курсы
+        Адрес мог устареть после обновления каталога. Сохранённые курсы
         по-прежнему доступны.
       </Fragment>
       <Button variant="primary" slot="actions" href={sitePath()}>
-        Перейти в Каталог курсов
+        Перейти в каталог курсов
       </Button>
     </Card>
   </div>

@@ -38,7 +38,7 @@ Dataset синтетический. Пороги SLA заданы в справ�
 ## Создай локальные источники
 
 Запусти bootstrap cell один раз в отдельном notebook или script. Fixed seed
-создаёт одинаковые файлы у всех learners.
+создаёт одинаковые файлы у всех участников.
 
 ```python
 from pathlib import Path
@@ -276,7 +276,7 @@ findings:
   core analysis.
 
 <Reflection
-  prompt="Какое решение в Capstone сильнее всего изменилось после контроля качества или clean run?"
+  prompt="Какое решение в итоговой работе сильнее всего изменилось после контроля качества или clean run?"
   outcomes={["reproduce-analysis", "prepare-tabular-data", "communicate-findings"]}
   guidance={[
     "Назови исходное решение",
@@ -295,5 +295,5 @@ findings:
 - Plotly — interactive delivery;
 - scikit-learn — predictive modeling.
 
-Эти инструменты не заменяют основу Курса: grain, quality, vectorized
+Эти инструменты не заменяют основу курса: grain, quality, vectorized
 calculation, checked transformation, evidence и reproducibility.

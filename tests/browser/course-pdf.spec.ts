@@ -450,8 +450,8 @@ test("Course PDF identifies its release and provides complete document navigatio
 
   for (const workloadText of [
     "Объём и актуальность",
-    "3 Модуля",
-    "6 Уроков",
+    "3 модуля",
+    "6 уроков",
     "3 ч 55 мин",
   ]) {
     expect(pdf.text).toContain(normalizePdfText(workloadText));
@@ -459,8 +459,8 @@ test("Course PDF identifies its release and provides complete document navigatio
 
   for (const section of [
     "Содержание",
-    "Модули и Уроки",
-    "Проверки Модулей",
+    "Модули и уроки",
+    "Проверки модулей",
     "Итоговая работа",
     "Ответы и самопроверка",
     "Источники",
@@ -600,7 +600,7 @@ test("Course PDF preserves meaningful print presentation for every Learning Visu
     "Самопроверка 2 2",
     "Проверка коллегой 1 1",
     "После самопроверки остаются четыре проблемы",
-    "Смоделированный журнал проверки в исходнике этого Урока",
+    "Смоделированный журнал проверки в исходнике этого урока",
   ]) {
     expect(markdownText).toContain(normalizePdfText(expected));
   }
@@ -669,7 +669,7 @@ test("representative actual PDF pages rasterize as readable monochrome A4 output
   const [cover, toc, denseLesson, appendix] = await Promise.all(
     [
       "Научись создавать, проверять и улучшать рабочие инструкции",
-      "Модули и Уроки",
+      "Модули и уроки",
       "Короткую команду или имя файла",
       "Проверка знаний 1 Задание",
     ].map((label) => rasterPageContaining(markdownPdf, label)),
@@ -754,7 +754,7 @@ test("Knowledge Checks remain answerable on paper and link to a spoiler appendix
   const appendix = markdown.text.slice(appendixStart);
   const single = knowledgeCheckMain(
     mainFlow,
-    "Какое действие понадобится для практики в этом Курсе?",
+    "Какое действие понадобится для практики в этом курсе?",
     1,
   );
   expect(single).toContain("Отметьодинответ.");
@@ -815,7 +815,7 @@ test("Knowledge Checks remain answerable on paper and link to a spoiler appendix
   expect(markdown.text).not.toContain(normalizePdfText(localAnswer));
 
   expect(appendix).toContain(
-    "Проверказнаний1Задание:КакоедействиепонадобитсядляпрактикивэтомКурсе?",
+    "Проверказнаний1Задание:Какоедействиепонадобитсядляпрактикивэтомкурсе?",
   );
   expect(appendix).toContain(
     "Проверказнаний3Задание:Сопоставьфрагментисходникасегоролью.",

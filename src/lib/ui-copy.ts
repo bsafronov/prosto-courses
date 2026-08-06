@@ -13,7 +13,7 @@ export const progressStatusCopy: Record<
 
 const destinationStatusName: Record<CoreDestinationKind, string> = {
   lesson: "урока",
-  checkpoint: "проверки Модуля",
+  checkpoint: "проверки модуля",
   capstone: "итоговой работы",
 };
 
@@ -45,10 +45,10 @@ export const completionControlCopy: Record<
     complete: "Завершить урок",
   },
   checkpoint: {
-    heading: "Завершение проверки Модуля",
+    heading: "Завершение проверки модуля",
     description:
-      "Ты сам решаешь, когда завершить проверку Модуля. Эта отметка не оценивает качество работы и не ограничивает переходы.",
-    complete: "Завершить проверку Модуля",
+      "Ты сам решаешь, когда завершить проверку модуля. Эта отметка не оценивает качество работы и не ограничивает переходы.",
+    complete: "Завершить проверку модуля",
   },
   capstone: {
     heading: "Завершение итоговой работы",

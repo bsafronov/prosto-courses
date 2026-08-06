@@ -138,7 +138,7 @@ async function expectOfflineFallback(
   await expect(
     page.getByRole("heading", { name: "Эта страница не сохранена" }),
   ).toBeVisible();
-  const catalog = page.getByRole("link", { name: "Перейти в Каталог курсов" });
+  const catalog = page.getByRole("link", { name: "Перейти в каталог курсов" });
   await expect(catalog).toHaveAttribute("href", catalogHref);
   await catalog.click();
   await expect(page.getByRole("list", { name: "Каталог курсов" })).toBeVisible();
@@ -631,7 +631,7 @@ test("data saving defers preparation until the learner accepts the measured rele
     control.getByText("Офлайн по запросу", { exact: true }),
   ).toBeVisible();
   await expect(control).toContainText(
-    /Экономия трафика включена.*Полный Каталог: \d+(?:[,.]\d)? МБ/,
+    /Экономия трафика включена.*Полный каталог: \d+(?:[,.]\d)? МБ/,
   );
   expect(
     await page.evaluate(
@@ -658,7 +658,7 @@ test("data saving defers preparation until the learner accepts the measured rele
     totalBytes,
   });
   await expect(control).toContainText(
-    `Полный Каталог: ${new Intl.NumberFormat("ru-RU", {
+    `Полный каталог: ${new Intl.NumberFormat("ru-RU", {
       maximumFractionDigits: 1,
     }).format(totalBytes / 1024 / 1024)} МБ.`,
   );
@@ -685,7 +685,7 @@ test("failed initial preparation never claims readiness and can be retried", asy
   await expect(control).not.toContainText("Доступно офлайн");
   await expect(
     control.getByRole("button", { name: "Повторить" }),
-  ).toHaveAccessibleDescription("Не удалось сохранить полный Каталог.");
+  ).toHaveAccessibleDescription("Не удалось сохранить полный каталог.");
   const stateResponse = await request.get(
     fixtureServerUrl(baseURL, "/__test__/state"),
   );
@@ -798,7 +798,7 @@ test("a Catalog Update survives a failed attempt, waits for consent, and preserv
     refreshedControl.getByText("Доступно обновление", { exact: true }),
   ).toBeVisible();
   await expect(update).toHaveAccessibleDescription(
-    "Текущие несохранённые действия могут быть потеряны. После обновления откроется Каталог курсов.",
+    "Текущие несохранённые действия могут быть потеряны. После обновления откроется каталог курсов.",
   );
   await expect(
     page.getByRole("heading", { level: 1, name: firstTitle, exact: true }),
@@ -838,7 +838,7 @@ test("a Catalog Update survives a failed attempt, waits for consent, and preserv
   await expect(page).toHaveURL(/\/prosto-courses\/$/, { timeout: 20_000 });
   await expect(
     page.getByRole("heading", {
-      name: "Выбери Курс и начни с первого Урока.",
+      name: "Выбери курс и начни с первого урока.",
     }),
   ).toBeVisible();
   await expect(siblingPage).toHaveURL(/\/prosto-courses\/$/, {
@@ -846,7 +846,7 @@ test("a Catalog Update survives a failed attempt, waits for consent, and preserv
   });
   await expect(
     siblingPage.getByRole("heading", {
-      name: "Выбери Курс и начни с первого Урока.",
+      name: "Выбери курс и начни с первого урока.",
     }),
   ).toBeVisible();
 
@@ -1103,7 +1103,7 @@ test("an unsupported browser keeps the ordinary site quiet", async ({
 
   await expect(
     page.getByRole("heading", {
-      name: "Выбери Курс и начни с первого Урока.",
+      name: "Выбери курс и начни с первого урока.",
     }),
   ).toBeVisible();
   await expect(

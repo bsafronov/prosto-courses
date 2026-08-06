@@ -19,8 +19,8 @@ test("Course Overview explains the promise and derived workload", async ({
   ).toBeVisible();
 
   const workload = page.getByRole("group", { name: "Объём курса" });
-  await expect(workload).toContainText("3 Модуля");
-  await expect(workload).toContainText("6 Уроков");
+  await expect(workload).toContainText("3 модуля");
+  await expect(workload).toContainText("6 уроков");
   await expect(workload).toContainText("3 ч 55 мин");
 });
 
@@ -70,7 +70,7 @@ test("Module Overview explains its capability, outcomes, and derived workload", 
   await expect(
     page.getByRole("heading", {
       level: 2,
-      name: "Что ты сможешь после Модуля",
+      name: "Что ты сможешь после модуля",
     }),
   ).toBeVisible();
   await expect(
@@ -81,7 +81,7 @@ test("Module Overview explains its capability, outcomes, and derived workload", 
   await expect(
     page.getByRole("heading", {
       level: 2,
-      name: "Какие результаты поддерживает Модуль",
+      name: "Какие результаты поддерживает модуль",
     }),
   ).toBeVisible();
   await expect(
@@ -90,8 +90,8 @@ test("Module Overview explains its capability, outcomes, and derived workload", 
     ),
   ).toBeVisible();
 
-  const workload = page.getByRole("group", { name: "Объём Модуля" });
-  await expect(workload).toContainText("2 Урока");
+  const workload = page.getByRole("group", { name: "Объём модуля" });
+  await expect(workload).toContainText("2 урока");
   await expect(workload).toContainText("50 мин");
   await expect(
     page.getByRole("link", {
@@ -109,13 +109,13 @@ test("Lesson page separates capability and time estimates", async ({
   await expect(
     page.getByText("Объяснять роль разметки и создавать простой Markdown-файл"),
   ).toBeVisible();
-  const workload = page.getByRole("group", { name: "Время на Урок" });
+  const workload = page.getByRole("group", { name: "Время на урок" });
   await expect(workload).toContainText("Изучение8 мин");
   await expect(workload).toContainText("Практика7 мин");
   await expect(workload).toContainText("Дополнительно0 мин");
 
   await page.goto("./courses/accessible-images/lessons/edit-for-clarity/");
-  const optionalWorkload = page.getByRole("group", { name: "Время на Урок" });
+  const optionalWorkload = page.getByRole("group", { name: "Время на урок" });
   await expect(optionalWorkload).toContainText("Изучение5 мин");
   await expect(optionalWorkload).toContainText("Практика5 мин");
   await expect(optionalWorkload).not.toContainText("Дополнительно");
@@ -161,7 +161,7 @@ test("promise and navigation remain readable at a narrow viewport", async ({
   ).toBeLessThanOrEqual(390);
 
   await page.getByRole("link", { name: "От исходника к структуре" }).click();
-  await expect(page.getByRole("group", { name: "Объём Модуля" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Объём модуля" })).toBeVisible();
   await page
     .getByRole("button", { name: "Открыть маршрут курса" })
     .click();

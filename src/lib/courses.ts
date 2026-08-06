@@ -151,10 +151,10 @@ function formatRussianCount(
 }
 
 export const formatModuleCount = (count: number) =>
-  formatRussianCount(count, ["Модуль", "Модуля", "Модулей"]);
+  formatRussianCount(count, ["модуль", "модуля", "модулей"]);
 
 export const formatLessonCount = (count: number) =>
-  formatRussianCount(count, ["Урок", "Урока", "Уроков"]);
+  formatRussianCount(count, ["урок", "урока", "уроков"]);
 
 export function getModuleOutcomes(course: CourseEntry, module: ModuleEntry) {
   const outcomesById = new Map(

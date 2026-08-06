@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 const acceptanceSurfaces = {
   catalog: {
     path: "./",
-    heading: "Выбери Курс и начни с первого Урока.",
+    heading: "Выбери курс и начни с первого урока.",
     function: ".catalog-open",
   },
   courseOverview: {
