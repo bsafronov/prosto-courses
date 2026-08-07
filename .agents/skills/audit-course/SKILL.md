@@ -1,89 +1,37 @@
 ---
 name: audit-course
-description: Независимо проверить, исправить и опубликовать готовый draft нового курса.
+description: Independently audit, correct, validate, and publish one complete new Course draft.
 ---
 
 # Audit Course
 
-Проведи Independent Course Audit готового draft в свежем контексте, исправь findings, создай quality report и только затем опубликуй Course из `drafts/courses/` в `src/content/courses/`.
+Audit a complete draft in a fresh context, correct it, create the quality report, and publish only after every release gate passes.
 
-## Вход и границы
+## Establish independent input
 
-Если slug не указан, найди единственный draft с Brief, Blueprint и полным learner-facing Course source. При нескольких кандидатах запроси только slug. Этот skill обслуживает новый Course: перед публикацией `src/content/courses/<course-slug>` должен отсутствовать. Существующий target — точный конфликт, а не разрешение на overwrite.
+Resolve the requested slug or the single eligible draft. If selection is ambiguous, stop and list candidates without asking a question. Require a ready Brief, Blueprint, and complete learner-facing Course tree. The catalog target must be absent unless a matching `drafts/course-releases/<course-slug>.md` journal points to it and its Brief carries the same Intake record; in that case resume or roll back the interrupted owned release. If no draft or journal exists and the requested target has a closed Intake record plus `Release state: published`, report idempotent success without changing it. Treat every other target as a conflict.
 
-Independent Course Audit — fresh-context AI review. Он сильнее self-review, но не является independent expert review, field validation или доказательством отсутствия ошибок. Отсутствие target-learner probe и expert review остаётся явным ограничением там, где применимо.
+Read the complete [audit contract](references/audit-contract.md) and its linked design, authoring, plain-Russian, and platform contracts. Build the audit bundle from raw requirements, sources, evidence ledger, platform manifest, and Course source. Do not include the author's verdict or suspected findings.
 
-## Обязательное ядро
+## Audit and correct
 
-- Начинай аудит от Brief, Blueprint, Source Policy, canonical contracts и authoritative sources, а не от авторского summary.
-- Проверяй каждое Learning Outcome по цепочке instruction → practice → Module Checkpoint → Capstone criterion и transfer.
-- Независимо решай или трассируй каждый deterministic answer, worked solution и rubric criterion.
-- Перепроверяй каждое consequential/time-sensitive утверждение и representative sample остальных по primary/official sources.
-- Разделяй accuracy, learning design, plain Russian, platform/accessibility и render QA на отдельные passes.
-- Классифицируй findings как `critical`, `material` или `minor`; указывай location, evidence, consequence и concrete correction.
-- Исправляй все `critical` и `material`; локальные безопасные `minor` исправляй, остальные получают явный disposition.
-- Повторяй затронутые проверки после исправления. Release требует ноль unresolved `critical` и `material`, выполненный validator/build и отсутствие blocking Critical Decision.
+Use a fresh auditor to run distinct passes for:
 
-## Канонические references
+- consequential facts, causal models, versions, jurisdiction, safety, and freshness;
+- every Learning Outcome from instruction through practice, Module Checkpoint, and Capstone transfer;
+- every deterministic answer, worked solution, task, and rubric criterion;
+- prerequisites, cognitive load, scaffolding, Cumulative Retrieval, and Course continuity;
+- natural Russian, terminology, language boundaries, read-aloud quality, and Course Voice;
+- platform metadata, components, accessibility, and render risks.
 
-До запуска аудитора полностью прочитай [`references/audit-contract.md`](references/audit-contract.md). Он содержит audit method, quality report, Content Revision, Definition of Done и Render QA.
+Require each finding to include location, severity, evidence, consequence, and correction. Verify findings, fix every critical and material issue, disposition minor findings, and rerun affected passes in a fresh context when changes are substantial. Ask no Course Owner questions: resolve uncertainty through evidence, recorded intent, narrow scope, and safe reversible defaults. If no safe useful Course remains, block release and preserve the draft.
 
-Аудитору передай прямые pointers и потребуй читать их по pass, а не одной неразличимой массой:
+## Release transactionally
 
-- [`../design-course/references/design-contract.md`](../design-course/references/design-contract.md) — intent, metadata, architecture, Source Policy и freshness;
-- [`../author-course/references/authoring-contract.md`](../author-course/references/authoring-contract.md) — pedagogy и Course Voice;
-- [`../author-course/references/plain-russian-contract.md`](../author-course/references/plain-russian-contract.md) — исчерпывающий language audit;
-- [`../author-course/references/platform-contract.md`](../author-course/references/platform-contract.md) — assessments, components, visuals и accessibility.
+After the audit converges, create `_authoring/quality-report.md` with the required ready audit status, draft-check results, `Release state: candidate`, and public gates explicitly marked pending. Validate the draft, verify future links and assets, and ensure the catalog target remains absent. Before moving, create `drafts/course-releases/<course-slug>.md` with the Intake identity, draft and target paths, current gate, attempts, results, and `Journal state: candidate`. Move the Course to `src/content/courses/<course-slug>/`, then run `pnpm validate`, `pnpm build`, and required desktop/mobile/keyboard Render QA.
 
-Full research evidence [`../author-course/references/plain-language-evidence.md`](../author-course/references/plain-language-evidence.md) раскрывай только для disputed language rule или проверки границы переноса research finding.
+After those gates pass, update the report with their exact results and `Release state: published`; update the journal to `Journal state: final-validation`; then run `pnpm validate` against that final report. Rerun build and affected Render QA too if any learner-facing source or metadata changed after their successful pass. Delete the journal only after the final required checks succeed. Journal removal finalizes publication.
 
-## Шаги
+If interrupted while the candidate is at the catalog path, use the matching journal to resume the pending gate or roll it back; do not report a conflict. If any post-move gate fails, reset the report to `Release state: candidate`, record the failure in both report and journal, move the Course back to its original draft path when safe, preserve diagnostics, and leave no catalog target. Never claim publication while a gate is failing and never overwrite either path.
 
-### 1. Зафиксировать audit input
-
-Проверь полноту draft. Собери Brief, Blueprint, весь Course source, evidence ledger, Source Policy, platform manifest и canonical references. Не передавай auditor собственные выводы, suspected bugs или ожидаемый verdict.
-
-Заверши шаг, когда audit bundle позволяет восстановить требования и проверить Course без авторского контекста, а unresolved Critical Decision либо отсутствует, либо точно блокирует только зависимую часть.
-
-### 2. Запустить fresh-context auditor
-
-Запусти отдельного субагента как независимого аудитора. Передай raw audit bundle и следующий scope:
-
-1. facts, causal models, versions, jurisdiction, safety и freshness;
-2. prerequisites, cognitive load, Outcome Alignment, scaffolding, Cumulative Retrieval и changed-case transfer;
-3. все deterministic answers, worked solutions, tasks и Capstone rubric;
-4. plain Russian, literal translation, terminology, read-aloud risks и Course Voice;
-5. platform API, metadata, accessibility и render risks.
-
-Потребуй exhaustive findings с location, severity, evidence и correction. Аудитор завершён только после проверки каждого consequential claim, каждого deterministic artifact, каждого Learning Outcome и каждого unique component/visual pattern; representative sampling допустим только для lower-risk claims.
-
-### 3. Исправить и перепроверить
-
-Самостоятельно проверь evidence каждого finding. Исправь confirmed `critical` и `material`; исправь безопасные локальные `minor`, остальные запиши с причиной disposition. Если authoritative sources конфликтуют materially и research не разрешает конфликт, оформи одну Critical Decision.
-
-Повторно реши изменённые answers, перепроверь затронутые claims, alignment, русский и platform contract. При существенной переработке попроси fresh-context auditor повторить affected pass. Шаг завершён при нуле unresolved `critical` и `material` и документированном disposition каждого `minor`.
-
-### 4. Создать quality report
-
-Создай `_authoring/quality-report.md` с точным ready-status из audit contract. Запиши Outcome Alignment, coverage/dependencies, answers/solutions, practice solvability, plain-Russian findings, sources/freshness, accessibility/render QA, validator/build, audit method, fresh-context auditor, findings/corrections/reruns и remaining limitations.
-
-Заверши шаг, когда непустой `## Independent Course Audit` честно отражает raw findings и corrections, не заявляет expert review и содержит достаточно evidence для воспроизведения release decision.
-
-### 5. Проверить draft и опубликовать
-
-Запусти validator на draft через `COURSE_CONTENT_ROOT=./drafts/courses`. Исправь каждую ошибку выбранного Course. До переноса проверь все относительные ссылки, пути к assets и provenance так, как они будут разрешаться из будущего `src/content/courses/<course-slug>`; draft-пути не должны попасть в release. Убедись, что target отсутствует, затем перемести туда готовый Course без overwrite и повторно проверь ссылки уже из опубликованного пути.
-
-Запусти:
-
-```sh
-pnpm validate
-pnpm build
-```
-
-Проведи Render QA для Course Overview, Capstone, одного representative Lesson каждого Module и каждой unique component/visual pattern на desktop/mobile и с keyboard. Platform defect запиши отдельно; Course source исправляй только в пределах authoring contract.
-
-При post-publish failure сохрани диагностируемое состояние, исправь Course и повтори affected checks. Release завершён только при успешных validate/build, пройденном Render QA, нуле unresolved `critical`/`material` и отсутствии blocking Critical Decision.
-
-### 6. Передать release
-
-Сообщи Course Owner: чему теперь учит Course, audit result, выполненные checks, remaining high-risk limitations и путь опубликованного Course. Не требуй общего approval и не выдавай AI audit за expert или learner validation.
+Finish only with zero unresolved critical or material findings, successful validation/build/Render QA, a truthful quality report, the Course at its published path, and no release journal. Report what it teaches, audit result, checks, source/freshness boundary, remaining high-risk limitations, and the published path.

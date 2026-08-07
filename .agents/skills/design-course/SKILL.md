@@ -1,55 +1,27 @@
 ---
 name: design-course
-description: "Спроектировать новый курс: исследовать тему, создать Course Brief и Course Blueprint."
+description: Research and design one new Course, producing a ready Course Brief and Course Blueprint without learner-facing content.
 ---
 
 # Design Course
 
-Спроектируй один новый Course и остановись до написания learner-facing материалов. Работай в `drafts/courses/<course-slug>/`; каталог `src/content/courses/` предназначен только для прошедшего аудит Course.
+Design one new Course in `drafts/courses/<course-slug>/` and stop before learner-facing authoring.
 
-## Вход и границы
+## Establish the input
 
-Прими свободный запрос Course Owner. Сам исследуй репозиторий, платформу и тему. Если slug не задан, создай короткий lowercase-hyphen slug. Этот skill создаёт только новые Courses; при совпадении slug с существующим draft или опубликованным Course остановись и сообщи точный конфликт.
+Read `AGENTS.md`, `CONTEXT.md`, `docs/authoring.md`, and the complete [design contract](references/design-contract.md). Accept either a free-form Course Owner request or a confirmed intake from `$create-course`. Create a short lowercase-hyphen slug when none is supplied. Resume a matching partial design from its Intake record and first incomplete artifact gate; stop on a different draft identity or any published slug conflict.
 
-Эскалируй только Critical Decision: вопрос, который нельзя надёжно разрешить по свидетельствам и варианты которого материально меняют Learner Profile, scope, Learning Outcomes, Capstone, безопасность, юрисдикцию, стоимость, необратимую зависимость или продуктовый компромисс. Задавай по одному вопросу короткой карточкой: решение, рекомендуемый default, различающиеся последствия, безопасный fallback. При наличии безопасного default продолжай и запиши допущение.
+When no confirmed intake exists, inspect the request and repository first, then ask one adaptive card with at most three questions covering the Learner Profile and entry capabilities, observable final performance, and material depth, time, scope, jurisdiction, or safety constraints. Reuse supplied facts; if the request is complete, restate the inferred design and ask for confirmation. Include recommended defaults and wait once.
 
-## Обязательное ядро
+After intake closes, ask no further questions. First create the draft path and persist the closed Intake record in `_authoring/brief.md`. Resolve later uncertainty through evidence, confirmed intent, repository conventions, narrow scope, and safe reversible defaults. Record every consequential choice. If no safe useful scope remains, preserve the artifacts and stop.
 
-- Один Course обслуживает один Learner Profile и ограниченный практический запрос.
-- Entry capabilities и Learning Outcomes наблюдаемы. Полнота означает перенос каждого Learning Outcome в реалистичную новую ситуацию, а не исчерпывающий охват темы.
-- Проектируй назад от Capstone Demonstration и его evidence. Topic list не заменяет Outcome Alignment.
-- Один Module развивает одну промежуточную capability; один Lesson — одну primary capability и полный Learning Cycle.
-- Предпосылки предшествуют использованию; Instructional Scaffolding ослабевает к независимому переносу; Cumulative Retrieval возвращает важные capabilities позже.
-- Source Policy отдаёт приоритет первичным и официальным источникам. Версия, дата, юрисдикция, неопределённость и граница применимости остаются видимыми.
-- Реестр доказательств связывает каждое существенное, спорное или time-sensitive утверждение с точным источником и местом будущего использования.
-- Course Brief фиксирует замысел и решения; Course Blueprint доказывает покрытие, последовательность и реалистичную нагрузку.
+## Design backward
 
-## Канонический reference
+Research the platform and topic from authoritative sources. Build the Course from Capstone evidence backward to Learning Outcomes, prerequisite capabilities, Modules, Lessons, practice, Module Checkpoints, and Cumulative Retrieval. Keep one Learner Profile, one intermediate capability per Module, and one primary capability per Lesson. Remove material that serves no outcome, prerequisite, misconception, or transfer need.
 
-До исследования полностью прочитай [`references/design-contract.md`](references/design-contract.md). Он содержит полный контракт этого этапа, metadata, Course architecture, Source Policy и Content Freshness. Применяй точную доменную терминологию из `CONTEXT.md`; learner-facing формулировки на этом этапе не создавай.
+Create only:
 
-## Шаги
+1. `_authoring/brief.md`, with a coherent learner need, outcomes, scope, Source Policy, evidence ledger, constraints, assumptions, and closed decision record;
+2. `_authoring/blueprint.md`, with dependencies, aligned instruction and practice, scaffolding, retrieval, explanation plans, workload, and coverage audit.
 
-### 1. Исследовать
-
-Прочитай `AGENTS.md`, `CONTEXT.md`, релевантные ADR, существующие Course sources, validator contract и `platform/capability-packs.json`. Найди авторитетные источники темы; проверь current версии, юрисдикцию, factual risk, safety и accessibility. Факты находи самостоятельно, решения Course Owner не подменяй.
-
-Заверши шаг, когда для каждого consequential, disputed или time-sensitive утверждения записаны: формулировка, точный источник, версия/юрисдикция/дата проверки, граница применимости и предполагаемое место в Course; оставшиеся неопределённости классифицированы как допущение, риск или Critical Decision.
-
-### 2. Зафиксировать Course Brief
-
-Создай только `drafts/courses/<course-slug>/_authoring/brief.md`. Включи все поля и ready-status из design contract, непустой `## Decision record` и `## Evidence ledger`. Реестр доказательств не раздувай общеизвестными низкорисковыми фактами.
-
-Заверши шаг, когда Learner Profile, need, entry capabilities, scope/exclusions, stable Learning Outcomes, Capstone evidence, workload/depth, Source Policy, freshness, language, packs, risks и решения образуют один непротиворечивый замысел, а unresolved Critical Decision не блокирует проектирование.
-
-### 3. Проверить Course Blueprint
-
-Создай `drafts/courses/<course-slug>/_authoring/blueprint.md`. Проектируй от Capstone назад: criteria → Learning Outcomes → checkpoints/practice → instruction → prerequisites. Добавь concept map, Modules/Lessons, explanation plan, scaffolding, Cumulative Retrieval, оценки времени и coverage audit.
-
-Заверши шаг, когда каждый Learning Outcome имеет instruction, practice, Module Checkpoint и Capstone criterion; все зависимости упорядочены; каждая capability имеет одного владельца; workload входит в бюджет; gaps, duplication, overload и лишний материал устранены; unresolved Critical Decision не блокирует authoring.
-
-### 4. Передать результат
-
-Перечитай оба артефакта против обязательного ядра и design contract. Сообщи Course Owner только путь draft, краткий замысел, принятые defaults, остающиеся ограничения и следующий вызов `$author-course`. Learner-facing Course source не создавай.
-
-Skill завершён только при наличии готовых `brief.md` и `blueprint.md` с выполненными критериями обоих артефактов.
+Finish only when both artifacts satisfy every readiness criterion in the design contract and no unresolved uncertainty blocks safe authoring. Report their paths, the Course's practical promise, material defaults, limitations, and the next standalone command `$author-course <course-slug>`.

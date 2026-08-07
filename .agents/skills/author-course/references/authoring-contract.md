@@ -32,8 +32,17 @@ Audit the Reference Lesson for:
 
 When practical, run the target-learner comprehension probe described below. The
 Course Owner's lay reading may reveal unnatural language or a broken explanation and
-is useful evidence, but it is not the sole quality test. Escalate only a Critical
-Decision. A small Course may record why a separate Reference Lesson was unnecessary.
+is useful evidence, but it is not the sole quality test. Resolve uncertainty through
+the closed intake and decision policy in the Course Brief. A small Course may record
+why a separate Reference Lesson was unnecessary.
+
+Before authoring the remaining Course, record a non-empty
+`## Reference Lesson calibration` section in the Course Blueprint. Include the
+representative Lesson path, cold-reader input, method, findings, corrections, reruns,
+remaining limitations, and the literal line `Calibration state: ready`. For a small
+Course that legitimately needs no separate Reference Lesson, record the reason,
+equivalent calibration evidence, and the same ready state. Treat this section as the
+durable resume gate for Module authoring.
 
 ### 5. Author the Course Module by Module
 
@@ -42,7 +51,8 @@ After Reference Lesson calibration:
 - author Modules in dependency order;
 - validate and self-review each Module before continuing;
 - update Cumulative Retrieval as earlier material becomes available;
-- continue autonomously unless a new Critical Decision is discovered;
+- continue autonomously; resolve new uncertainty through evidence, recorded intent,
+  narrow scope, and safe reversible defaults, then update the design artifacts;
 - never invent a component, source, requirement, or Course Owner decision.
 
 ## Pedagogical rules
@@ -99,6 +109,10 @@ Flashcards are optional. Repetition is a Course-sequence property, not a compone
 ### Use a respectful Course Voice
 
 - Address the learner as `ты` in clear conversational Russian.
+- Sound like a knowledgeable friend sharing useful experience in a calm informal
+  setting: warm, direct, equal, and precise.
+- Prefer familiar household or work cases when they clarify the model; never add an
+  example, analogy, story, or joke by quota.
 - Be precise without bureaucratic prose or unexplained jargon.
 - Do not dismiss a difficult step with `это просто`, `это легко`, or `это очевидно`.
   Demonstrate the reasoning and acknowledge prerequisites instead of judging the

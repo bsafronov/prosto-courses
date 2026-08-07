@@ -34,43 +34,42 @@ Completeness does not mean exhausting everything known about a topic. If the req
 
 ## Collaboration with the Course Owner
 
-Delegated Authoring is the default collaboration mode. The Course Owner supplies
-the learner's need, product intent, known constraints, and value judgments. The
-Course Owner is not expected to be a subject-matter expert or to verify every fact,
-explanation, or instructional choice. The Authoring Agent owns research, source
-verification, terminology, sequence, pedagogy, examples, assessment alignment,
-plain Russian, and quality control.
+Delegated Authoring uses one compact intake round. The Course Owner supplies the
+learner's need, product intent, known constraints, and value judgments. The Course
+Owner is not expected to be a subject-matter expert or to verify facts, explanations,
+or instructional choices. The Authoring Agent owns research, source verification,
+terminology, sequence, pedagogy, examples, assessment alignment, plain Russian, and
+quality control.
 
-Do not turn uncertainty into a questionnaire. Inspect the repository, available
-Capability Packs, and authoritative sources first. Resolve evidence-based and
-reversible low-impact choices autonomously, then record the evidence or assumption
-in the Course Brief, Course Blueprint, or quality report.
+Inspect the repository, available Capability Packs, and authoritative sources far
+enough to avoid asking for discoverable facts. Reuse details already present in the
+request. Before writing artifacts, ask one adaptive decision card with at most three
+short questions covering only choices that materially affect the Learner Profile,
+final performance, scope, depth, safety, jurisdiction, accessibility, cost, or an
+irreversible dependency. If no material detail is missing, restate the inferred
+learner, result, and scope and ask for confirmation. Include a recommended default
+for every open choice and wait for one reply.
 
-Escalate a Critical Decision only when the answer cannot be established reliably and
-at least one option would materially change:
+After that reply, close intake and ask no more questions. Resolve later uncertainty
+in this order: authoritative evidence, confirmed intent, repository conventions, the
+narrowest useful scope, then the safest reversible and accessible default. Record
+every material decision, evidence, and assumption in the Course Brief, Course
+Blueprint, or quality report. Never broaden scope or change Learning Outcomes
+silently. If no safe useful Course remains, preserve the draft, record the exact
+blocker, and stop without publication. Course Owner review is never a default gate.
 
-- the Learner Profile, scope, Learning Outcomes, or evidence required by the Capstone;
-- safety, factual risk, jurisdiction, cost, or an irreversible platform dependency;
-- a value judgment, product preference, or trade-off that belongs to the Course Owner;
-- the treatment of a consequential conflict between authoritative sources.
-
-Ask no more than one Critical Decision at a time. Use a short decision card containing:
-
-1. the question in one sentence;
-2. the Authoring Agent's recommended default;
-3. only the consequences that distinguish the viable options;
-4. the safe fallback that will be used if no answer arrives, when such a fallback exists.
-
-If there is a safe default, proceed and record it as an assumption. If there is no
-safe default, pause only the work that depends on the decision. Never change the
-Course scope or Learning Outcomes silently. The Course Owner may request explicit
-review at any workflow stage, but such review is not a default publication gate.
+Immediately after the intake reply, create the draft path and persist an initial
+`_authoring/brief.md` before any further research or design. Its non-empty
+`## Intake record` contains the exact original request, the Course Owner's one reply,
+the inferred learner, final performance and scope, every accepted default, and the
+literal line `Intake state: closed`. This is a resumable checkpoint, not a ready
+Brief; expand the same file and preserve this section throughout the workflow.
 
 ## Required authoring workflow
 
 ### 1. Investigate the topic and platform
 
-Before asking design questions:
+Before closing intake:
 
 - inspect existing Course source, the component contract, validation rules, and relevant domain decisions;
 - identify the topic's authoritative primary and secondary sources;
@@ -82,6 +81,7 @@ Before asking design questions:
 
 Create `_authoring/brief.md`. It is versioned but never learner-facing. It must contain:
 
+- the closed `## Intake record` and original request identity;
 - the Learner Profile and application context;
 - observable entry capabilities;
 - the learner's practical need;

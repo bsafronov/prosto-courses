@@ -98,15 +98,15 @@ A diagram, chart, table, or image selected because it reduces the effort of unde
 _Avoid_: Decoration, visual quota, unexplained image
 
 **Course Owner**:
-The person who supplies a Course's product intent and makes Critical Decisions that evidence alone cannot resolve. The Course Owner may contribute a lay reading but is not presumed to be a subject-matter expert or the Course's full quality reviewer.
+The person who supplies a Course's product intent and closes its single initial intake. The Course Owner may contribute a lay reading but is not presumed to be a subject-matter expert or the Course's full quality reviewer.
 _Avoid_: Developer, requester, user
 
 **Delegated Authoring**:
-The default collaboration mode in which the Authoring Agent owns researchable factual and instructional decisions while the Course Owner is consulted only for Critical Decisions. It replaces mandatory human approval at every authoring stage without permitting silent changes to scope or Learning Outcomes.
-_Avoid_: Unsupervised generation, AI approval, automatic publication
+The collaboration mode in which the Course Owner closes one compact intake and the Authoring Agent owns all later research, instructional decisions, documented defaults, verification, and gated publication. It removes intermediate approval gates without permitting silent scope or Learning Outcome changes.
+_Avoid_: Unsupervised generation, AI approval
 
 **Critical Decision**:
-A choice that evidence cannot resolve reliably and whose viable answers materially change the Course's audience, scope, Learning Outcomes, safety, factual risk, cost, jurisdiction, irreversible dependencies, or value trade-offs. It is the only decision type that Delegated Authoring must escalate to the Course Owner.
+A choice that evidence cannot resolve reliably and whose viable answers materially change the Course's audience, scope, Learning Outcomes, safety, factual risk, cost, jurisdiction, irreversible dependencies, or value trade-offs. Surface detectable Critical Decisions in the single intake; after intake closes, record the narrowest safe useful default or block release when none exists.
 _Avoid_: Clarifying question, preference check, fact lookup
 
 **Course Brief**:
@@ -124,6 +124,14 @@ _Avoid_: First lesson, template, prototype Course
 **Independent Course Audit**:
 A fresh-context AI review that starts from the Course requirements and authoritative sources, then independently checks the completed draft's facts, learning design, answers, Russian, safety, and accessibility. It is neither Authoring Agent self-review nor independent expert review.
 _Avoid_: AI approval, expert review, final proof
+
+**Course Release Candidate**:
+A fully audited Course tree temporarily placed at its future catalog path while public validation, build, and Render QA run. A matching Course Release Journal makes it resumable or reversible; it is not published until final validation succeeds and the journal is removed.
+_Avoid_: Published Course, partial release
+
+**Course Release Journal**:
+A transient non-learner record at `drafts/course-releases/<course-slug>.md` that identifies one Course Release Candidate and its current gate. Its presence marks an owned unfinished transaction; successful publication removes it.
+_Avoid_: Quality report, Course Brief, permanent release record
 
 **Source Policy**:
 The Course Brief's hierarchy of acceptable evidence, jurisdiction, version and freshness requirements, and citation placement. It distinguishes primary authority from commentary and verified fact from simplification, opinion, and simulated cases.

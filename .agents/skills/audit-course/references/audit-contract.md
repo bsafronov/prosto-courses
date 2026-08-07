@@ -30,9 +30,11 @@ The audit must:
   a concrete correction.
 
 The Authoring Agent fixes critical and material findings, records the disposition of
-minor findings, and reruns affected checks. A critical finding blocks release. A
-material disagreement between authoritative sources becomes a Critical Decision only
-when research cannot resolve it and product judgment is required.
+minor findings, and reruns affected checks. A critical finding blocks release. When
+research cannot resolve a material disagreement between authoritative sources, use
+the recorded intent and narrowest safe applicability boundary. Remove the dependent
+claim or outcome when necessary; if no safe useful Course remains, preserve the draft
+and block release.
 
 An Independent Course Audit is stronger than Authoring Agent self-review, but it is
 still an AI audit. It must never be represented as independent expert review, field
@@ -54,14 +56,22 @@ Create `_authoring/quality-report.md` with:
   findings by severity, corrections, and rerun results;
 - remaining limitations and the absence of independent expert review, when relevant.
 
+Stage the release state in that report. Before the catalog move, record the literal
+line `Release state: candidate`, the completed draft checks, and each public gate as
+pending. This state is truthful because the required ready status certifies the
+Independent Course Audit, not publication. After public validation, build, and Render
+QA pass, replace the pending entries with exact results and set
+`Release state: published`; validate that final report before declaring release.
+
 Record the audit in a non-empty `## Independent Course Audit` or
 `## Независимый ИИ-аудит` section.
 
 Release the Course when validation passes, the Independent Course Audit has no
-unresolved critical or material findings, and no Critical Decision remains blocked.
+unresolved critical or material findings, every consequential uncertainty has a
+documented resolution or safe applicability boundary, and no release journal remains.
 Give the Course Owner a concise release summary: what the Course now teaches, audit
-result, remaining high-risk limitations, and only the Critical Decisions that still
-need an answer. Full Course Owner approval is optional.
+result, material assumptions, and remaining high-risk limitations. Course Owner
+approval is not a release gate.
 
 The public validator treats these as structured artifacts, not placeholder
 files. Each uses its documented level-one heading, a positive `Version` or
@@ -82,14 +92,38 @@ independent audit, validation run, and remaining limitations.
 ## Validation and Definition of Done
 
 Validate the completed draft with `COURSE_CONTENT_ROOT=./drafts/courses`. After it
-passes, confirm that `src/content/courses/<course-slug>` does not exist and move the
-whole Course tree there without overwrite. Then run the public validation and build
-entry points:
+passes, confirm that `src/content/courses/<course-slug>` does not exist. Create a
+transient `drafts/course-releases/<course-slug>.md` journal containing the closed
+Intake identity, exact draft and target paths, current gate, attempts, results, and
+the literal line `Journal state: candidate`. Then move the whole Course tree to the
+target without overwrite as a release candidate and run the public validation and
+build entry points:
 
 ```sh
 pnpm validate
 pnpm build
 ```
+
+Run Render QA while the release candidate is at the catalog path. After all three
+gates pass, write their exact results to the quality report, set
+`Release state: published`, set `Journal state: final-validation`, and run
+`pnpm validate` once more against the final report. If learner-facing source or
+metadata changed after a successful build or Render QA pass, rerun those affected
+gates too. Delete the journal only after every final required check succeeds; that
+deletion finalizes publication.
+
+If an invocation finds no draft but finds both a catalog target and matching release
+journal whose Intake identity and paths agree, treat it as the owned interrupted
+transaction regardless of the report state: resume the journal's current gate or
+roll it back. If no draft or journal exists and the requested catalog target has a
+closed Intake record plus `Release state: published`, report idempotent success
+without changing it. Any other target without a matching journal is a conflict.
+
+If any post-move gate fails, reset the report to `Release state: candidate`, record
+the failure in both report and journal, move the Course back to its original draft
+path when that move is safe, preserve diagnostics, and leave no catalog target.
+If rollback itself cannot be completed safely, report the exact filesystem state and
+never claim publication.
 
 The target validator must reject:
 
@@ -132,8 +166,8 @@ Technical validity is necessary but not sufficient. Before release, confirm:
 - Russian prose follows the Course Voice;
 - the Capstone genuinely demonstrates all Learning Outcomes.
 
-The Course Owner reviews only the release summary and any unresolved Critical
-Decisions unless they explicitly request a broader review.
+The Course Owner receives the release summary and may request a broader review, but
+no additional approval or question is part of the default workflow.
 
 ### Render QA
 

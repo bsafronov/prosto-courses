@@ -1,132 +1,136 @@
-# Operational contract: понятный учебный текст на русском
+# Operational contract: plain Russian learning content
 
-Этот файл — обязательная выжимка для authoring и audit. Его критерий — результат у конкретного Learner Profile: ученик находит нужную идею, пересказывает связь своими словами, применяет её в похожем случае и переносит в изменённый. Гладкость, длина предложения и отсутствие отдельных слов этого не доказывают.
+This reference is mandatory during authoring and audit. Judge clarity by the recorded Learner Profile: the learner can find the needed idea, retell the relationship in their own words, apply it in a familiar case, and transfer it to a changed case. Smooth prose, short sentences, and missing stop words do not prove comprehension.
 
-## Содержание
+## Contents
 
-- [Сохранить полезную трудность](#сохранить-полезную-трудность)
-- [Собрать объяснение](#собрать-объяснение)
-- [Писать русский из смысла](#писать-русский-из-смысла)
-- [Строить paragraph и segment](#строить-paragraph-и-segment)
-- [Вводить термины](#вводить-термины)
-- [Управлять русско-английской границей](#управлять-русско-английской-границей)
-- [Превратить объяснение в обучение](#превратить-объяснение-в-обучение)
-- [Сохранить Course Voice](#сохранить-course-voice)
-- [Провести раздельные passes](#провести-раздельные-passes)
+- [Preserve useful difficulty](#preserve-useful-difficulty)
+- [Build an explanation](#build-an-explanation)
+- [Write Russian from meaning](#write-russian-from-meaning)
+- [Build paragraphs and segments](#build-paragraphs-and-segments)
+- [Introduce terms](#introduce-terms)
+- [Control the Russian-English boundary](#control-the-russian-english-boundary)
+- [Turn explanation into learning](#turn-explanation-into-learning)
+- [Keep the Course Voice](#keep-the-course-voice)
+- [Run separate passes](#run-separate-passes)
 
-## Сохранить полезную трудность
+## Preserve useful difficulty
 
-Сними трудность, созданную плохим порядком, скрытой логикой, неизвестными частями, калькой и лишними деталями. Сохрани точность, причинность, необходимые термины, реальные ограничения и самостоятельное усилие ученика.
+Remove difficulty caused by poor order, hidden logic, unknown parts, translation calques, and irrelevant detail. Preserve precision, causality, necessary terms, real constraints, and the learner's independent effort.
 
-Объяснение достаточно простое, когда Learner Profile может рассуждать и действовать точно. Course Depth означает достаточное causal understanding, application, boundary recognition и trade-off reasoning, а не максимум подробностей.
+An explanation is simple enough when the Learner Profile can reason and act accurately. Course Depth means sufficient causal understanding, application, boundary recognition, and trade-off reasoning—not maximum detail.
 
-## Собрать объяснение
+## Build an explanation
 
-Используй минимальный spine, нужный конкретной capability:
+Use only the parts of this spine needed for the capability:
 
-1. **Задача.** Начни с реальной ситуации, вопроса или решения ученика.
-2. **Короткий ответ.** Дай самый короткий точный вывод рано.
-3. **Опора.** Активируй только prerequisite knowledge, без которого следующая связь не строится.
-4. **Части.** Назови необходимые objects и одной фразой объясни роль каждого.
-5. **Модель.** Покажи cause, condition, consequence, contrast и exception явными связями.
-6. **Полный пример.** Покажи context/goal, initial data, consequential steps, reason каждого шага, intermediate check, interpreted result и applicability boundary.
-7. **Контраст.** Измени один важный признак: покажи nearby non-example, misconception или boundary case.
-8. **Действие.** Дай partial completion, затем independent familiar case и changed/ambiguous transfer.
-9. **Feedback.** Объясни evidence, cause, correction и next attempt.
-10. **Возврат.** Позже потребуй recall и применение без копирования исходной формулировки.
+1. **Need.** Start with a real situation, question, or decision the learner faces.
+2. **Short answer.** Give the shortest accurate conclusion early.
+3. **Foundation.** Activate only prerequisite knowledge needed for the next link.
+4. **Parts.** Name each necessary object and explain its role in one familiar phrase.
+5. **Model.** Make cause, condition, consequence, contrast, and exception explicit.
+6. **Worked example.** Show context, goal, initial data, consequential steps, reasons, an intermediate check, the interpreted result, and the applicability boundary.
+7. **Contrast.** Change one important feature to expose a nearby non-example, misconception, or boundary case.
+8. **Action.** Move from partial completion to an independent familiar case and then changed or ambiguous transfer.
+9. **Feedback.** Explain evidence, cause, correction, and the next attempt.
+10. **Return.** Later require recall and application without copying the original wording.
 
-Функции spine не требуют одинаковых заголовков или фиксированного порядка в каждом Lesson. Выбирай минимальное объяснение, которое сохраняет точную модель и transfer.
+These functions require neither fixed headings nor identical order in every Lesson. Choose the smallest explanation that preserves an accurate model and transfer.
 
-## Писать русский из смысла
+## Write Russian from meaning
 
-Сначала установи claim, intent, facts, logical relations, conditions и boundaries источника. Затем отложи исходную фразу и напиши мысль так, как её естественно сформулировал бы русский автор. После правки сверь каждый факт, условие, степень уверенности и границу применимости с источником.
+First establish the source's claim, intent, facts, logical relationships, conditions, and boundaries. Put the source wording aside and express the meaning as a Russian author naturally would. Then compare every fact, condition, confidence level, and applicability boundary with the source.
 
-Для предложения используй рабочую рамку:
+Use this diagnostic frame for a sentence:
 
 > Кто делает? Что делает? С чем? При каком условии? Что из этого следует?
 
-- Ставь видимого actor рядом с finite verb и object, когда actor известен и важен.
-- Выбирай active voice, когда он проясняет действие. Выбирай passive, когда результат важнее actor или active звучит хуже.
-- Возвращай действие из abstract noun в verb: `провести проверку` → `проверить`, если noun не является точным domain term.
-- Развязывай длинные noun/genitive chains через verb, preposition или отдельное предложение.
-- Держи одну main assertion в предложении. Новый subject, condition, exception или conclusion обычно получает новое предложение.
-- Держи связанные actor, action и object достаточно близко; выноси длинные insertions.
-- Используй обычные conjunctions и pronouns, когда они показывают связь естественно.
-- Сохраняй exact professional term, если ученик должен его узнавать или использовать; объясняй через знакомые слова вместо неточного бытового synonym.
+- Keep a visible actor near the finite verb and object when the actor matters.
+- Prefer active voice when it clarifies action; use passive voice when the result matters more or active voice sounds less natural.
+- Restore action from an abstract noun when the noun is not a precise domain term: `провести проверку` → `проверить`.
+- Untangle long noun and genitive chains with a verb, preposition, or separate sentence.
+- Keep one main assertion per sentence. A new subject, condition, exception, or conclusion usually needs a new sentence.
+- Keep related actor, action, and object close enough to follow without rereading.
+- Use ordinary conjunctions and pronouns when they expose the relationship naturally.
+- Preserve an exact professional term when the learner must recognize or use it; explain it with familiar words instead of replacing it with an inaccurate household synonym.
 
-`данный`, `является`, `осуществлять`, `посредством`, verbal nouns, participles и passive — сигналы для проверки функции, а не стоп-слова. Сохраняй конструкцию, когда она даёт самый точный и естественный вариант.
+Treat `данный`, `является`, `осуществлять`, `посредством`, verbal nouns, participles, and passive constructions as prompts to check function, not banned forms. Keep a construction when it is the most accurate and natural Russian choice.
 
-## Строить paragraph и segment
+## Build paragraphs and segments
 
-- Один paragraph совершает один logical move.
-- Main claim или ответ стоит раньше supporting detail, если detail не нужен для понимания claim.
-- Заголовок позволяет предсказать вопрос, object, decision или action ниже.
-- Один segment решает одну intermediate task: thesis → reason/model → case or boundary → learner action или mini-conclusion.
-- Следующий segment опирается на уже собранную часть mental model.
-- Связанные text, label, example и visual находятся рядом.
-- Деталь остаётся, когда улучшает model, distinction, error diagnosis, memory нужной связи или реальное действие.
+- Make one logical move per paragraph.
+- Put the main claim or answer before supporting detail unless that detail is required to understand the claim.
+- Use a heading that predicts the question, object, decision, or action below it.
+- Give each segment one intermediate job: thesis → reason or model → case or boundary → learner action or short conclusion.
+- Make each segment depend on an already established part of the mental model.
+- Keep related text, labels, examples, and visuals together.
+- Retain a detail only when it improves the model, distinction, error diagnosis, memory of a useful relationship, or real action.
 
-Сохраняй связное рассуждение цельным: карточки, однофразовые paragraphs и дробление по word count не заменяют semantic segmentation.
+Keep coherent reasoning together. Cards, one-sentence paragraphs, and splitting by word count do not replace semantic segmentation.
 
-## Вводить термины
+## Introduce terms
 
-Для каждого необходимого нового term дай рядом:
+For each necessary new term, place together:
 
-1. знакомое объяснение;
-2. точный term;
-3. роль или distinguishing feature;
-4. representative example;
-5. nearby non-example, если вероятна путаница.
+1. a familiar explanation;
+2. the exact term;
+3. its role or distinguishing feature;
+4. a representative example;
+5. a nearby non-example when confusion is likely.
 
-После введения называй один concept одинаково. Различай соседние concepts явно. Проверяй перевод по authoritative domain glossary или primary source.
+After introduction, use one stable name for one concept. Contrast neighboring concepts explicitly. Verify translations through an authoritative domain glossary or primary source.
 
-## Управлять русско-английской границей
+## Control the Russian-English boundary
 
-Learner-facing explanation, heading, instruction, feedback, example и authored metadata пиши по-русски, когда точная естественная русская форма существует. Внутренний prompt, английский skill или source не являются причиной оставить английский prose.
+Write learner-facing explanations, headings, instructions, feedback, examples, and authored metadata in Russian whenever an accurate natural Russian form exists. An English skill, prompt, or source never justifies English prose in the Course.
 
-Сохраняй исходную форму, когда она несёт identity или operational meaning:
+Keep the original form only when it carries identity or operational meaning:
 
-- официальное имя person, organization, product, library, framework, standard или publication без официальной русской формы;
-- code, command, identifier, API name, file path, config key и data field;
-- exact interface label, которое ученик должен найти;
-- quotation или bibliographic title, когда важен original.
+- an official name of a person, organization, product, library, framework, standard, or publication with no official Russian form;
+- code, commands, identifiers, API names, file paths, configuration keys, and data fields;
+- an exact interface label the learner must locate;
+- a quotation or bibliographic title when the original matters.
 
-Если English professional term нужен для поиска или общения, один раз поставь его после русского: `извлечение из памяти (retrieval practice)`. Дальше используй русский term, пока сам English token не является предметом обучения. Сохраняй официальный `OpenAI`, command `git status` и instruction `Нажми Run`; окружающее предложение остаётся русским.
+When an English professional term is useful for search or communication, place it once after the Russian term: `извлечение из памяти (retrieval practice)`. Continue with the Russian term unless the English token itself is being taught. Keep official `OpenAI`, command `git status`, and label `Run`; keep the surrounding prose Russian: `Нажми Run`.
 
-## Превратить объяснение в обучение
+Do not alternate Russian and English synonyms, copy English word order, or transliterate a name when an established original or Russian form exists.
 
-- Дай модель до сложного самостоятельного поиска новичка.
-- Покажи first worked example с reasoning; затем постепенно сними support.
-- Попроси ученика предсказать, объяснить, сравнить, диагностировать, закончить, решить, улучшить или создать.
-- Дай попытку до hint, answer, solution или rubric.
-- Сделай distractors правдоподобными misconceptions; каждому дай короткий диагноз.
-- Проверь transfer изменением surface, condition, ambiguity или требуемого choice.
-- Верни ключевую capability позже с growing interval и новым context.
+## Turn explanation into learning
 
-Feedback меняет следующую попытку. Он сообщает:
+- Give a novice the model before difficult independent search.
+- Show the first worked example with visible reasoning, then fade support.
+- Ask the learner to predict, explain, compare, diagnose, complete, decide, improve, or create.
+- Require an attempt before a hint, answer, solution, or rubric.
+- Build distractors from plausible misconceptions and diagnose each one briefly.
+- Test transfer by changing the surface, condition, ambiguity, or required choice.
+- Return key capabilities later with a growing interval and a new context.
 
-1. что подтверждает или опровергает answer;
-2. какой observable sign это показывает;
-3. почему возникла ошибка;
-4. какое rule/reasoning исправляет её;
-5. что попробовать дальше.
+Feedback must change the next attempt. State:
 
-## Сохранить Course Voice
+1. what the answer confirms or contradicts;
+2. which observable sign shows it;
+3. why the error arose;
+4. which rule or reasoning corrects it;
+5. what to try next.
 
-- Обращайся к ученику на `ты`; используй imperative для реального шага.
-- Признавай genuine difficulty через prerequisites и reasoning.
-- Описывай проблему в answer или reasoning, сохраняя уважение к ученику.
-- Давай specific feedback вместо automatic praise.
-- Поддерживай взрослый conversational register без bureaucratic scaffolding, forced slang и infantilization.
-- Используй humor/emoji только для понимания, памяти или эмоционального облегчения.
-- Пиши доменные слова естественно и со строчной буквы внутри предложения: `в этом курсе`, `в следующем уроке`. Internal terms из `CONTEXT.md` не превращай в learner-facing English или искусственные proper names.
+## Keep the Course Voice
 
-## Провести раздельные passes
+- Address the learner as `ты`; use the imperative for a real action.
+- Sound like a knowledgeable friend sharing something useful in a calm informal setting: warm, direct, equal, and precise.
+- Prefer familiar household or work situations when they clarify the model; never add examples by quota.
+- Acknowledge genuine difficulty through prerequisites and reasoning.
+- Describe a problem in the answer or reasoning, never a defect in the learner.
+- Give specific feedback instead of automatic praise.
+- Keep an adult conversational register without bureaucratic scaffolding, forced slang, fake excitement, or infantilization.
+- Use humor or emoji only when it improves understanding, memory, or emotional ease.
+- Write Russian domain nouns naturally and lowercase inside a sentence: `в этом курсе`, `в следующем уроке`. Never expose internal English domain labels as learner-facing prose.
 
-1. **Accuracy:** факты, causal model, examples, boundaries, terminology.
-2. **Structure:** need first, prerequisites before use, visible path, one logical move per segment.
-3. **Russian:** natural syntax, visible actions, stable terms, functional language switching, no literal translation.
-4. **Read aloud:** перепиши каждое место, где речь спотыкается; затем сверь meaning и logical links.
-5. **Comprehension:** cold reader находит идею, пересказывает model и решает changed case. AI cold read записывается как proxy; живой target-learner probe — отдельное evidence.
+## Run separate passes
 
-Language pass завершён только когда каждое learner-facing предложение имеет естественную русскую структуру, каждый retained foreign fragment имеет точную функцию, central models можно пересказать, а changed cases решаются без копирования wording.
+1. **Accuracy:** verify facts, causal models, examples, boundaries, and terminology.
+2. **Structure:** put the need first, prerequisites before use, and one logical move in each segment.
+3. **Russian:** verify natural syntax, visible actions, stable terms, functional language switching, and absence of literal translation.
+4. **Read aloud:** rewrite every place where speech catches, then recheck meaning and logical links.
+5. **Comprehension:** require a cold reader to find the central idea, retell the model, and solve a changed case. Record an AI cold read only as a proxy; target-learner evidence is separate.
+
+Finish the language pass only when every learner-facing sentence has a natural Russian structure, every retained foreign fragment has a precise function, central models can be retold, and changed cases can be solved without copying the wording.

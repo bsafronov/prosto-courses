@@ -1,6 +1,16 @@
 # Course authoring
 
-Канонический authoring contract разделён между тремя repo-local, user-invoked skills. Каждый запуск загружает только правила своего этапа; подробные нормы не дублируются в этом файле.
+Основной вызов `$create-course` проводит новый Course от короткого intake до проверенной публикации. Три repo-local stage skills остаются для отдельной работы; подробные нормы живут только в canonical contracts.
+
+## Один вызов
+
+```text
+$create-course Курс по Git для дизайнеров, которые передают макеты разработчикам
+```
+
+Skill сначала задаёт одну карточку максимум из трёх вопросов или подтверждает уже полный замысел. После одного ответа Authoring Agent сам исследует тему, фиксирует defaults, проектирует, пишет, независимо проверяет и публикует Course. Дополнительных approval gates и поздних вопросов нет.
+
+Публикация завершается только после Independent Course Audit, validation, build, Render QA и повторной validation окончательного quality report. Временный Course Release Journal позволяет продолжить или откатить прерванный release candidate. При failed gate Course возвращается в диагностируемый draft; существующий опубликованный target не перезаписывается.
 
 ## Три этапа
 
@@ -10,7 +20,7 @@
 | `$author-course` | Откалибровать Reference Lesson через cold read, затем написать Course Module за Module | Полный learner-facing draft без quality report |
 | `$audit-course` | Провести fresh-context Independent Course Audit, исправить findings, проверить и опубликовать Course | Quality report и готовый Course в `src/content/courses/<course-slug>/` |
 
-Skills работают в режиме Delegated Authoring. Course Owner отвечает только на Critical Decisions без безопасного default; промежуточные approval gates не требуются.
+Stage skills работают в том же режиме Delegated Authoring. `$design-course` проводит один intake, если не получил уже подтверждённый замысел. `$author-course` и `$audit-course` используют готовые артефакты и не задают новых вопросов.
 
 ## Канонические contracts
 
@@ -37,19 +47,16 @@ drafts/courses/<course-slug>/
 src/content/courses/<course-slug>/
 ```
 
-После публикации обязательны `pnpm validate`, `pnpm build` и Render QA из audit contract.
+До завершения публикации обязательны `pnpm validate`, `pnpm build` и Render QA из audit contract.
 
-## Быстрый вызов
+## Отдельные этапы
 
-Начального запроса в свободной форме достаточно:
+Stage skills нужны, когда Course Owner намеренно останавливается между этапами:
 
 ```text
 $design-course Курс по Git для дизайнеров, которые передают макеты разработчикам
-```
-
-Следующие skills автоматически выбирают единственный подходящий draft. Slug нужен только при нескольких кандидатах:
-
-```text
 $author-course <course-slug>
 $audit-course <course-slug>
 ```
+
+`$author-course` и `$audit-course` автоматически выбирают единственный подходящий draft. При нескольких кандидатах передай slug явно.
