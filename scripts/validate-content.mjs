@@ -572,7 +572,10 @@ function openingComponentTags(source) {
 }
 
 function validateInteractionId(component, file, label, interactionIds) {
-  if (!componentAttribute(component.source, "id")) return;
+  if (!componentAttribute(component.source, "id")) {
+    report(file, `${label} requires a stable id`);
+    return;
+  }
 
   const id = stringAttribute(component.source, "id");
   if (typeof id !== "string" || !slugPattern.test(id)) {

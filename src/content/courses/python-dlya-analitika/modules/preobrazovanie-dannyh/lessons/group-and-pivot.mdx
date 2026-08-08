@@ -75,6 +75,7 @@ assert summary["revenue"].sum() == orders["net_revenue"].sum()
 denominator.
 
 <KnowledgeCheck
+  id="knowledge-check-answer-with-transformations"
   type="single"
   prompt="Как посчитать общую среднюю выручку заказа из summary с группами разного размера?"
   outcomes={["answer-with-transformations"]}
@@ -121,6 +122,7 @@ assert revenue_pivot.to_numpy().sum() == orders["net_revenue"].sum()
 ```
 
 <PracticeTask
+  id="practice-task-answer-with-transformations"
   title="Сравни время обращений по каналам"
   level="core"
   estimatedMinutes={20}

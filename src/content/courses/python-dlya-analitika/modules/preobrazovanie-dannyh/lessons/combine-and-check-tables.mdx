@@ -103,6 +103,7 @@ bad_products = pd.DataFrame(
 четыре. Merge без `validate` создаст 6 строк и завысит revenue.
 
 <KnowledgeCheck
+  id="knowledge-check-answer-with-transformations"
   type="numeric"
   prompt="Сколько строк получится при left merge четырёх orders с bad_products без validate?"
   outcomes={["answer-with-transformations", "prepare-tabular-data"]}
@@ -128,6 +129,7 @@ Left join сохраняет заказы без справочника и по�
 молча удалил бы их, если не сравнить число строк.
 
 <PracticeTask
+  id="practice-task-answer-with-transformations"
   title="Добавь справочник складов без размножения"
   level="core"
   estimatedMinutes={19}

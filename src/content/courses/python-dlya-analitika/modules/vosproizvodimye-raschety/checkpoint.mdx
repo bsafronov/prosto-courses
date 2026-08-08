@@ -11,6 +11,7 @@ time: 35
 выражение недостаточно, если notebook выполняется только в случайном порядке.
 
 <KnowledgeCheck
+  id="knowledge-check-reproduce-analysis"
   type="single"
   prompt="Notebook работает после ручного запуска последней ячейки, но падает после Restart and Run All с NameError. Что это доказывает?"
   outcomes={["reproduce-analysis"]}
@@ -92,6 +93,7 @@ assert int(large_cells.sum()) == 3
 ```
 
 <PracticeTask
+  id="practice-task-reproduce-analysis"
   title="Восстанови notebook и докажи расчёт"
   level="core"
   estimatedMinutes={35}

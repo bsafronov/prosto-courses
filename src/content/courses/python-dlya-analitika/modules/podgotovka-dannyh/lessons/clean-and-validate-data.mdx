@@ -243,6 +243,7 @@ assert ready["revenue"].sum() == 2200
 `assert` покажет место нарушения раньше, чем ошибочный вывод попадёт в график.
 
 <KnowledgeCheck
+  id="knowledge-check-prepare-tabular-data"
   type="ordering"
   prompt="Расположи действия так, чтобы очистка оставляла проверяемое evidence."
   outcomes={["prepare-tabular-data", "reproduce-analysis"]}
@@ -311,6 +312,7 @@ deliveries_source.to_csv("deliveries_raw.csv", index=False)
 ```
 
 <PracticeTask
+  id="practice-task-prepare-tabular-data"
   title="Очисти данные без молчаливых потерь"
   level="core"
   estimatedMinutes={21}

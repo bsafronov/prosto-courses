@@ -97,6 +97,28 @@ test("accepts a fresh Course through the public authoring contract", async () =>
   );
 });
 
+test("rejects published interactions without stable IDs", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        source.replace('  id="knowledge-check-identify-image-purpose"\n', ""),
+      "modules/alt-text/lessons/edit-for-clarity.mdx": (source) =>
+        source.replace('  id="practice-task-write-concise-alt-text"\n', ""),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /describe-purpose\.mdx: Knowledge Check 1 requires a stable id/i,
+      );
+      assert.match(
+        result.output,
+        /edit-for-clarity\.mdx: Practice Task 1 requires a stable id/i,
+      );
+    },
+  );
+});
+
 test("uses an injected validation date without depending on the machine clock", async () => {
   const result = await validateFixture("valid-course", {
     validationDate: "2026-08-29",
@@ -990,6 +1012,7 @@ test("rejects images without accessible provenance and generated-image disclosur
 
 const solutionPracticeTask = `
 <PracticeTask
+  id="contract-practice-task-1"
   title="Draft useful alternative text"
   level="core"
   estimatedMinutes={8}
@@ -1014,6 +1037,7 @@ const solutionPracticeTask = `
 
 const rubricPracticeTask = `
 <PracticeTask
+  id="contract-practice-task-2"
   title="Review an image description"
   level="challenge"
   estimatedMinutes={10}
@@ -1038,18 +1062,18 @@ const rubricPracticeTask = `
 </PracticeTask>
 `;
 
-test("accepts optional stable interaction IDs", async () => {
+test("accepts authored stable interaction IDs", async () => {
   await withChangedValidCourse(
     {
       "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
         source.replace(
-          "<KnowledgeCheck\n",
-          '<KnowledgeCheck\n  id="identify-image-purpose"\n',
+          'id="knowledge-check-identify-image-purpose"',
+          'id="identify-image-purpose"',
         ),
       "modules/alt-text/lessons/edit-for-clarity.mdx": (source) =>
         source.replace(
-          "<PracticeTask\n",
-          '<PracticeTask\n  id="polish-description"\n',
+          'id="practice-task-write-concise-alt-text"',
+          'id="polish-description"',
         ),
     },
     (result) => assert.equal(result.exitCode, 0, result.output),
@@ -1061,13 +1085,13 @@ test("rejects malformed stable interaction IDs at the authored component", async
     {
       "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
         source.replace(
-          "<KnowledgeCheck\n",
-          '<KnowledgeCheck\n  id="Identify image purpose"\n',
+          'id="knowledge-check-identify-image-purpose"',
+          'id="Identify image purpose"',
         ),
       "modules/alt-text/lessons/edit-for-clarity.mdx": (source) =>
         source.replace(
-          "<PracticeTask\n",
-          '<PracticeTask\n  id="polish_description"\n',
+          'id="practice-task-write-concise-alt-text"',
+          'id="polish_description"',
         ),
     },
     (result) => {
@@ -1090,12 +1114,12 @@ test("rejects duplicate interaction IDs within one authored destination", async 
       "modules/alt-text/lessons/edit-for-clarity.mdx": (source) =>
         source
           .replace(
-            "<KnowledgeCheck\n",
-            '<KnowledgeCheck\n  id="concise-alt-text"\n',
+            'id="knowledge-check-write-concise-alt-text"',
+            'id="concise-alt-text"',
           )
           .replace(
-            "<PracticeTask\n",
-            '<PracticeTask\n  id="concise-alt-text"\n',
+            'id="practice-task-write-concise-alt-text"',
+            'id="concise-alt-text"',
           ),
     },
     (result) => {
@@ -1787,6 +1811,7 @@ test("accepts matching Knowledge Checks with stable pairs and feedback", async (
       "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
         `${source}
 <KnowledgeCheck
+  id="contract-knowledge-check-1"
   type="matching"
   prompt="Match each accessibility input to its purpose."
   outcomes={["identify-image-purpose"]}
@@ -1818,6 +1843,7 @@ test("rejects duplicate IDs and malformed matching pairs", async () => {
       "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
         `${source}
 <KnowledgeCheck
+  id="contract-knowledge-check-2"
   type="matching"
   prompt="Match each accessibility input to its purpose."
   outcomes={["identify-image-purpose"]}
@@ -1862,6 +1888,7 @@ test("accepts ordering Knowledge Checks whose items declare the correct order", 
       "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
         `${source}
 <KnowledgeCheck
+  id="contract-knowledge-check-3"
   type="ordering"
   prompt="Put the description workflow in order."
   outcomes={["identify-image-purpose"]}
@@ -1884,6 +1911,7 @@ test("rejects malformed and duplicate ordering items", async () => {
       "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
         `${source}
 <KnowledgeCheck
+  id="contract-knowledge-check-4"
   type="ordering"
   prompt="Put the description workflow in order."
   outcomes={["identify-image-purpose"]}
@@ -1919,6 +1947,7 @@ test("rejects ambiguous matching values and ordering text", async () => {
       "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
         `${source}
 <KnowledgeCheck
+  id="contract-knowledge-check-5"
   type="matching"
   prompt="Match each input."
   outcomes={["identify-image-purpose"]}
@@ -1929,6 +1958,7 @@ test("rejects ambiguous matching values and ordering text", async () => {
   explanation="Each side must identify one unambiguous pair."
 />
 <KnowledgeCheck
+  id="contract-knowledge-check-6"
   type="ordering"
   prompt="Put the steps in order."
   outcomes={["identify-image-purpose"]}
@@ -1964,6 +1994,7 @@ test("accepts exact Knowledge Checks with explicit trimming and case normalizati
       "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
         `${source}
 <KnowledgeCheck
+  id="contract-knowledge-check-7"
   type="exact"
   prompt="Name the text alternative attribute."
   outcomes={["identify-image-purpose"]}
@@ -1983,6 +2014,7 @@ test("rejects invalid or ambiguous exact-answer normalization", async () => {
       "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
         `${source}
 <KnowledgeCheck
+  id="contract-knowledge-check-8"
   type="exact"
   prompt="Name the text alternative attribute."
   outcomes={["identify-image-purpose"]}
@@ -2010,6 +2042,7 @@ test("rejects invalid or ambiguous exact-answer normalization", async () => {
       "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
         `${source}
 <KnowledgeCheck
+  id="contract-knowledge-check-9"
   type="exact"
   prompt="Name the text alternative attribute."
   outcomes={["identify-image-purpose"]}
@@ -2035,6 +2068,7 @@ test("accepts numeric Knowledge Checks with explicit tolerance and unit", async 
       "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
         `${source}
 <KnowledgeCheck
+  id="contract-knowledge-check-10"
   type="numeric"
   prompt="How many characters are in the alt attribute name?"
   outcomes={["identify-image-purpose"]}
@@ -2055,6 +2089,7 @@ test("rejects invalid numeric answers, tolerance, and units", async () => {
       "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
         `${source}
 <KnowledgeCheck
+  id="contract-knowledge-check-11"
   type="numeric"
   prompt="How many characters are in the alt attribute name?"
   outcomes={["identify-image-purpose"]}
@@ -2089,6 +2124,7 @@ test("rejects response props from another Knowledge Check type", async () => {
       "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
         `${source}
 <KnowledgeCheck
+  id="contract-knowledge-check-12"
   type="exact"
   prompt="Name the text alternative attribute."
   outcomes={["identify-image-purpose"]}
