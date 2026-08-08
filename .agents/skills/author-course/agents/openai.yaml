@@ -1,7 +1,7 @@
 interface:
-  display_name: "Написание курса"
-  short_description: "Пишет и проверяет новый курс по проекту"
-  default_prompt: "Используй $author-course, чтобы написать спроектированный новый курс."
+  display_name: "Course Authoring"
+  short_description: "Authors and validates a new Course"
+  default_prompt: "Use $author-course to author a designed new Course."
 
 policy:
   allow_implicit_invocation: false

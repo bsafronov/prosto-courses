@@ -1,7 +1,7 @@
 interface:
-  display_name: "Аудит курса"
-  short_description: "Проверяет, исправляет и публикует курс"
-  default_prompt: "Используй $audit-course, чтобы независимо проверить и опубликовать готовый черновик курса."
+  display_name: "Course Audit"
+  short_description: "Audits, fixes, and publishes a Course"
+  default_prompt: "Use $audit-course to independently audit and publish a completed Course draft."
 
 policy:
   allow_implicit_invocation: false

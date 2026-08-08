@@ -1,7 +1,7 @@
 interface:
-  display_name: "Проектирование курса"
-  short_description: "Создаёт бриф и проект нового курса"
-  default_prompt: "Используй $design-course, чтобы спроектировать новый курс по моему запросу."
+  display_name: "Course Design"
+  short_description: "Creates a brief and blueprint for a new Course"
+  default_prompt: "Use $design-course to design a new Course from my request."
 
 policy:
   allow_implicit_invocation: false

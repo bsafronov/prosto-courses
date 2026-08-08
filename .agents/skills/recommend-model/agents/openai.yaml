@@ -1,0 +1,7 @@
+interface:
+  display_name: "Model Recommendation"
+  short_description: "Recommends a model and reasoning for an issue"
+  default_prompt: "Use $recommend-model to choose a model and reasoning effort before implementing a GitHub issue."
+
+policy:
+  allow_implicit_invocation: false

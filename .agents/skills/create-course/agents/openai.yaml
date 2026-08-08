@@ -1,7 +1,7 @@
 interface:
-  display_name: "Создание курса"
-  short_description: "Создаёт и публикует полный курс"
-  default_prompt: "Используй $create-course, чтобы создать и опубликовать курс по моему запросу."
+  display_name: "Course Creation"
+  short_description: "Creates and publishes a complete Course"
+  default_prompt: "Use $create-course to create and publish a Course from my request."
 
 policy:
   allow_implicit_invocation: false
