@@ -46,6 +46,21 @@ async function moveOrderingItem(
   await expect(row.locator("[data-ordering-handle]")).toBeFocused();
 }
 
+test("authored interaction identities are exposed without replacing interaction semantics", async ({
+  page,
+}) => {
+  await expect(
+    page.locator(
+      '[data-knowledge-check][data-interaction-id="markdown-source-readability"]',
+    ),
+  ).toHaveCount(1);
+  await expect(
+    page.locator(
+      '[data-practice-task][data-interaction-id="separate-content-markup"]',
+    ),
+  ).toHaveRole("region");
+});
+
 test("Knowledge Check uses one bounded work area with internally ruled options", async ({
   page,
 }) => {

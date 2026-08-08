@@ -27,7 +27,7 @@ function opaqueResponseKey(kind: "matching" | "ordering", authoredId: string) {
 }
 
 const props = Astro.props;
-const { type, prompt, explanation } = props;
+const { id, type, prompt, explanation } = props;
 const inputName = `knowledge-check-${crypto.randomUUID()}`;
 const titleId = `${inputName}-title`;
 const orderingListId = `${inputName}-ordering-list`;
@@ -73,6 +73,7 @@ const numericUnit = type === "numeric" ? props.unit : undefined;
   headingId={titleId}
   headingLevel={2}
   data-knowledge-check
+  data-interaction-id={id}
   data-type={type}
   data-answer={JSON.stringify(authoredAnswer)}
   data-normalization={authoredNormalization}

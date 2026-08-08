@@ -2,6 +2,7 @@
 import CoursePdfWorkSpace from "./CoursePdfWorkSpace.astro";
 
 interface Props {
+  id?: string;
   title: string;
   level: "core" | "challenge" | "stretch";
   estimatedMinutes: number;
@@ -19,6 +20,7 @@ const levelLabels = {
 } satisfies Record<Props["level"], string>;
 
 const {
+  id,
   title,
   level,
   estimatedMinutes,
@@ -32,6 +34,7 @@ const {
 <article
   class="course-pdf-activity course-pdf-practice-task"
   data-course-pdf-practice-task
+  data-interaction-id={id}
 >
   <p class="course-pdf-practice-task__label type-meta">
     {levelLabels[level]} · {estimatedMinutes} мин

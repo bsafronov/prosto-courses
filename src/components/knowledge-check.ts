@@ -22,6 +22,7 @@ export interface ExactNormalization {
 }
 
 interface SharedProps {
+  id?: string;
   prompt: string;
   outcomes: string[];
   explanation: string;

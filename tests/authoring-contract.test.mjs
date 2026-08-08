@@ -1038,6 +1038,76 @@ const rubricPracticeTask = `
 </PracticeTask>
 `;
 
+test("accepts optional stable interaction IDs", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        source.replace(
+          "<KnowledgeCheck\n",
+          '<KnowledgeCheck\n  id="identify-image-purpose"\n',
+        ),
+      "modules/alt-text/lessons/edit-for-clarity.mdx": (source) =>
+        source.replace(
+          "<PracticeTask\n",
+          '<PracticeTask\n  id="polish-description"\n',
+        ),
+    },
+    (result) => assert.equal(result.exitCode, 0, result.output),
+  );
+});
+
+test("rejects malformed stable interaction IDs at the authored component", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/describe-purpose.mdx": (source) =>
+        source.replace(
+          "<KnowledgeCheck\n",
+          '<KnowledgeCheck\n  id="Identify image purpose"\n',
+        ),
+      "modules/alt-text/lessons/edit-for-clarity.mdx": (source) =>
+        source.replace(
+          "<PracticeTask\n",
+          '<PracticeTask\n  id="polish_description"\n',
+        ),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /describe-purpose\.mdx: Knowledge Check 1 id must use a stable lowercase-hyphen form/i,
+      );
+      assert.match(
+        result.output,
+        /edit-for-clarity\.mdx: Practice Task 1 id must use a stable lowercase-hyphen form/i,
+      );
+    },
+  );
+});
+
+test("rejects duplicate interaction IDs within one authored destination", async () => {
+  await withChangedValidCourse(
+    {
+      "modules/alt-text/lessons/edit-for-clarity.mdx": (source) =>
+        source
+          .replace(
+            "<KnowledgeCheck\n",
+            '<KnowledgeCheck\n  id="concise-alt-text"\n',
+          )
+          .replace(
+            "<PracticeTask\n",
+            '<PracticeTask\n  id="concise-alt-text"\n',
+          ),
+    },
+    (result) => {
+      assert.notEqual(result.exitCode, 0);
+      assert.match(
+        result.output,
+        /edit-for-clarity\.mdx: Practice Task 1 id concise-alt-text duplicates Knowledge Check 1 in this authored destination/i,
+      );
+    },
+  );
+});
+
 test("accepts valid solution and Self-Assessment Practice Tasks", async () => {
   await withChangedValidCourse(
     {

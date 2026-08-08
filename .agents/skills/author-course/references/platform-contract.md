@@ -32,6 +32,7 @@ Supported core response types are:
 
 Shared props are static and required unless stated otherwise:
 
+- `id`, optional during the interaction-identity expand phase;
 - `type`;
 - `prompt`;
 - `outcomes`, containing at least one Course Learning Outcome ID;
@@ -45,6 +46,12 @@ Response-specific props are:
 - `ordering`: `items` is an array of unique `{ id, text }` objects in the correct order; the platform shuffles them for the learner.
 - `exact`: `acceptedAnswers` is a non-empty array of strings and `normalization` is exactly `{ trim: boolean, case: "sensitive" | "insensitive" }`. Accepted answers must remain non-empty and distinct after that normalization.
 - `numeric`: `answer` is a finite number, `tolerance` is a finite non-negative number measured in the same unit, and `unit` is a non-empty string whenever the quantity is not unitless.
+
+When present, a Knowledge Check `id` uses stable lowercase kebab-case and is
+unique among Knowledge Checks and Practice Tasks in one authored destination.
+Keep it independent from learner-facing prompt text so cosmetic edits do not
+change the interaction identity. Course source without interaction IDs remains
+valid during the expand phase.
 
 IDs are unique and never derived from learner-facing display text. Option-specific feedback diagnoses why that response is or is not appropriate. Do not expose correct ordering or matching through IDs or initial presentation.
 
@@ -114,6 +121,10 @@ Use the same `PracticeTask` model inside Lessons, Module Checkpoints, and `capst
 
 Rules:
 
+- `id` is optional during the interaction-identity expand phase. When present,
+  it uses stable lowercase kebab-case, is unique among Knowledge Checks and
+  Practice Tasks in one authored destination, and stays independent from the
+  learner-facing title.
 - `title`, `level`, positive integer `estimatedMinutes`, `goal`, `outcomes`,
   `criteria`, and meaningful learner prompt content are required.
 - `constraints` and `hints` are optional non-empty arrays of non-empty strings.

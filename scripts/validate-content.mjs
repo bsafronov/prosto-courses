@@ -571,8 +571,39 @@ function openingComponentTags(source) {
   return tags;
 }
 
-function validateKnowledgeChecks(body, file, alignment) {
-  const sharedProps = new Set(["explanation", "outcomes", "prompt", "type"]);
+function validateInteractionId(component, file, label, interactionIds) {
+  if (!componentAttribute(component.source, "id")) return;
+
+  const id = stringAttribute(component.source, "id");
+  if (typeof id !== "string" || !slugPattern.test(id)) {
+    report(file, `${label} id must use a stable lowercase-hyphen form`);
+    return;
+  }
+
+  const existingLabel = interactionIds.get(id);
+  if (existingLabel) {
+    report(
+      file,
+      `${label} id ${id} duplicates ${existingLabel} in this authored destination`,
+    );
+    return;
+  }
+  interactionIds.set(id, label);
+}
+
+function validateKnowledgeChecks(
+  body,
+  file,
+  alignment,
+  interactionIds = new Map(),
+) {
+  const sharedProps = new Set([
+    "explanation",
+    "id",
+    "outcomes",
+    "prompt",
+    "type",
+  ]);
   const responseProps = {
     single: ["answer", "options"],
     multiple: ["answer", "options"],
@@ -585,6 +616,7 @@ function validateKnowledgeChecks(body, file, alignment) {
     "acceptedAnswers",
     "answer",
     "explanation",
+    "id",
     "items",
     "normalization",
     "options",
@@ -601,6 +633,7 @@ function validateKnowledgeChecks(body, file, alignment) {
 
   for (const [index, check] of checks.entries()) {
     const label = `Knowledge Check ${index + 1}`;
+    validateInteractionId(check, file, label, interactionIds);
     if (!check.selfClosing) {
       report(
         file,
@@ -1227,7 +1260,13 @@ function validateTaskRubric(rubric, file, index) {
   }
 }
 
-function validatePracticeTasks(body, file, owner, alignment) {
+function validatePracticeTasks(
+  body,
+  file,
+  owner,
+  alignment,
+  interactionIds = new Map(),
+) {
   const source = withoutFencedCode(body).replace(
     /\{\/\*[\s\S]*?\*\/\}/g,
     "",
@@ -1237,6 +1276,7 @@ function validatePracticeTasks(body, file, owner, alignment) {
     (tag) => tag.name === "TaskSolution" || tag.name === "TaskRubric",
   );
   const allowedProps = new Set([
+    "id",
     "title",
     "level",
     "estimatedMinutes",
@@ -1254,6 +1294,7 @@ function validatePracticeTasks(body, file, owner, alignment) {
 
   for (const [index, task] of tasks.entries()) {
     const label = `Practice Task ${index + 1}`;
+    validateInteractionId(task.opening, file, label, interactionIds);
     if (!allowedOwners.has(owner)) {
       report(
         file,
@@ -1548,8 +1589,13 @@ function validateSemanticComponents(body, file, declaredPacks = new Map()) {
     const authoredControlProps = attributeNames(source).filter(
       (name) => {
         const lowerName = name.toLowerCase();
+        const isInteractionId =
+          lowerName === "id" &&
+          (componentName === "KnowledgeCheck" ||
+            componentName === "PracticeTask");
         return (
-          ["class", "classname", "id", "style"].includes(lowerName) ||
+          (!isInteractionId &&
+            ["class", "classname", "id", "style"].includes(lowerName)) ||
           /^(?:client|set|is):/.test(lowerName) ||
           /^on(?::|[A-Z])/.test(name) ||
           (lowerName.startsWith("on") && lowerName in authoredEventTarget)
@@ -1807,14 +1853,21 @@ async function validateLearnerSource(
   alignment,
 ) {
   if (!source) return;
+  const interactionIds = new Map();
   requiredString(source.data, "title", file, owner);
   validateSharedMetadata(source.data, file);
   validateAuthoringBoundary(source.content, file);
   validateImages(source.content, file);
   validateSemanticComponents(source.content, file, declaredPacks);
-  validateKnowledgeChecks(source.content, file, alignment);
+  validateKnowledgeChecks(source.content, file, alignment, interactionIds);
   validateReflections(source.content, file, alignment);
-  validatePracticeTasks(source.content, file, owner, alignment);
+  validatePracticeTasks(
+    source.content,
+    file,
+    owner,
+    alignment,
+    interactionIds,
+  );
   validateCallouts(source.content, file);
   await validateDiagrams(source.content, file);
 }

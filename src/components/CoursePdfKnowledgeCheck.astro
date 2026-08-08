@@ -6,7 +6,7 @@ function rotateAwayFromAuthoredOrder<T>(values: T[]) {
 }
 
 const props = Astro.props as Props;
-const { type, prompt, explanation } = props;
+const { id, type, prompt, explanation } = props;
 const choiceOptions = "options" in props ? props.options : [];
 const correctChoiceIds =
   type === "single"
@@ -28,6 +28,7 @@ const printableOrderingItems =
 <article
   class="course-pdf-activity course-pdf-knowledge-check"
   data-course-pdf-knowledge-check
+  data-interaction-id={id}
 >
   <p class="course-pdf-knowledge-check__label type-meta">Проверка знаний</p>
   <p class="course-pdf-knowledge-check__prompt">{prompt}</p>
